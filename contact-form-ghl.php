@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.2.1
+ * Version:     1.3.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -54,6 +54,8 @@ function cfg_defaults() {
         'input_radius'           => '4',
         'card_border'            => '1',
         'card_shadow'            => '1',
+        'btn_hover_bg_color'     => '',
+        'btn_hover_text_color'   => '',
 
         // ── Contact Form ─────────────────────────────────────────────────
         'show_hero'              => '1',
@@ -211,6 +213,7 @@ function cfg_sanitize( $input ) {
     ];
     $color_fields = [
         'hero_bg_color','primary_color','bg_color','text_color','muted_color','border_color',
+        'btn_hover_bg_color','btn_hover_text_color',
         'bm_hero_bg_color','bm_cta_bg_color','ty_bg_color','alg_accent_color','imp_accent_color',
     ];
     $textarea_fields = [
@@ -384,6 +387,26 @@ function cfg_settings_page() {
                 </div>
             </div>
         <?php endforeach; ?>
+        </div>
+
+        <div class="cfg-section-title">Button Hover Effect</div>
+        <div class="cfg-grid">
+            <div class="cfg-field">
+                <label>Hover Background Color <span class="cfg-badge">optional</span></label>
+                <div class="cfg-color-row">
+                    <input type="color" id="c_btn_hover_bg_color" value="<?= esc_attr( $s['btn_hover_bg_color'] ?: $s['primary_color'] ) ?>" oninput="syncColor('btn_hover_bg_color',this.value)"/>
+                    <input type="text" id="btn_hover_bg_color" name="<?= CFG_OPTION ?>[btn_hover_bg_color]" value="<?= esc_attr( $s['btn_hover_bg_color'] ) ?>" maxlength="7" placeholder="Default: darken primary" oninput="syncPicker('c_btn_hover_bg_color',this.value)"/>
+                </div>
+                <span class="cfg-desc">Leave blank to use the default brightness effect on hover.</span>
+            </div>
+            <div class="cfg-field">
+                <label>Hover Text Color <span class="cfg-badge">optional</span></label>
+                <div class="cfg-color-row">
+                    <input type="color" id="c_btn_hover_text_color" value="<?= esc_attr( $s['btn_hover_text_color'] ?: '#ffffff' ) ?>" oninput="syncColor('btn_hover_text_color',this.value)"/>
+                    <input type="text" id="btn_hover_text_color" name="<?= CFG_OPTION ?>[btn_hover_text_color]" value="<?= esc_attr( $s['btn_hover_text_color'] ) ?>" maxlength="7" placeholder="Default: #ffffff" oninput="syncPicker('c_btn_hover_text_color',this.value)"/>
+                </div>
+                <span class="cfg-desc">Leave blank to keep white text on hover.</span>
+            </div>
         </div>
 
         <div class="cfg-section-title">Typography</div>
@@ -1397,7 +1420,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     <style>
     #cfg-wrap *{box-sizing:border-box;}
     #cfg-wrap input:focus,#cfg-wrap select:focus{outline:none;box-shadow:0 0 0 3px <?= $pri ?>33;border-color:<?= $pri ?> !important;}
-    #cfg-wrap button[type=submit]:hover{filter:brightness(1.1);}
+    #cfg-wrap button[type=submit]:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
     #cfg-wrap button[type=submit]:disabled{opacity:0.65;cursor:not-allowed;}
     @media(max-width:600px){.cfg-row2{grid-template-columns:1fr !important;}#cfg-wrap .cfg-card{padding:1.25rem !important;}}
     </style>
@@ -1595,7 +1618,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
     <style>
     #cfge-wrap *{box-sizing:border-box;}
     #cfge-wrap input:focus,#cfge-wrap select:focus{outline:none;box-shadow:0 0 0 3px <?= $pri ?>33;border-color:<?= $pri ?> !important;}
-    #cfge-wrap button[type=submit]:hover{filter:brightness(1.1);}
+    #cfge-wrap button[type=submit]:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
     #cfge-wrap button[type=submit]:disabled{opacity:0.65;cursor:not-allowed;}
     @media(max-width:600px){.cfge-row2{grid-template-columns:1fr !important;}#cfge-wrap .cfge-card{padding:1.25rem !important;}}
     </style>
@@ -2216,7 +2239,7 @@ function cfg_aligner_shortcode() {
 @media(max-width:500px){.<?= $uid ?>-img3{grid-template-columns:1fr 1fr;}}
 @media(max-width:340px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr;}}
 .<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
-.<?= $uid ?>-btn:hover{filter:brightness(1.1);}
+.<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
 .<?= $uid ?>-btn:active{transform:scale(0.97);}
 .<?= $uid ?>-ghost{background:none;border:2px solid #e5e7eb;border-radius:8px;color:#6b7280;font-weight:500;cursor:pointer;font-family:inherit;transition:border-color 0.18s,color 0.18s;}
 .<?= $uid ?>-ghost:hover{border-color:<?= $accent ?>;color:<?= $accent ?>;}
@@ -2716,6 +2739,7 @@ function cfg_implant_shortcode() {
 #<?= $uid ?>-app .imp-input:focus{border-color:hsl(var(--primary));}
 /* Reveal button */
 #<?= $uid ?>-reveal-btn:not(:disabled){cursor:pointer;opacity:1!important;}
+#<?= $uid ?>-reveal-btn:not(:disabled):hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
 /* Intro layout */
 #<?= $uid ?>-intro-cols{display:flex;flex-direction:column;gap:2rem;width:100%;}
 #<?= $uid ?>-intro-left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
