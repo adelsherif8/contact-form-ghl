@@ -1,0 +1,9 @@
+{
+  "name": "contact-form-ghl",
+  "version": "1.2.0",
+  "description": "WordPress plugin: Contact Form + GoHighLevel integration",
+  "scripts": {
+    "release": "node release.js"
+  },
+  "author": "Adel Emad"
+}
