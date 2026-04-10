@@ -22,7 +22,13 @@ jobs:
       - name: Build plugin ZIP
         run: |
           mkdir -p build
-          zip -r build/contact-form-ghl.zip contact-form-ghl.php
+          zip -r build/contact-form-ghl.zip \
+            contact-form-ghl.php \
+            vendor/ \
+            composer.json \
+            composer.lock \
+            --exclude "vendor/yahnis-elsts/plugin-update-checker/tests/*" \
+            --exclude "vendor/yahnis-elsts/plugin-update-checker/.git/*"
           echo "Built contact-form-ghl.zip (v${{ steps.version.outputs.VERSION }})"
 
       - name: Create GitHub Release

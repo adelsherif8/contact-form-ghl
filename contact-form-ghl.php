@@ -15,6 +15,17 @@ define( 'CFG_SLUG',   'contact-form-ghl' );
 define( 'CFG_OPTION', 'cfg_settings' );
 
 // ═══════════════════════════════════════════════════════════════
+//  AUTO-UPDATE FROM GITHUB
+// ═══════════════════════════════════════════════════════════════
+require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
+$cfg_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+    'https://github.com/adelsherif8/contact-form-ghl/',
+    __FILE__,
+    'contact-form-ghl'
+);
+$cfg_update_checker->getVcsApi()->enableReleaseAssets();
+
+// ═══════════════════════════════════════════════════════════════
 //  DEFAULTS
 // ═══════════════════════════════════════════════════════════════
 function cfg_defaults() {
