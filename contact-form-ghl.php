@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.4.0
+ * Version:     1.5.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -167,18 +167,19 @@ function cfg_defaults() {
         'imp_intro_bullets'    => "Takes under 2 minutes\nNo obligation — 100% free\nInstant, personalised estimate",
         'imp_intro_btn'        => 'Get My Estimate',
         'imp_q1_title'         => 'What best describes your situation?',
-        'imp_q1_opt1'          => "I'm missing a tooth",
-        'imp_q1_opt2'          => 'I need a tooth extracted first',
-        'imp_q1_opt3'          => 'I want to replace my dentures',
-        'imp_q1_opt4'          => 'My crown or implant is broken',
-        'imp_q1_opt5'          => '',
-        'imp_q1_opt6'          => '',
+        'imp_q1_opts'          => [
+            "I'm missing a tooth",
+            'I need a tooth extracted first',
+            'I want to replace my dentures',
+            'My crown or implant is broken',
+        ],
         'imp_q2_title'         => 'How many teeth need implants?',
-        'imp_q2_opt1'          => 'Just one tooth',
-        'imp_q2_opt2'          => '2 – 4 teeth',
-        'imp_q2_opt3'          => 'Full arch (all teeth)',
-        'imp_q2_opt4'          => '5+ teeth',
-        'imp_q2_opt4_enabled'  => '1',
+        'imp_q2_opts'          => [
+            [ 'label' => 'Just one tooth',       'tier' => 'single' ],
+            [ 'label' => '2 – 4 teeth',          'tier' => 'multi'  ],
+            [ 'label' => 'Full arch (all teeth)', 'tier' => 'arch'   ],
+            [ 'label' => '5+ teeth',              'tier' => 'multi'  ],
+        ],
         'imp_q3_title'         => 'Has a dentist mentioned you may need bone grafting?',
         'imp_q3_opt1'          => 'Yes',
         'imp_q3_opt2'          => 'Not sure',
@@ -191,9 +192,11 @@ function cfg_defaults() {
         'imp_contact_title'    => 'Book Your Free Consultation',
         'imp_contact_subtitle' => "Enter your details and we'll reach out to confirm your free implant consultation.",
         'imp_contact_btn'      => 'Book My Free Consultation',
-        'imp_hide_header'      => '0',
-        'imp_show_price'       => '1',
-        'imp_price_hidden_msg' => 'Your personalised estimate is ready. Book your free consultation to review it with our team.',
+        'imp_hide_header'       => '0',
+        'imp_show_price'        => '1',
+        'imp_no_price_title'    => 'Your Estimate Is Ready',
+        'imp_no_price_subtitle' => 'Book a free consultation and our team will walk you through your personalised treatment options and costs.',
+        'imp_no_price_btn'      => 'Book My Free Consultation',
     ];
 }
 
@@ -229,7 +232,7 @@ function cfg_sanitize( $input ) {
     $textarea_fields = [
         'hero_subheading','terms_text','success_msg','treatment_options',
         'bm_hero_subheading','bm_card1_body','bm_card2_body','bm_card3_body','bm_card4_body','bm_cta_body','ty_body',
-        'imp_intro_subtitle','imp_intro_bullets','imp_financing_text','imp_disclaimer','imp_result_subtitle','imp_contact_subtitle','imp_price_hidden_msg',
+        'imp_intro_subtitle','imp_intro_bullets','imp_financing_text','imp_disclaimer','imp_result_subtitle','imp_contact_subtitle','imp_no_price_subtitle',
     ];
     $bool_fields = [
         'show_hero','req_first_name','req_last_name','req_email','req_phone',
@@ -238,10 +241,36 @@ function cfg_sanitize( $input ) {
         'spam_honeypot',
         'bm_show_hero','bm_show_cta','bm_show_card3','bm_show_card4',
         'ty_social_show','ty_show_image',
-        'imp_show_full_arch','imp_show_financing','imp_q2_opt4_enabled','imp_hide_header','imp_show_price',
+        'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price',
     ];
 
+    // ── Dynamic option arrays (handle before the general loop) ──
+    $valid_tiers = [ 'single', 'multi', 'arch' ];
+
+    $q1_raw = $input['imp_q1_opts'] ?? null;
+    if ( is_array( $q1_raw ) ) {
+        $clean['imp_q1_opts'] = array_values( array_filter( array_map( 'sanitize_text_field', $q1_raw ) ) );
+        if ( empty( $clean['imp_q1_opts'] ) ) $clean['imp_q1_opts'] = $defaults['imp_q1_opts'];
+    } else {
+        $clean['imp_q1_opts'] = $defaults['imp_q1_opts'];
+    }
+
+    $q2_raw = $input['imp_q2_opts'] ?? null;
+    $clean['imp_q2_opts'] = [];
+    if ( is_array( $q2_raw ) ) {
+        foreach ( $q2_raw as $item ) {
+            if ( ! is_array( $item ) ) continue;
+            $label = sanitize_text_field( $item['label'] ?? '' );
+            $tier  = in_array( $item['tier'] ?? '', $valid_tiers, true ) ? $item['tier'] : 'multi';
+            if ( $label !== '' ) $clean['imp_q2_opts'][] = [ 'label' => $label, 'tier' => $tier ];
+        }
+    }
+    if ( empty( $clean['imp_q2_opts'] ) ) $clean['imp_q2_opts'] = $defaults['imp_q2_opts'];
+
+    // ── General loop (skip array fields already handled) ──
+    $skip = [ 'imp_q1_opts', 'imp_q2_opts' ];
     foreach ( $defaults as $key => $default ) {
+        if ( in_array( $key, $skip, true ) ) continue;
         if ( in_array( $key, $bool_fields ) ) {
             $clean[ $key ] = ! empty( $input[ $key ] ) ? '1' : '0';
         } elseif ( in_array( $key, $color_fields ) ) {
@@ -250,6 +279,9 @@ function cfg_sanitize( $input ) {
             $clean[ $key ] = sanitize_textarea_field( $input[ $key ] ?? '' );
         } elseif ( in_array( $key, $url_fields ) ) {
             $clean[ $key ] = esc_url_raw( $input[ $key ] ?? '' );
+        } elseif ( is_array( $default ) ) {
+            // any other array default — preserve as-is from DB (already handled above or leave as default)
+            if ( ! isset( $clean[ $key ] ) ) $clean[ $key ] = $default;
         } else {
             $clean[ $key ] = sanitize_text_field( $input[ $key ] ?? $default );
         }
@@ -1211,16 +1243,31 @@ function cfg_settings_page() {
         <!-- ── PRICE REVEAL ─────────────────────────────────────── -->
         <div class="cfg-section-title" style="margin-top:24px;">Price Reveal</div>
         <div class="cfg-toggle-row" style="margin-bottom:12px;">
-            <input type="checkbox" id="imp_show_price" name="<?= CFG_OPTION ?>[imp_show_price]" value="1" <?= checked( $s['imp_show_price'], '1', false ) ?> onchange="document.getElementById('imp-price-hidden-row').style.display=this.checked?'none':'block'"/>
+            <input type="checkbox" id="imp_show_price" name="<?= CFG_OPTION ?>[imp_show_price]" value="1" <?= checked( $s['imp_show_price'], '1', false ) ?> onchange="document.getElementById('imp-price-rows').style.display=this.checked?'block':'none';document.getElementById('imp-noprice-rows').style.display=this.checked?'none':'block'"/>
             <label for="imp_show_price"><strong>Show estimated price range</strong> on the results screen</label>
         </div>
-        <div id="imp-price-hidden-row" style="display:<?= $s['imp_show_price'] === '1' ? 'none' : 'block' ?>;">
+        <!-- Fields shown when price IS shown -->
+        <div id="imp-price-rows" style="display:<?= $s['imp_show_price'] === '1' ? 'block' : 'none' ?>;">
             <div class="cfg-card-section">
-                <h4>Message shown instead of price</h4>
-                <p class="cfg-desc" style="margin:0 0 10px;">When price is hidden, this message is displayed to encourage the patient to book a consultation.</p>
-                <div class="cfg-field cfg-full">
-                    <textarea name="<?= CFG_OPTION ?>[imp_price_hidden_msg]" rows="3"><?= esc_textarea( $s['imp_price_hidden_msg'] ) ?></textarea>
+                <h4>Results Screen — Price Shown</h4>
+                <div class="cfg-grid">
+                    <div class="cfg-field"><label>Title <span style="font-weight:400;color:#646970;">(small caps label above price)</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_result_title]" value="<?= esc_attr( $s['imp_result_title'] ) ?>"/></div>
+                    <div class="cfg-field cfg-full"><label>Subtitle <span style="font-weight:400;color:#646970;">(shown below title, above price)</span></label><textarea name="<?= CFG_OPTION ?>[imp_result_subtitle]"><?= esc_textarea( $s['imp_result_subtitle'] ) ?></textarea></div>
+                    <div class="cfg-field cfg-full"><label>Financing Note <span class="cfg-badge">shown when financing toggle is on</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_financing_text]" value="<?= esc_attr( $s['imp_financing_text'] ) ?>"/></div>
                 </div>
+            </div>
+        </div>
+        <!-- Fields shown when price is HIDDEN -->
+        <div id="imp-noprice-rows" style="display:<?= $s['imp_show_price'] === '1' ? 'none' : 'block' ?>;">
+            <div class="cfg-card-section" style="border-left:3px solid #2271b1;">
+                <h4>Results Screen — Price Hidden</h4>
+                <p class="cfg-desc" style="margin:0 0 12px;">This is a completely separate screen shown instead of the price. Encourage the patient to book a consultation.</p>
+                <div class="cfg-grid">
+                    <div class="cfg-field cfg-full"><label>Heading</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_title]" value="<?= esc_attr( $s['imp_no_price_title'] ) ?>"/></div>
+                    <div class="cfg-field cfg-full"><label>Body Text</label><textarea name="<?= CFG_OPTION ?>[imp_no_price_subtitle]" rows="3"><?= esc_textarea( $s['imp_no_price_subtitle'] ) ?></textarea></div>
+                    <div class="cfg-field"><label>Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_btn]" value="<?= esc_attr( $s['imp_no_price_btn'] ) ?>"/></div>
+                </div>
+                <p class="cfg-desc" style="margin-top:8px;">The button links to the Success Redirect URL set above. Make sure to set that.</p>
             </div>
         </div>
 
@@ -1294,30 +1341,36 @@ function cfg_settings_page() {
 
         <div class="cfg-card-section">
             <h4>Question 1 — Situation</h4>
-            <p class="cfg-desc" style="margin:0 0 12px;">You can add up to 6 options. Leave an option blank to hide it. All options lead to question 2.</p>
-            <div class="cfg-grid">
+            <p class="cfg-desc" style="margin:0 0 12px;">Add or remove options freely. All options lead to question 2. Drag to reorder (coming soon).</p>
+            <div class="cfg-grid" style="margin-bottom:10px;">
                 <div class="cfg-field cfg-full"><label>Question Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_q1_title]" value="<?= esc_attr( $s['imp_q1_title'] ) ?>"/></div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;" id="imp-q1-options">
-            <?php for ( $i = 1; $i <= 6; $i++ ): $val = $s[ 'imp_q1_opt' . $i ] ?? ''; ?>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:11px;font-weight:600;color:#646970;min-width:54px;text-align:right;">Option <?= $i ?></span>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_q1_opt<?= $i ?>]" value="<?= esc_attr( $val ) ?>" placeholder="<?= $i <= 3 ? 'Required' : 'Leave blank to hide' ?>" style="flex:1;"/>
-                </div>
-            <?php endfor; ?>
-            </div>
-            <p class="cfg-desc" style="margin-top:8px;">Options 1–3 are the defaults. Options 4–6 are extras — leave blank to hide them.</p>
+            <div id="imp-q1-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+            <button type="button" onclick="impAddQ1()" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#f0f6fc;border:1px dashed #2271b1;color:#2271b1;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
+                <span style="font-size:16px;line-height:1;">+</span> Add Option
+            </button>
+            <!-- Hidden: PHP-generated JSON of current Q1 opts for JS to hydrate -->
+            <input type="hidden" id="imp-q1-json" value="<?= esc_attr( wp_json_encode( array_values( (array)$s['imp_q1_opts'] ) ) ) ?>"/>
         </div>
 
         <div class="cfg-card-section">
             <h4>Question 2 — How Many Teeth</h4>
-            <p class="cfg-desc" style="margin:0 0 12px;">Each option is tied to a specific price range. You can edit the label text but the pricing logic stays the same.</p>
-            <div class="cfg-grid">
+            <p class="cfg-desc" style="margin:0 0 12px;">For each option, choose the price tier it triggers. You control the label and the pricing logic.</p>
+            <div class="cfg-grid" style="margin-bottom:10px;">
                 <div class="cfg-field cfg-full"><label>Question Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_q2_title]" value="<?= esc_attr( $s['imp_q2_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 1 <span class="cfg-badge">→ single price</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q2_opt1]" value="<?= esc_attr( $s['imp_q2_opt1'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 2 <span class="cfg-badge">→ multi price</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q2_opt2]" value="<?= esc_attr( $s['imp_q2_opt2'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 3 — Full arch <span class="cfg-badge">→ arch price</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q2_opt3]" value="<?= esc_attr( $s['imp_q2_opt3'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 4 — 5+ teeth <span class="cfg-badge">→ multi price</span> <span style="color:#646970;font-weight:400;font-size:11px;">(requires toggle above)</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q2_opt4]" value="<?= esc_attr( $s['imp_q2_opt4'] ) ?>"/></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;padding:4px 0;margin-bottom:4px;">
+                <span style="font-size:11px;font-weight:700;color:#1d2327;padding-left:4px;">Option Label</span>
+                <span style="font-size:11px;font-weight:700;color:#1d2327;min-width:170px;text-align:center;">Price Tier</span>
+            </div>
+            <div id="imp-q2-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+            <button type="button" onclick="impAddQ2()" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#f0f6fc;border:1px dashed #2271b1;color:#2271b1;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
+                <span style="font-size:16px;line-height:1;">+</span> Add Option
+            </button>
+            <!-- Hidden: PHP-generated JSON of current Q2 opts for JS to hydrate -->
+            <input type="hidden" id="imp-q2-json" value="<?= esc_attr( wp_json_encode( array_values( (array)$s['imp_q2_opts'] ) ) ) ?>"/>
+            <div style="margin-top:12px;padding:10px 12px;background:#f0f6fc;border-radius:6px;">
+                <p style="font-size:11.5px;color:#2271b1;margin:0;"><strong>Price tiers:</strong> Single = 1 implant price &nbsp;|&nbsp; Multiple = 2–4+ teeth price &nbsp;|&nbsp; Full Arch = arch price. Arch options are hidden if the Full Arch toggle is off.</p>
             </div>
         </div>
 
@@ -1342,15 +1395,10 @@ function cfg_settings_page() {
         </div>
 
         <div class="cfg-card-section">
-            <h4>Results Screen</h4>
-            <div class="cfg-grid">
-                <div class="cfg-field"><label>Title</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_title]" value="<?= esc_attr( $s['imp_result_title'] ) ?>"/></div>
-                <div class="cfg-field cfg-full"><label>Subtitle</label><textarea name="<?= CFG_OPTION ?>[imp_result_subtitle]"><?= esc_textarea( $s['imp_result_subtitle'] ) ?></textarea></div>
-                <div class="cfg-field cfg-full"><label>Financing / Payment Note <span class="cfg-badge">shown when financing toggle is on</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_financing_text]" value="<?= esc_attr( $s['imp_financing_text'] ) ?>"/></div>
-                <div class="cfg-field cfg-full">
-                    <label>Disclaimer <span style="font-weight:400;color:#646970;">(shown in small text below — protects against holding you to the estimate)</span></label>
-                    <textarea name="<?= CFG_OPTION ?>[imp_disclaimer]"><?= esc_textarea( $s['imp_disclaimer'] ) ?></textarea>
-                </div>
+            <h4>Disclaimer <span style="font-weight:400;color:#646970;">(shown on results screen regardless of price toggle)</span></h4>
+            <div class="cfg-field cfg-full">
+                <textarea name="<?= CFG_OPTION ?>[imp_disclaimer]"><?= esc_textarea( $s['imp_disclaimer'] ) ?></textarea>
+                <span class="cfg-desc">Shown in small text below the estimate. Protects against patients holding you to the estimate.</span>
             </div>
         </div>
 
@@ -1370,6 +1418,7 @@ function cfg_settings_page() {
     </div>
 
     <script>
+    /* ── Tab navigation ── */
     function cfgTab(el, id) {
         document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
@@ -1381,6 +1430,79 @@ function cfg_settings_page() {
     }
     function syncPicker(pickerId, val) {
         if (/^#[0-9a-f]{6}$/i.test(val)) { var el = document.getElementById(pickerId); if (el) el.value = val; }
+    }
+
+    /* ── Dynamic Q1 (situation) options ── */
+    var impQ1List = document.getElementById('imp-q1-list');
+    var impQ1Data = JSON.parse(document.getElementById('imp-q1-json').value || '[]');
+
+    function impRenderQ1() {
+        impQ1List.innerHTML = '';
+        impQ1Data.forEach(function(label, i) { impQ1Row(i, label); });
+    }
+    function impQ1Row(i, label) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        row.innerHTML =
+            '<span style="font-size:11px;font-weight:600;color:#646970;min-width:20px;">' + (i+1) + '.</span>'
+          + '<input type="text" name="<?= CFG_OPTION ?>[imp_q1_opts][]" value="' + escAttr(label) + '" placeholder="Option label" style="flex:1;" oninput="impQ1Data[' + i + ']=this.value"/>'
+          + '<button type="button" onclick="impRemoveQ1(' + i + ')" title="Remove" style="background:none;border:none;cursor:pointer;color:#b32d2e;font-size:18px;line-height:1;padding:0 4px;">&times;</button>';
+        impQ1List.appendChild(row);
+    }
+    function impAddQ1() {
+        impQ1Data.push('');
+        impRenderQ1();
+        impQ1List.querySelectorAll('input[type=text]')[impQ1Data.length - 1].focus();
+    }
+    function impRemoveQ1(i) {
+        if (impQ1Data.length <= 1) return;
+        impQ1Data.splice(i, 1);
+        impRenderQ1();
+    }
+    impRenderQ1();
+
+    /* ── Dynamic Q2 (count) options ── */
+    var impQ2List = document.getElementById('imp-q2-list');
+    var impQ2Data = JSON.parse(document.getElementById('imp-q2-json').value || '[]');
+    var impQ2Tiers = {
+        single: 'Single tooth price',
+        multi:  'Multiple teeth price',
+        arch:   'Full arch price'
+    };
+
+    function impRenderQ2() {
+        impQ2List.innerHTML = '';
+        impQ2Data.forEach(function(item, i) { impQ2Row(i, item.label, item.tier); });
+    }
+    function impQ2Row(i, label, tier) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;';
+        var sel = '<select name="<?= CFG_OPTION ?>[imp_q2_opts][' + i + '][tier]" onchange="impQ2Data[' + i + '].tier=this.value" style="min-width:160px;">';
+        Object.keys(impQ2Tiers).forEach(function(t) {
+            sel += '<option value="' + t + '"' + (tier === t ? ' selected' : '') + '>' + impQ2Tiers[t] + '</option>';
+        });
+        sel += '</select>';
+        row.innerHTML =
+            '<input type="text" name="<?= CFG_OPTION ?>[imp_q2_opts][' + i + '][label]" value="' + escAttr(label) + '" placeholder="Option label" oninput="impQ2Data[' + i + '].label=this.value"/>'
+          + sel
+          + '<button type="button" onclick="impRemoveQ2(' + i + ')" title="Remove" style="background:none;border:none;cursor:pointer;color:#b32d2e;font-size:18px;line-height:1;padding:0 4px;">&times;</button>';
+        impQ2List.appendChild(row);
+    }
+    function impAddQ2() {
+        impQ2Data.push({ label: '', tier: 'multi' });
+        impRenderQ2();
+        impQ2List.querySelectorAll('input[type=text]')[impQ2Data.length - 1].focus();
+    }
+    function impRemoveQ2(i) {
+        if (impQ2Data.length <= 1) return;
+        impQ2Data.splice(i, 1);
+        impRenderQ2();
+    }
+    impRenderQ2();
+
+    /* ── Utility ── */
+    function escAttr(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
     </script>
     <?php
@@ -2726,8 +2848,9 @@ function cfg_implant_shortcode() {
     $pfg_hsl          = '0 0% 100%';
     $hide_header      = $s['imp_hide_header'] === '1';
     $show_price       = $s['imp_show_price']  !== '0';
-    $price_hidden_msg = $s['imp_price_hidden_msg'] ?? 'Your personalised estimate is ready. Book your free consultation to review it with our team.';
-    $show_q2opt4      = $s['imp_q2_opt4_enabled'] === '1' && ! empty( $s['imp_q2_opt4'] );
+    $no_price_title   = $s['imp_no_price_title']    ?? 'Your Estimate Is Ready';
+    $no_price_sub     = $s['imp_no_price_subtitle'] ?? 'Book a free consultation and our team will walk you through your personalised treatment options and costs.';
+    $no_price_btn     = $s['imp_no_price_btn']      ?? 'Book My Free Consultation';
     $prices_json = wp_json_encode([
         'single_min' => (int)($s['imp_single_min'] ?? 3000),
         'single_max' => (int)($s['imp_single_max'] ?? 6000),
@@ -2775,7 +2898,10 @@ function cfg_implant_shortcode() {
 ?><style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
 <?php if($hide_header): ?>
-header,#site-header,.site-header,#masthead,.navbar,.nav-bar,nav.main-nav,#main-nav{display:none!important;}
+header,#header,.header,#site-header,.site-header,#masthead,.masthead,
+.navbar,.nav-bar,.navigation,nav.main-nav,#main-nav,.main-navigation,
+#page-header,.page-header,.header-wrapper,.site-header-wrapper,
+.header-container,.top-header{display:none!important;}
 <?php endif; ?>
 #<?= $uid ?>-app{--background:40 20% 97%;--foreground:200 10% 20%;--card:0 0% 100%;--card-foreground:200 10% 20%;--primary:<?= esc_attr($primary_hsl) ?>;--primary-foreground:<?= esc_attr($pfg_hsl) ?>;--secondary:40 18% 93%;--muted:40 12% 94%;--muted-foreground:200 8% 46%;--accent:100 10% 90%;--accent-foreground:100 14% 38%;--border:40 14% 88%;font-family:Inter,sans-serif;background-color:hsl(var(--background));color:hsl(var(--foreground));line-height:1.5;-webkit-font-smoothing:antialiased;margin:0 auto;}
 #<?= $uid ?>-app *,#<?= $uid ?>-app *::before,#<?= $uid ?>-app *::after{box-sizing:border-box;border-width:0;border-style:solid;border-color:hsl(var(--border));}
@@ -2911,12 +3037,11 @@ header,#site-header,.site-header,#masthead,.navbar,.nav-bar,nav.main-nav,#main-n
 
 <!-- Q1: SITUATION -->
 <?php
-$q1_vals = [ 'opt1' => 'missing', 'opt2' => 'extraction', 'opt3' => 'denture', 'opt4' => 'crown', 'opt5' => 'other1', 'opt6' => 'other2' ];
 $q1_opts_html = '';
-foreach ( $q1_vals as $opt_key => $val ) {
-    $label = trim( $s[ 'imp_q1_' . $opt_key ] ?? '' );
+foreach ( (array)$s['imp_q1_opts'] as $idx => $label ) {
+    $label = trim( (string)$label );
     if ( $label !== '' ) {
-        $q1_opts_html .= $opt( 'q1', $val, $label, 'q2' );
+        $q1_opts_html .= $opt( 'q1', 'q1_' . $idx, $label, 'q2' );
     }
 }
 echo $qpanel( 'q1', $s['imp_q1_title'], 'Select the option that best describes your situation.', $q1_opts_html );
@@ -2924,11 +3049,17 @@ echo $qpanel( 'q1', $s['imp_q1_title'], 'Select the option that best describes y
 
 <!-- Q2: COUNT -->
 <?php
-$q2_opts = $opt( 'q2', 'single', $s['imp_q2_opt1'], 'q3' )
-         . $opt( 'q2', 'multi',  $s['imp_q2_opt2'], 'q3' );
-if ( $show_arch ) $q2_opts .= $opt( 'q2', 'arch',      $s['imp_q2_opt3'], 'q3' );
-if ( $show_q2opt4 ) $q2_opts .= $opt( 'q2', 'multi',   $s['imp_q2_opt4'], 'q3' ); // 5+ maps to multi price
-echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your personalised range.", $q2_opts );
+$q2_opts_html = '';
+foreach ( (array)$s['imp_q2_opts'] as $item ) {
+    $lbl  = trim( (string)( $item['label'] ?? '' ) );
+    $tier = $item['tier'] ?? 'multi';
+    // Hide arch options when full arch is turned off
+    if ( $tier === 'arch' && ! $show_arch ) continue;
+    if ( $lbl !== '' ) {
+        $q2_opts_html .= $opt( 'q2', $tier, $lbl, 'q3' );
+    }
+}
+echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your personalised range.", $q2_opts_html );
 ?>
 
 <!-- Q3: BONE GRAFT -->
@@ -3037,15 +3168,14 @@ echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your person
           Your Estimate Is Ready
         </div>
       </div>
+
+      <?php if ( $show_price ): ?>
+      <!-- ── PRICE SHOWN ── -->
       <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
         <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
         <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;margin-bottom:1.5rem;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
-        <?php if ( $show_price ): ?>
         <p id="<?= $uid ?>-result-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
         <p id="<?= $uid ?>-result-suffix" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"></p>
-        <?php else: ?>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground));font-size:1rem;line-height:1.6;margin-bottom:2rem;padding:1.5rem;background:hsl(var(--accent)/.4);border-radius:.75rem;"><?= esc_html( $price_hidden_msg ) ?></p>
-        <?php endif; ?>
         <div style="display:flex;flex-direction:column;gap:.625rem;max-width:18rem;margin:0 auto 1.5rem;text-align:left;">
           <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Included:</p>
           <?php foreach(['Implant surgery','Abutment','Final crown'] as $item): ?>
@@ -3072,12 +3202,33 @@ echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your person
       <?php endif; ?>
       <?php if ( ! empty( $s['imp_success_url'] ) ): ?>
       <div style="display:flex;justify-content:center;">
-        <a href="<?= esc_url( $s['imp_success_url'] ) ?>" style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2.5rem;border-radius:.5rem;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;text-decoration:none;transition:box-shadow .2s;">
+        <a href="<?= esc_url( $s['imp_success_url'] ) ?>" class="imp-cta-btn" style="text-decoration:none;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
           Book My Free Consultation
         </a>
       </div>
       <?php endif; ?>
+
+      <?php else: ?>
+      <!-- ── PRICE HIDDEN — fully separate message ── -->
+      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
+        <div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:hsl(var(--primary)/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,4vw,2rem);line-height:1.25;margin:0 0 1rem;"><?= esc_html( $no_price_title ) ?></h2>
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;margin:0 auto 2rem;max-width:26rem;"><?= esc_html( $no_price_sub ) ?></p>
+        <?php $np_href = ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '#'; ?>
+        <a href="<?= $np_href ?>" class="imp-cta-btn" style="text-decoration:none;margin:0 auto;">
+          <?= esc_html( $no_price_btn ) ?>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+      </div>
+      <?php if ( ! empty( $s['imp_disclaimer'] ) ): ?>
+      <div style="text-align:center;">
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;"><?= esc_html( $s['imp_disclaimer'] ) ?></p>
+      </div>
+      <?php endif; ?>
+      <?php endif; // end show_price toggle ?>
     </div>
   </main>
 </div>
