@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.1
+ * Version:     1.7.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -168,19 +168,69 @@ function cfg_defaults() {
         'imp_intro_btn'        => 'Get My Estimate',
         'imp_router_title'     => 'What are you looking to replace?',
         'imp_router_sub'       => 'Select the option that best describes your situation.',
+        'imp_router_opt1'      => 'One missing tooth',       'imp_router_opt1_sub' => 'Replace a single tooth with an implant',
+        'imp_router_opt2'      => 'Several missing teeth',   'imp_router_opt2_sub' => 'Replace 2 to 5 individual teeth',
+        'imp_router_opt3'      => 'A denture or most/all teeth in an arch', 'imp_router_opt3_sub' => 'Full-arch or All-on-4 / All-on-6',
         'imp_a1_title'         => 'Where is the tooth located?',
+        'imp_a1_opt1'          => 'Front',         'imp_a1_opt1_sub' => 'Visible when smiling',
+        'imp_a1_opt2'          => 'Back',           'imp_a1_opt2_sub' => 'Chewing tooth (molar or premolar)',
+        'imp_a1_opt3'          => 'Not sure',       'imp_a1_opt3_sub' => '',
         'imp_a2_title'         => 'How long has the tooth been missing?',
+        'imp_a2_opt1'          => 'Less than 6 months',
+        'imp_a2_opt2'          => '6–12 months',
+        'imp_a2_opt3'          => '1–3 years',
+        'imp_a2_opt4'          => '3+ years',
+        'imp_a2_opt5'          => 'Not sure',
         'imp_a3_title'         => 'Has a dentist mentioned bone loss or the need for bone grafting?',
+        'imp_a3_opt1'          => 'Yes',
+        'imp_a3_opt2'          => 'No',
+        'imp_a3_opt3'          => 'Not sure',
         'imp_a4_title'         => 'What best describes your situation?',
+        'imp_a4_opt1'          => 'Tooth already missing',
+        'imp_a4_opt2'          => 'Tooth needs to be removed',
+        'imp_a4_opt3'          => 'Replacing a bridge or crown',
+        'imp_a4_opt4'          => 'Not sure',
         'imp_m1_title'         => 'How many teeth are you looking to replace?',
+        'imp_m1_opt1'          => '2 teeth',
+        'imp_m1_opt2'          => '3 teeth',
+        'imp_m1_opt3'          => '4 teeth',
+        'imp_m1_opt4'          => '5+ teeth',
         'imp_m2_title'         => 'Where are the teeth located?',
+        'imp_m2_opt1'          => 'Front',          'imp_m2_opt1_sub' => 'Visible when smiling',
+        'imp_m2_opt2'          => 'Back',            'imp_m2_opt2_sub' => 'Chewing teeth',
+        'imp_m2_opt3'          => 'Both front and back', 'imp_m2_opt3_sub' => '',
+        'imp_m2_opt4'          => 'Not sure',        'imp_m2_opt4_sub' => '',
         'imp_m3_title'         => 'How long have the teeth been missing?',
+        'imp_m3_opt1'          => 'Less than 6 months',
+        'imp_m3_opt2'          => '6–12 months',
+        'imp_m3_opt3'          => '1–3 years',
+        'imp_m3_opt4'          => '3+ years',
+        'imp_m3_opt5'          => 'Not sure',
         'imp_m4_title'         => 'Has a dentist mentioned bone loss or the need for bone grafting?',
+        'imp_m4_opt1'          => 'Yes',
+        'imp_m4_opt2'          => 'No',
+        'imp_m4_opt3'          => 'Not sure',
         'imp_m5_title'         => 'What best describes your situation?',
+        'imp_m5_opt1'          => 'Teeth already missing',
+        'imp_m5_opt2'          => 'Some teeth need to be removed',
+        'imp_m5_opt3'          => 'Replacing bridges or crowns',
+        'imp_m5_opt4'          => 'Not sure',
         'imp_b1_title'         => 'Which arch are you looking to replace?',
+        'imp_b1_opt1'          => 'Upper',  'imp_b1_opt1_sub' => 'Top teeth',
+        'imp_b1_opt2'          => 'Lower',  'imp_b1_opt2_sub' => 'Bottom teeth',
+        'imp_b1_opt3'          => 'Both',   'imp_b1_opt3_sub' => 'Full mouth restoration',
         'imp_b2_title'         => 'What best describes your current situation?',
+        'imp_b2_opt1'          => 'Wearing a denture',
+        'imp_b2_opt2'          => 'Multiple failing teeth',
+        'imp_b2_opt3'          => 'Teeth beyond repair',
+        'imp_b2_opt4'          => 'Not sure',
         'imp_b3_title'         => 'How long have you had missing or failing teeth?',
+        'imp_b3_opt1'          => 'Less than 1 year',
+        'imp_b3_opt2'          => '1–5 years',
+        'imp_b3_opt3'          => '5+ years',
         'imp_ins_title'        => 'Do you have dental insurance?',
+        'imp_ins_opt1'         => 'Yes (I have coverage)',
+        'imp_ins_opt2'         => 'No',
         'imp_result_single_suffix'   => 'for a single dental implant',
         'imp_result_multiple_suffix' => 'Based on number of teeth at the per-implant rate',
         'imp_result_fullarch_suffix' => 'per arch',
@@ -1213,6 +1263,14 @@ function cfg_settings_page() {
     .imp-path-body .cfg-grid{gap:12px 20px;}
     .imp-q-label{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
     .imp-result-suffix-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+    .imp-q-block{background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+    .imp-q-title-input{width:100%;padding:7px 10px;border:1px solid #8c8f94;border-radius:4px;font-size:13px;margin-bottom:10px;box-sizing:border-box;}
+    .imp-opts-grid{display:flex;flex-direction:column;gap:6px;}
+    .imp-opt-row{display:flex;align-items:center;gap:8px;}
+    .imp-opt-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#e5e7eb;font-size:11px;font-weight:700;color:#6b7280;display:flex;align-items:center;justify-content:center;}
+    .imp-opt-row input[type=text]{flex:1;padding:6px 9px;border:1px solid #d1d5db;border-radius:4px;font-size:12.5px;min-width:0;}
+    .imp-opt-row input[type=text]:focus{border-color:#2271b1;outline:none;box-shadow:0 0 0 1px #2271b1;}
+    .imp-opt-sub{color:#6b7280!important;font-style:italic;}
     </style>
 
         <!-- ════════════════════════════════════════════════════ -->
@@ -1362,18 +1420,26 @@ function cfg_settings_page() {
             <div class="imp-path-header" onclick="impTogglePath(this)">
                 <span class="imp-path-dot" style="background:#6b7280;"></span>
                 <span class="imp-path-title">Router Question</span>
-                <span class="imp-path-count">1 question</span>
+                <span class="imp-path-count">1 question · 3 options</span>
                 <span class="imp-path-chevron">▼</span>
             </div>
             <div class="imp-path-body">
-                <div class="cfg-grid">
+                <div class="cfg-grid" style="margin-bottom:14px;">
                     <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">Router Title</div>
+                        <div class="imp-q-label">Question Title</div>
                         <input type="text" name="<?= CFG_OPTION ?>[imp_router_title]" value="<?= esc_attr( $s['imp_router_title'] ) ?>"/>
                     </div>
                     <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">Router Sub-label</div>
+                        <div class="imp-q-label">Sub-label</div>
                         <input type="text" name="<?= CFG_OPTION ?>[imp_router_sub]" value="<?= esc_attr( $s['imp_router_sub'] ) ?>"/>
+                    </div>
+                </div>
+                <div style="border-top:1px solid #e5e7eb;padding-top:12px;">
+                    <div class="imp-q-label" style="margin-bottom:10px;color:#6b7280;">Answer Options</div>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt1]" value="<?= esc_attr( $s['imp_router_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt1_sub]" value="<?= esc_attr( $s['imp_router_opt1_sub'] ) ?>" placeholder="Sub-label (optional)" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt2]" value="<?= esc_attr( $s['imp_router_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt2_sub]" value="<?= esc_attr( $s['imp_router_opt2_sub'] ) ?>" placeholder="Sub-label (optional)" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt3]" value="<?= esc_attr( $s['imp_router_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt3_sub]" value="<?= esc_attr( $s['imp_router_opt3_sub'] ) ?>" placeholder="Sub-label (optional)" class="imp-opt-sub"/></div>
                     </div>
                 </div>
             </div>
@@ -1388,24 +1454,50 @@ function cfg_settings_page() {
                 <span class="imp-path-chevron">▼</span>
             </div>
             <div class="imp-path-body">
-                <div class="cfg-grid">
-                    <div class="cfg-field">
-                        <div class="imp-q-label">A1 — Tooth Location</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_a1_title]" value="<?= esc_attr( $s['imp_a1_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">A2 — How Long Missing</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_a2_title]" value="<?= esc_attr( $s['imp_a2_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">A3 — Bone Graft</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_a3_title]" value="<?= esc_attr( $s['imp_a3_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">A4 — Situation</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_a4_title]" value="<?= esc_attr( $s['imp_a4_title'] ) ?>"/>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#3b82f6;">A1 — Tooth Location</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_a1_title]" value="<?= esc_attr( $s['imp_a1_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt1]" value="<?= esc_attr( $s['imp_a1_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt1_sub]" value="<?= esc_attr( $s['imp_a1_opt1_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt2]" value="<?= esc_attr( $s['imp_a1_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt2_sub]" value="<?= esc_attr( $s['imp_a1_opt2_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt3]" value="<?= esc_attr( $s['imp_a1_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt3_sub]" value="<?= esc_attr( $s['imp_a1_opt3_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
                     </div>
                 </div>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#3b82f6;">A2 — How Long Missing</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_a2_title]" value="<?= esc_attr( $s['imp_a2_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt1]" value="<?= esc_attr( $s['imp_a2_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt2]" value="<?= esc_attr( $s['imp_a2_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt3]" value="<?= esc_attr( $s['imp_a2_opt3'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt4]" value="<?= esc_attr( $s['imp_a2_opt4'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">5</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt5]" value="<?= esc_attr( $s['imp_a2_opt5'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#3b82f6;">A3 — Bone Graft</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_a3_title]" value="<?= esc_attr( $s['imp_a3_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a3_opt1]" value="<?= esc_attr( $s['imp_a3_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a3_opt2]" value="<?= esc_attr( $s['imp_a3_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a3_opt3]" value="<?= esc_attr( $s['imp_a3_opt3'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
+                <div class="imp-q-block" style="margin-bottom:0;">
+                    <div class="imp-q-label" style="color:#3b82f6;">A4 — Situation</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_a4_title]" value="<?= esc_attr( $s['imp_a4_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt1]" value="<?= esc_attr( $s['imp_a4_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt2]" value="<?= esc_attr( $s['imp_a4_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt3]" value="<?= esc_attr( $s['imp_a4_opt3'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt4]" value="<?= esc_attr( $s['imp_a4_opt4'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1418,28 +1510,62 @@ function cfg_settings_page() {
                 <span class="imp-path-chevron">▼</span>
             </div>
             <div class="imp-path-body">
-                <div class="cfg-grid">
-                    <div class="cfg-field">
-                        <div class="imp-q-label">M1 — How Many Teeth</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_m1_title]" value="<?= esc_attr( $s['imp_m1_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">M2 — Teeth Location</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_m2_title]" value="<?= esc_attr( $s['imp_m2_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">M3 — How Long Missing</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_m3_title]" value="<?= esc_attr( $s['imp_m3_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">M4 — Bone Graft</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_m4_title]" value="<?= esc_attr( $s['imp_m4_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">M5 — Situation</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_m5_title]" value="<?= esc_attr( $s['imp_m5_title'] ) ?>"/>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#8b5cf6;">M1 — How Many Teeth</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_m1_title]" value="<?= esc_attr( $s['imp_m1_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt1]" value="<?= esc_attr( $s['imp_m1_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt2]" value="<?= esc_attr( $s['imp_m1_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt3]" value="<?= esc_attr( $s['imp_m1_opt3'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt4]" value="<?= esc_attr( $s['imp_m1_opt4'] ) ?>" placeholder="Label"/></div>
                     </div>
                 </div>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#8b5cf6;">M2 — Teeth Location</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_m2_title]" value="<?= esc_attr( $s['imp_m2_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt1]" value="<?= esc_attr( $s['imp_m2_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt1_sub]" value="<?= esc_attr( $s['imp_m2_opt1_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt2]" value="<?= esc_attr( $s['imp_m2_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt2_sub]" value="<?= esc_attr( $s['imp_m2_opt2_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt3]" value="<?= esc_attr( $s['imp_m2_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt3_sub]" value="<?= esc_attr( $s['imp_m2_opt3_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt4]" value="<?= esc_attr( $s['imp_m2_opt4'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt4_sub]" value="<?= esc_attr( $s['imp_m2_opt4_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                    </div>
+                </div>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#8b5cf6;">M3 — How Long Missing</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_m3_title]" value="<?= esc_attr( $s['imp_m3_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt1]" value="<?= esc_attr( $s['imp_m3_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt2]" value="<?= esc_attr( $s['imp_m3_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt3]" value="<?= esc_attr( $s['imp_m3_opt3'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt4]" value="<?= esc_attr( $s['imp_m3_opt4'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">5</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt5]" value="<?= esc_attr( $s['imp_m3_opt5'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#8b5cf6;">M4 — Bone Graft</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_m4_title]" value="<?= esc_attr( $s['imp_m4_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m4_opt1]" value="<?= esc_attr( $s['imp_m4_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m4_opt2]" value="<?= esc_attr( $s['imp_m4_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m4_opt3]" value="<?= esc_attr( $s['imp_m4_opt3'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
+                <div class="imp-q-block" style="margin-bottom:0;">
+                    <div class="imp-q-label" style="color:#8b5cf6;">M5 — Situation</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_m5_title]" value="<?= esc_attr( $s['imp_m5_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt1]" value="<?= esc_attr( $s['imp_m5_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt2]" value="<?= esc_attr( $s['imp_m5_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt3]" value="<?= esc_attr( $s['imp_m5_opt3'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt4]" value="<?= esc_attr( $s['imp_m5_opt4'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1452,20 +1578,38 @@ function cfg_settings_page() {
                 <span class="imp-path-chevron">▼</span>
             </div>
             <div class="imp-path-body">
-                <div class="cfg-grid">
-                    <div class="cfg-field">
-                        <div class="imp-q-label">B1 — Which Arch</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_b1_title]" value="<?= esc_attr( $s['imp_b1_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field">
-                        <div class="imp-q-label">B2 — Current Situation</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_b2_title]" value="<?= esc_attr( $s['imp_b2_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">B3 — Duration</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_b3_title]" value="<?= esc_attr( $s['imp_b3_title'] ) ?>"/>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#10b981;">B1 — Which Arch</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_b1_title]" value="<?= esc_attr( $s['imp_b1_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt1]" value="<?= esc_attr( $s['imp_b1_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt1_sub]" value="<?= esc_attr( $s['imp_b1_opt1_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt2]" value="<?= esc_attr( $s['imp_b1_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt2_sub]" value="<?= esc_attr( $s['imp_b1_opt2_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt3]" value="<?= esc_attr( $s['imp_b1_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt3_sub]" value="<?= esc_attr( $s['imp_b1_opt3_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
                     </div>
                 </div>
+
+                <div class="imp-q-block">
+                    <div class="imp-q-label" style="color:#10b981;">B2 — Current Situation</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_b2_title]" value="<?= esc_attr( $s['imp_b2_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt1]" value="<?= esc_attr( $s['imp_b2_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt2]" value="<?= esc_attr( $s['imp_b2_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt3]" value="<?= esc_attr( $s['imp_b2_opt3'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt4]" value="<?= esc_attr( $s['imp_b2_opt4'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
+                <div class="imp-q-block" style="margin-bottom:0;">
+                    <div class="imp-q-label" style="color:#10b981;">B3 — Duration</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_b3_title]" value="<?= esc_attr( $s['imp_b3_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_b3_opt1]" value="<?= esc_attr( $s['imp_b3_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_b3_opt2]" value="<?= esc_attr( $s['imp_b3_opt2'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_b3_opt3]" value="<?= esc_attr( $s['imp_b3_opt3'] ) ?>" placeholder="Label"/></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1478,12 +1622,16 @@ function cfg_settings_page() {
                 <span class="imp-path-chevron">▼</span>
             </div>
             <div class="imp-path-body">
-                <div class="cfg-grid">
-                    <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">Insurance Question Title</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_ins_title]" value="<?= esc_attr( $s['imp_ins_title'] ) ?>"/>
+
+                <div class="imp-q-block" style="margin-bottom:0;">
+                    <div class="imp-q-label" style="color:#f59e0b;">Question Title</div>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_ins_title]" value="<?= esc_attr( $s['imp_ins_title'] ) ?>" class="imp-q-title-input"/>
+                    <div class="imp-opts-grid">
+                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_ins_opt1]" value="<?= esc_attr( $s['imp_ins_opt1'] ) ?>" placeholder="Label"/></div>
+                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_ins_opt2]" value="<?= esc_attr( $s['imp_ins_opt2'] ) ?>" placeholder="Label"/></div>
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -3362,103 +3510,103 @@ $ins_next = $show_insurance ? 'ins' : 'summary';
 
 <!-- ROUTER -->
 <?php
-$router_opts = $opt( 'router', 'single',   'One missing tooth',                    'a1', 'Replace a single tooth with an implant' )
-             . $opt( 'router', 'multiple',  'Several missing teeth',                'm1', 'Replace 2 to 5 individual teeth' );
+$router_opts = $opt( 'router', 'single',   $s['imp_router_opt1'], 'a1', $s['imp_router_opt1_sub'] )
+             . $opt( 'router', 'multiple',  $s['imp_router_opt2'], 'm1', $s['imp_router_opt2_sub'] );
 if ( $show_arch ) {
-    $router_opts .= $opt( 'router', 'fullarch', 'A denture or most/all teeth in an arch', 'b1', 'Full-arch or All-on-4 / All-on-6' );
+    $router_opts .= $opt( 'router', 'fullarch', $s['imp_router_opt3'], 'b1', $s['imp_router_opt3_sub'] );
 }
 echo $qpanel( 'router', $s['imp_router_title'], $s['imp_router_sub'], $router_opts );
 ?>
 
 <!-- SINGLE-TOOTH FLOW -->
 <?php echo $qpanel( 'a1', $s['imp_a1_title'], 'Location affects restoration complexity and the materials used.',
-    $opt('toothLocation','front',    'Front',    'a2', 'Visible when smiling')
-  . $opt('toothLocation','back',     'Back',     'a2', 'Chewing tooth (molar or premolar)')
-  . $opt('toothLocation','not-sure', 'Not sure', 'a2')
+    $opt('toothLocation','front',    $s['imp_a1_opt1'], 'a2', $s['imp_a1_opt1_sub'])
+  . $opt('toothLocation','back',     $s['imp_a1_opt2'], 'a2', $s['imp_a1_opt2_sub'])
+  . $opt('toothLocation','not-sure', $s['imp_a1_opt3'], 'a2', $s['imp_a1_opt3_sub'])
 ); ?>
 
 <?php echo $qpanel( 'a2', $s['imp_a2_title'], 'This helps us assess potential bone changes at the site.',
-    $opt('timeMissing','under-6mo', 'Less than 6 months', 'a3')
-  . $opt('timeMissing','6-12mo',   '6–12 months',        'a3')
-  . $opt('timeMissing','1-3yr',    '1–3 years',          'a3')
-  . $opt('timeMissing','3yr+',     '3+ years',           'a3')
-  . $opt('timeMissing','not-sure', 'Not sure',           'a3')
+    $opt('timeMissing','under-6mo', $s['imp_a2_opt1'], 'a3')
+  . $opt('timeMissing','6-12mo',   $s['imp_a2_opt2'], 'a3')
+  . $opt('timeMissing','1-3yr',    $s['imp_a2_opt3'], 'a3')
+  . $opt('timeMissing','3yr+',     $s['imp_a2_opt4'], 'a3')
+  . $opt('timeMissing','not-sure', $s['imp_a2_opt5'], 'a3')
 ); ?>
 
 <?php echo $qpanel( 'a3', $s['imp_a3_title'], 'This can affect your treatment plan and overall timeline.',
-    $opt('boneGraft','yes',      'Yes',      'a4')
-  . $opt('boneGraft','no',       'No',       'a4')
-  . $opt('boneGraft','not-sure', 'Not sure', 'a4')
+    $opt('boneGraft','yes',      $s['imp_a3_opt1'], 'a4')
+  . $opt('boneGraft','no',       $s['imp_a3_opt2'], 'a4')
+  . $opt('boneGraft','not-sure', $s['imp_a3_opt3'], 'a4')
 ); ?>
 
 <?php echo $qpanel( 'a4', $s['imp_a4_title'], 'This helps us tailor your estimate to your current needs.',
-    $opt('situationSingle','already-missing', 'Tooth already missing',       $ins_next)
-  . $opt('situationSingle','needs-removal',   'Tooth needs to be removed',   $ins_next)
-  . $opt('situationSingle','bridge-crown',    'Replacing a bridge or crown', $ins_next)
-  . $opt('situationSingle','not-sure',        'Not sure',                    $ins_next)
+    $opt('situationSingle','already-missing', $s['imp_a4_opt1'], $ins_next)
+  . $opt('situationSingle','needs-removal',   $s['imp_a4_opt2'], $ins_next)
+  . $opt('situationSingle','bridge-crown',    $s['imp_a4_opt3'], $ins_next)
+  . $opt('situationSingle','not-sure',        $s['imp_a4_opt4'], $ins_next)
 ); ?>
 
 <!-- MULTIPLE-TEETH FLOW -->
 <?php echo $qpanel( 'm1', $s['imp_m1_title'], "We'll use this to calculate your personalized range.",
-    $opt('teethCount','2',     '2 teeth',  'm2')
-  . $opt('teethCount','3',     '3 teeth',  'm2')
-  . $opt('teethCount','4',     '4 teeth',  'm2')
-  . $opt('teethCount','5plus', '5+ teeth', 'm2')
+    $opt('teethCount','2',     $s['imp_m1_opt1'], 'm2')
+  . $opt('teethCount','3',     $s['imp_m1_opt2'], 'm2')
+  . $opt('teethCount','4',     $s['imp_m1_opt3'], 'm2')
+  . $opt('teethCount','5plus', $s['imp_m1_opt4'], 'm2')
 ); ?>
 
 <?php echo $qpanel( 'm2', $s['imp_m2_title'], 'Location affects restoration complexity and materials.',
-    $opt('teethLocation','front',    'Front',               'm3', 'Visible when smiling')
-  . $opt('teethLocation','back',     'Back',                'm3', 'Chewing teeth')
-  . $opt('teethLocation','both',     'Both front and back', 'm3')
-  . $opt('teethLocation','not-sure', 'Not sure',            'm3')
+    $opt('teethLocation','front',    $s['imp_m2_opt1'], 'm3', $s['imp_m2_opt1_sub'])
+  . $opt('teethLocation','back',     $s['imp_m2_opt2'], 'm3', $s['imp_m2_opt2_sub'])
+  . $opt('teethLocation','both',     $s['imp_m2_opt3'], 'm3', $s['imp_m2_opt3_sub'])
+  . $opt('teethLocation','not-sure', $s['imp_m2_opt4'], 'm3', $s['imp_m2_opt4_sub'])
 ); ?>
 
 <?php echo $qpanel( 'm3', $s['imp_m3_title'], 'This helps us assess potential bone changes at the sites.',
-    $opt('timeMissingMult','under-6mo', 'Less than 6 months', 'm4')
-  . $opt('timeMissingMult','6-12mo',   '6–12 months',        'm4')
-  . $opt('timeMissingMult','1-3yr',    '1–3 years',          'm4')
-  . $opt('timeMissingMult','3yr+',     '3+ years',           'm4')
-  . $opt('timeMissingMult','not-sure', 'Not sure',           'm4')
+    $opt('timeMissingMult','under-6mo', $s['imp_m3_opt1'], 'm4')
+  . $opt('timeMissingMult','6-12mo',   $s['imp_m3_opt2'], 'm4')
+  . $opt('timeMissingMult','1-3yr',    $s['imp_m3_opt3'], 'm4')
+  . $opt('timeMissingMult','3yr+',     $s['imp_m3_opt4'], 'm4')
+  . $opt('timeMissingMult','not-sure', $s['imp_m3_opt5'], 'm4')
 ); ?>
 
 <?php echo $qpanel( 'm4', $s['imp_m4_title'], 'This can affect your treatment plan and overall timeline.',
-    $opt('boneGraftMult','yes',      'Yes',      'm5')
-  . $opt('boneGraftMult','no',       'No',       'm5')
-  . $opt('boneGraftMult','not-sure', 'Not sure', 'm5')
+    $opt('boneGraftMult','yes',      $s['imp_m4_opt1'], 'm5')
+  . $opt('boneGraftMult','no',       $s['imp_m4_opt2'], 'm5')
+  . $opt('boneGraftMult','not-sure', $s['imp_m4_opt3'], 'm5')
 ); ?>
 
 <?php echo $qpanel( 'm5', $s['imp_m5_title'], 'This helps us tailor your estimate to your current needs.',
-    $opt('situationMult','already-missing', 'Teeth already missing',           $ins_next)
-  . $opt('situationMult','needs-removal',   'Some teeth need to be removed',   $ins_next)
-  . $opt('situationMult','bridge-crown',    'Replacing bridges or crowns',     $ins_next)
-  . $opt('situationMult','not-sure',        'Not sure',                        $ins_next)
+    $opt('situationMult','already-missing', $s['imp_m5_opt1'], $ins_next)
+  . $opt('situationMult','needs-removal',   $s['imp_m5_opt2'], $ins_next)
+  . $opt('situationMult','bridge-crown',    $s['imp_m5_opt3'], $ins_next)
+  . $opt('situationMult','not-sure',        $s['imp_m5_opt4'], $ins_next)
 ); ?>
 
 <!-- FULL-ARCH FLOW -->
 <?php echo $qpanel( 'b1', $s['imp_b1_title'], 'Upper, lower, or both — this shapes your treatment overview.',
-    $opt('archSelection','upper', 'Upper', 'b2', 'Top teeth')
-  . $opt('archSelection','lower', 'Lower', 'b2', 'Bottom teeth')
-  . $opt('archSelection','both',  'Both',  'b2', 'Full mouth restoration')
+    $opt('archSelection','upper', $s['imp_b1_opt1'], 'b2', $s['imp_b1_opt1_sub'])
+  . $opt('archSelection','lower', $s['imp_b1_opt2'], 'b2', $s['imp_b1_opt2_sub'])
+  . $opt('archSelection','both',  $s['imp_b1_opt3'], 'b2', $s['imp_b1_opt3_sub'])
 ); ?>
 
 <?php echo $qpanel( 'b2', $s['imp_b2_title'], 'This helps us understand your starting point.',
-    $opt('situationArch','wearing-denture', 'Wearing a denture',        'b3')
-  . $opt('situationArch','failing-teeth',   'Multiple failing teeth',   'b3')
-  . $opt('situationArch','beyond-repair',   'Teeth beyond repair',      'b3')
-  . $opt('situationArch','not-sure',        'Not sure',                 'b3')
+    $opt('situationArch','wearing-denture', $s['imp_b2_opt1'], 'b3')
+  . $opt('situationArch','failing-teeth',   $s['imp_b2_opt2'], 'b3')
+  . $opt('situationArch','beyond-repair',   $s['imp_b2_opt3'], 'b3')
+  . $opt('situationArch','not-sure',        $s['imp_b2_opt4'], 'b3')
 ); ?>
 
 <?php echo $qpanel( 'b3', $s['imp_b3_title'], 'Duration helps determine bone volume and treatment complexity.',
-    $opt('archDuration','under-1yr', 'Less than 1 year', 'summary')
-  . $opt('archDuration','1-5yr',     '1–5 years',        'summary')
-  . $opt('archDuration','5yr+',      '5+ years',         'summary')
+    $opt('archDuration','under-1yr', $s['imp_b3_opt1'], 'summary')
+  . $opt('archDuration','1-5yr',     $s['imp_b3_opt2'], 'summary')
+  . $opt('archDuration','5yr+',      $s['imp_b3_opt3'], 'summary')
 ); ?>
 
 <!-- INSURANCE -->
 <?php if ( $show_insurance ) :
 echo $qpanel( 'ins', $s['imp_ins_title'], 'Insurance can reduce your out-of-pocket cost.',
-    $opt('insurance','yes', 'Yes (I have coverage)', 'summary')
-  . $opt('insurance','no',  'No',                    'summary')
+    $opt('insurance','yes', $s['imp_ins_opt1'], 'summary')
+  . $opt('insurance','no',  $s['imp_ins_opt2'], 'summary')
 );
 endif; ?>
 
