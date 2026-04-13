@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.6.0
+ * Version:     1.6.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -194,6 +194,7 @@ function cfg_defaults() {
         'imp_contact_btn'      => 'Book My Free Consultation',
         'imp_hide_header'       => '0',
         'imp_show_price'        => '1',
+        'imp_show_insurance'    => '1',
         'imp_no_price_title'    => 'Your Estimate Is Ready',
         'imp_no_price_subtitle' => 'Book a free consultation and our team will walk you through your personalised treatment options and costs.',
         'imp_no_price_btn'      => 'Book My Free Consultation',
@@ -241,7 +242,7 @@ function cfg_sanitize( $input ) {
         'spam_honeypot',
         'bm_show_hero','bm_show_cta','bm_show_card3','bm_show_card4',
         'ty_social_show','ty_show_image',
-        'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price',
+        'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
     ];
 
     // ── Dynamic option arrays (handle before the general loop) ──
@@ -1239,6 +1240,10 @@ function cfg_settings_page() {
                 <input type="checkbox" id="imp_show_financing" name="<?= CFG_OPTION ?>[imp_show_financing]" value="1" <?= checked( $s['imp_show_financing'], '1', false ) ?>/>
                 <label for="imp_show_financing"><strong>Show financing note</strong> on the results screen</label>
             </div>
+            <div class="cfg-toggle-row">
+                <input type="checkbox" id="imp_show_insurance" name="<?= CFG_OPTION ?>[imp_show_insurance]" value="1" <?= checked( $s['imp_show_insurance'], '1', false ) ?>/>
+                <label for="imp_show_insurance"><strong>Show insurance question</strong> (Q4 — "Do you have dental insurance?"). When off, the flow goes Q3 → Summary.</label>
+            </div>
         </div>
 
         <!-- ── PRICE REVEAL ─────────────────────────────────────── -->
@@ -1459,74 +1464,62 @@ function cfg_settings_page() {
         <!-- ══ SECTION 2 — Custom Fields ══ -->
         <div class="cfg-guide-section">Step 2 — Create Custom Fields in GHL</div>
 
+        <p class="cfg-desc" style="margin-bottom:16px;">Go to <strong>Settings → Custom Fields → Contacts</strong> and create all the fields below. Every field type is <strong>Text</strong> unless noted. The <em>Key</em> column is what matters — it must match exactly.</p>
+
+        <style>
+        .cfg-cft{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:20px;}
+        .cfg-cft th{background:#f0f6fc;padding:8px 12px;text-align:left;border:1px solid #dde3e9;font-weight:700;color:#1d2327;}
+        .cfg-cft td{padding:7px 12px;border:1px solid #e5e5e5;color:#3c434a;vertical-align:top;}
+        .cfg-cft tr:nth-child(even) td{background:#fafafa;}
+        .cfg-cft .req{color:#b32d2e;font-weight:700;}
+        .cfg-cft .opt{color:#646970;}
+        </style>
+
+        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">All Forms — Required</p>
+        <table class="cfg-cft">
+            <tr><th>Key</th><th>Label (suggestion)</th><th>Sent by</th></tr>
+            <tr><td><code class="cfg-guide-code">utm_campaign</code></td><td>UTM Campaign</td><td>All 3 forms</td></tr>
+            <tr><td><code class="cfg-guide-code">utm_medium</code></td><td>UTM Medium</td><td>All 3 forms</td></tr>
+            <tr><td><code class="cfg-guide-code">utm_content</code></td><td>UTM Content</td><td>All 3 forms</td></tr>
+            <tr><td><code class="cfg-guide-code">utm_keyword</code></td><td>UTM Keyword</td><td>All 3 forms</td></tr>
+            <tr><td><code class="cfg-guide-code">gclid</code></td><td>Google Click ID</td><td>All 3 forms</td></tr>
+        </table>
+
+        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">Contact Form</p>
+        <table class="cfg-cft">
+            <tr><th>Key</th><th>Label (suggestion)</th><th>Notes</th></tr>
+            <tr><td><code class="cfg-guide-code">treatment_type</code></td><td>Treatment Type</td><td>Treatment selected from dropdown</td></tr>
+        </table>
+
+        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">Implant Estimator</p>
+        <table class="cfg-cft">
+            <tr><th>Key</th><th>Label (suggestion)</th><th>Example value</th></tr>
+            <tr><td><code class="cfg-guide-code">situation</code></td><td>Implant Situation</td><td><em>q1_0</em> (internal key)</td></tr>
+            <tr><td><code class="cfg-guide-code">situation_label</code></td><td>Implant Situation (label)</td><td><em>I'm missing a tooth</em></td></tr>
+            <tr><td><code class="cfg-guide-code">teeth</code></td><td>Teeth Count Tier</td><td><em>single</em>, <em>multi</em>, or <em>arch</em></td></tr>
+            <tr><td><code class="cfg-guide-code">teeth_label</code></td><td>Teeth Count (label)</td><td><em>Just one tooth</em></td></tr>
+            <tr><td><code class="cfg-guide-code">bone_graft</code></td><td>Bone Graft</td><td><em>yes</em>, <em>notsure</em>, or <em>no</em></td></tr>
+            <tr><td><code class="cfg-guide-code">bone_graft_label</code></td><td>Bone Graft (label)</td><td><em>Not sure</em></td></tr>
+            <tr><td><code class="cfg-guide-code">insurance</code></td><td>Has Insurance</td><td><em>yes</em> or <em>no</em> (if Q4 is enabled)</td></tr>
+            <tr><td><code class="cfg-guide-code">insurance_label</code></td><td>Insurance (label)</td><td><em>Yes, I have coverage</em></td></tr>
+            <tr><td><code class="cfg-guide-code">range</code></td><td>Estimated Price Range</td><td><em>$3,000 – $6,000</em></td></tr>
+        </table>
+
+        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">Aligner Quiz</p>
+        <table class="cfg-cft">
+            <tr><th>Key</th><th>Notes</th></tr>
+            <tr><td colspan="2" style="color:#646970;font-style:italic;">Keys are generated automatically from your quiz step IDs. Each answer is sent as its own custom field using the step key you configure in the Aligner Form tab.</td></tr>
+        </table>
+
+        <div class="cfg-guide-tip" style="margin-top:4px;">
+            <strong>Tip:</strong> Only non-empty fields are sent. If a patient skips the insurance question (or it is turned off), the <code class="cfg-guide-code">insurance</code> field simply won't appear on the contact.
+        </div>
+
+        <!-- ══ SECTION 3 — Tags & Workflows ══ -->
+        <div class="cfg-guide-section">Step 3 — Tags &amp; Workflow Triggers</div>
+
         <div class="cfg-guide-step">
             <div class="cfg-guide-num">3</div>
-            <div class="cfg-guide-body">
-                <h3>Add a Trigger / Source Custom Field</h3>
-                <p>Go to <strong>Settings → Custom Fields → Contacts</strong> and add a new <strong>Text</strong> field with the following settings:</p>
-                <ul>
-                    <li>Label: <code class="cfg-guide-code">Lead Source</code> (or any friendly name)</li>
-                    <li>Key: <code class="cfg-guide-code">lead_source</code></li>
-                </ul>
-                <p>This receives the form source string (e.g. <em>Website Contact Form</em>, <em>Implant Estimator Form</em>, <em>Aligner Quiz Form</em>).</p>
-            </div>
-        </div>
-
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">4</div>
-            <div class="cfg-guide-body">
-                <h3>Add Treatment Type Custom Field</h3>
-                <p>For the main contact form, add a <strong>Text</strong> field:</p>
-                <ul>
-                    <li>Key: <code class="cfg-guide-code">treatment_type</code></li>
-                </ul>
-                <p>This stores the treatment the patient selected in the form dropdown.</p>
-            </div>
-        </div>
-
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">5</div>
-            <div class="cfg-guide-body">
-                <h3>Add UTM Tracking Custom Fields</h3>
-                <p>Create five <strong>Text</strong> custom fields (one per UTM parameter). The plugin automatically reads these from the page URL and sends them with every form submission:</p>
-                <ul>
-                    <li>Key: <code class="cfg-guide-code">utm_campaign</code> — e.g. <em>implant-promo-2025</em></li>
-                    <li>Key: <code class="cfg-guide-code">utm_medium</code> — e.g. <em>cpc</em>, <em>email</em></li>
-                    <li>Key: <code class="cfg-guide-code">utm_content</code> — e.g. <em>banner-a</em></li>
-                    <li>Key: <code class="cfg-guide-code">utm_keyword</code> — the paid search keyword</li>
-                    <li>Key: <code class="cfg-guide-code">gclid</code> — Google Ads click ID (auto-tagged by Google)</li>
-                </ul>
-                <div class="cfg-guide-tip">
-                    <strong>Tip:</strong> Fields that are empty (no UTM in the URL) are simply not sent — GHL will leave that field blank on the contact.
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ SECTION 3 — Implant Estimator fields ══ -->
-        <div class="cfg-guide-section">Step 3 — Implant Estimator Answer Fields <span class="cfg-badge">optional</span></div>
-
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">6</div>
-            <div class="cfg-guide-body">
-                <h3>Add Estimator Answer Custom Fields</h3>
-                <p>The implant estimator sends the patient's quiz answers as custom fields. Create <strong>Text</strong> fields for each answer you want to store:</p>
-                <ul>
-                    <li>Key: <code class="cfg-guide-code">situation</code> — Q1 answer key (e.g. <em>q1_0</em>)</li>
-                    <li>Key: <code class="cfg-guide-code">situation_label</code> — Q1 readable label</li>
-                    <li>Key: <code class="cfg-guide-code">teeth</code> — Q2 tier (single / multi / arch)</li>
-                    <li>Key: <code class="cfg-guide-code">teeth_label</code> — Q2 readable label</li>
-                    <li>Key: <code class="cfg-guide-code">bone_graft</code> — Q3 answer</li>
-                    <li>Key: <code class="cfg-guide-code">insurance</code> — Q4 answer</li>
-                    <li>Key: <code class="cfg-guide-code">range</code> — The final estimated price range shown to the patient</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- ══ SECTION 4 — Tags & Workflows ══ -->
-        <div class="cfg-guide-section">Step 4 — Tags &amp; Workflow Triggers</div>
-
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">7</div>
             <div class="cfg-guide-body">
                 <h3>Understand the Tags Each Form Sends</h3>
                 <p>Every submission automatically applies tags to the GHL contact. Use these tags as workflow triggers:</p>
@@ -1540,7 +1533,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="cfg-guide-step">
-            <div class="cfg-guide-num">8</div>
+            <div class="cfg-guide-num">4</div>
             <div class="cfg-guide-body">
                 <h3>Create Workflows Triggered by Tags</h3>
                 <p>In GHL go to <strong>Automation → Workflows → + New Workflow</strong>. Set the trigger to <strong>Contact Tag</strong> and enter the tag to listen for. Recommended workflows to create:</p>
@@ -1557,7 +1550,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="cfg-guide-step">
-            <div class="cfg-guide-num">9</div>
+            <div class="cfg-guide-num">5</div>
             <div class="cfg-guide-body">
                 <h3>Add Contacts to a Pipeline</h3>
                 <p>Inside each workflow, add a <strong>Add to Pipeline</strong> action to move the contact into your sales pipeline at the appropriate stage. Suggested setup:</p>
@@ -1568,11 +1561,11 @@ function cfg_settings_page() {
             </div>
         </div>
 
-        <!-- ══ SECTION 5 — Test ══ -->
-        <div class="cfg-guide-section">Step 5 — Test &amp; Verify</div>
+        <!-- ══ SECTION 4 — Test ══ -->
+        <div class="cfg-guide-section">Step 4 — Test &amp; Verify</div>
 
         <div class="cfg-guide-step">
-            <div class="cfg-guide-num">10</div>
+            <div class="cfg-guide-num">6</div>
             <div class="cfg-guide-body">
                 <h3>Submit a Test Lead</h3>
                 <p>Open a form page on your site and append UTM parameters to the URL to test tracking, e.g.:</p>
@@ -3048,8 +3041,9 @@ function cfg_implant_shortcode() {
     $currency    = $s['imp_currency'] ?? '$';
     $primary_hsl      = cfg_imp_hex_to_hsl( $accent );
     $pfg_hsl          = '0 0% 100%';
-    $hide_header      = $s['imp_hide_header'] === '1';
-    $show_price       = $s['imp_show_price']  !== '0';
+    $hide_header      = $s['imp_hide_header']    === '1';
+    $show_price       = $s['imp_show_price']    !== '0';
+    $show_insurance   = $s['imp_show_insurance'] !== '0';
     $no_price_title   = $s['imp_no_price_title']    ?? 'Your Estimate Is Ready';
     $no_price_sub     = $s['imp_no_price_subtitle'] ?? 'Book a free consultation and our team will walk you through your personalised treatment options and costs.';
     $no_price_btn     = $s['imp_no_price_btn']      ?? 'Book My Free Consultation';
@@ -3265,17 +3259,21 @@ echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your person
 ?>
 
 <!-- Q3: BONE GRAFT -->
-<?php echo $qpanel( 'q3', $s['imp_q3_title'], 'This helps us assess whether your estimate should include preparatory work.',
-    $opt( 'q3', 'yes',     $s['imp_q3_opt1'], 'q4' )
-  . $opt( 'q3', 'notsure', $s['imp_q3_opt2'], 'q4' )
-  . $opt( 'q3', 'no',      $s['imp_q3_opt3'], 'q4' )
+<?php
+$q3_next = $show_insurance ? 'q4' : 'summary';
+echo $qpanel( 'q3', $s['imp_q3_title'], 'This helps us assess whether your estimate should include preparatory work.',
+    $opt( 'q3', 'yes',     $s['imp_q3_opt1'], $q3_next )
+  . $opt( 'q3', 'notsure', $s['imp_q3_opt2'], $q3_next )
+  . $opt( 'q3', 'no',      $s['imp_q3_opt3'], $q3_next )
 ); ?>
 
 <!-- Q4: INSURANCE -->
-<?php echo $qpanel( 'q4', $s['imp_q4_title'], 'Insurance can reduce your out-of-pocket cost.',
+<?php if ( $show_insurance ) :
+echo $qpanel( 'q4', $s['imp_q4_title'], 'Insurance can reduce your out-of-pocket cost.',
     $opt( 'q4', 'yes', $s['imp_q4_opt1'], 'summary' )
   . $opt( 'q4', 'no',  $s['imp_q4_opt2'], 'summary' )
-); ?>
+);
+endif; ?>
 
 <!-- SUMMARY -->
 <div class="die-panel" id="<?= $uid ?>-panel-summary">
@@ -3454,16 +3452,24 @@ echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your person
   var currentPanel = 'intro';
   var navHistory   = [];
 
-  var stepMap = {
-    intro:   { label:'Get Started',   pct:5   },
-    q1:      { label:'Step 1 of 4',   pct:25  },
-    q2:      { label:'Step 2 of 4',   pct:50  },
-    q3:      { label:'Step 3 of 4',   pct:75  },
-    q4:      { label:'Step 4 of 4',   pct:88  },
-    summary: { label:'Step 5 of 6',   pct:94  },
-    lead:    { label:'Step 6 of 6',   pct:97  },
-    result:  { label:'Your Estimate', pct:100 }
-  };
+  var stepMap = <?= $show_insurance ? '{
+    intro:   { label:"Get Started",   pct:5   },
+    q1:      { label:"Step 1 of 4",   pct:25  },
+    q2:      { label:"Step 2 of 4",   pct:50  },
+    q3:      { label:"Step 3 of 4",   pct:75  },
+    q4:      { label:"Step 4 of 4",   pct:88  },
+    summary: { label:"Step 5 of 6",   pct:94  },
+    lead:    { label:"Step 6 of 6",   pct:97  },
+    result:  { label:"Your Estimate", pct:100 }
+  }' : '{
+    intro:   { label:"Get Started",   pct:5   },
+    q1:      { label:"Step 1 of 3",   pct:28  },
+    q2:      { label:"Step 2 of 3",   pct:56  },
+    q3:      { label:"Step 3 of 3",   pct:78  },
+    summary: { label:"Step 4 of 5",   pct:90  },
+    lead:    { label:"Step 5 of 5",   pct:97  },
+    result:  { label:"Your Estimate", pct:100 }
+  }' ?>;
 
   var msgs = {
     q1:      ['Starting your estimate\u2026',      'A few short questions'],
