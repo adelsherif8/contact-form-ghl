@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.0
+ * Version:     1.7.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1175,10 +1175,58 @@ function cfg_settings_page() {
 
     <!-- ═══ IMPLANT ESTIMATOR TAB ═══ -->
     <div id="cfg-imp" class="cfg-panel">
+    <style>
+    /* ── IMP REDESIGN ─────────────────────────────────── */
+    .imp-sw-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:8px;background:#fff;border:1px solid #e5e7eb;margin-bottom:8px;transition:box-shadow .15s;}
+    .imp-sw-row:hover{box-shadow:0 1px 4px rgba(0,0,0,.08);}
+    .imp-sw-info{flex:1;min-width:0;padding-right:16px;}
+    .imp-sw-info strong{font-size:13px;color:#1d2327;display:block;margin-bottom:2px;}
+    .imp-sw-info span{font-size:12px;color:#6b7280;line-height:1.4;}
+    .imp-sw{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;}
+    .imp-sw input{opacity:0;width:0;height:0;position:absolute;}
+    .imp-sw-slider{position:absolute;inset:0;background:#c7ccd1;border-radius:24px;cursor:pointer;transition:background .2s;}
+    .imp-sw-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .imp-sw input:checked + .imp-sw-slider{background:#2271b1;}
+    .imp-sw input:checked + .imp-sw-slider:before{transform:translateX(18px);}
+    .imp-sw input:focus + .imp-sw-slider{outline:2px solid #2271b1;outline-offset:2px;}
+    .imp-section-hdr{display:flex;align-items:center;gap:10px;padding:14px 0 10px;border-bottom:2px solid #f0f0f1;margin-bottom:16px;}
+    .imp-section-hdr .imp-section-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+    .imp-section-hdr h3{margin:0;font-size:14px;font-weight:700;color:#1d2327;}
+    .imp-section-hdr p{margin:2px 0 0;font-size:12px;color:#6b7280;}
+    .imp-pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+    .imp-price-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;position:relative;}
+    .imp-price-card.disabled-card{opacity:.4;pointer-events:none;}
+    .imp-price-card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .imp-price-card-label span.dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+    .imp-price-range-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .imp-price-range-row .cfg-field label{font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+    .imp-path-accordion{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:10px;}
+    .imp-path-header{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;user-select:none;background:#fafafa;transition:background .15s;}
+    .imp-path-header:hover{background:#f3f4f6;}
+    .imp-path-header .imp-path-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .imp-path-header .imp-path-title{flex:1;font-size:13px;font-weight:700;color:#1d2327;}
+    .imp-path-header .imp-path-count{font-size:11px;color:#9ca3af;background:#f0f0f1;padding:2px 8px;border-radius:12px;}
+    .imp-path-header .imp-path-chevron{font-size:12px;color:#9ca3af;transition:transform .2s;margin-left:4px;}
+    .imp-path-header.open .imp-path-chevron{transform:rotate(180deg);}
+    .imp-path-body{display:none;padding:16px;background:#fff;border-top:1px solid #e5e7eb;}
+    .imp-path-body.open{display:block;}
+    .imp-path-body .cfg-grid{gap:12px 20px;}
+    .imp-q-label{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+    .imp-result-suffix-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+    </style>
 
-        <!-- ── DISPLAY ─────────────────────────────────────────── -->
-        <div class="cfg-section-title">Display</div>
-        <div class="cfg-grid">
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  1 · DISPLAY & TOGGLES                               -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:0;">
+            <div class="imp-section-icon" style="background:#eff6ff;">⚙️</div>
+            <div>
+                <h3>Display Settings</h3>
+                <p>Control what appears in the estimator and basic redirect behaviour</p>
+            </div>
+        </div>
+
+        <div class="cfg-grid" style="margin-bottom:16px;">
             <div class="cfg-field">
                 <label>Accent Color</label>
                 <div class="cfg-color-row">
@@ -1189,113 +1237,275 @@ function cfg_settings_page() {
             <div class="cfg-field">
                 <label>Success Redirect URL <span class="cfg-badge">optional</span></label>
                 <input type="url" name="<?= CFG_OPTION ?>[imp_success_url]" value="<?= esc_url( $s['imp_success_url'] ) ?>" placeholder="/thank-you"/>
-                <span class="cfg-desc">Leave blank to show results inline after submit.</span>
+                <span class="cfg-desc">Leave blank to show results inline.</span>
             </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px;">
-            <div class="cfg-toggle-row">
+
+        <div class="imp-sw-row">
+            <div class="imp-sw-info">
+                <strong>Hide Site Header</strong>
+                <span>Hides <code>&lt;header&gt;</code> and common nav elements on pages with this estimator</span>
+            </div>
+            <label class="imp-sw">
                 <input type="checkbox" id="imp_hide_header" name="<?= CFG_OPTION ?>[imp_hide_header]" value="1" <?= checked( $s['imp_hide_header'], '1', false ) ?>/>
-                <label for="imp_hide_header"><strong>Hide site header</strong> on pages with this estimator (hides <code>&lt;header&gt;</code> and common nav elements)</label>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+
+        <div class="imp-sw-row">
+            <div class="imp-sw-info">
+                <strong>Show "Full Arch" Path</strong>
+                <span>Adds the full arch route to the router question and enables arch pricing below</span>
             </div>
-            <div class="cfg-toggle-row">
-                <input type="checkbox" id="imp_show_full_arch" name="<?= CFG_OPTION ?>[imp_show_full_arch]" value="1" <?= checked( $s['imp_show_full_arch'], '1', false ) ?> onchange="document.getElementById('imp-arch-pricing').style.cssText=this.checked?'':'opacity:0.4;pointer-events:none;'"/>
-                <label for="imp_show_full_arch"><strong>Show "Full Arch" option</strong> in question 2 and enable arch pricing</label>
+            <label class="imp-sw">
+                <input type="checkbox" id="imp_show_full_arch" name="<?= CFG_OPTION ?>[imp_show_full_arch]" value="1" <?= checked( $s['imp_show_full_arch'], '1', false ) ?> onchange="document.getElementById('imp-arch-price-card').classList.toggle('disabled-card',!this.checked)"/>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+
+        <div class="imp-sw-row">
+            <div class="imp-sw-info">
+                <strong>Show Financing Note</strong>
+                <span>Displays a financing availability message on the results screen</span>
             </div>
-            <div class="cfg-toggle-row">
+            <label class="imp-sw">
                 <input type="checkbox" id="imp_show_financing" name="<?= CFG_OPTION ?>[imp_show_financing]" value="1" <?= checked( $s['imp_show_financing'], '1', false ) ?>/>
-                <label for="imp_show_financing"><strong>Show financing note</strong> on the results screen</label>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+
+        <div class="imp-sw-row">
+            <div class="imp-sw-info">
+                <strong>Show Insurance Question</strong>
+                <span>When off, single &amp; multiple tooth flows skip insurance and go straight to the summary</span>
             </div>
-            <div class="cfg-toggle-row">
+            <label class="imp-sw">
                 <input type="checkbox" id="imp_show_insurance" name="<?= CFG_OPTION ?>[imp_show_insurance]" value="1" <?= checked( $s['imp_show_insurance'], '1', false ) ?>/>
-                <label for="imp_show_insurance"><strong>Show insurance question</strong> (Q4 — "Do you have dental insurance?"). When off, the flow goes Q3 → Summary.</label>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+
+        <div class="imp-sw-row">
+            <div class="imp-sw-info">
+                <strong>Show Price Range on Results</strong>
+                <span>When off, a custom call-to-action is shown instead of the estimated price</span>
+            </div>
+            <label class="imp-sw">
+                <input type="checkbox" id="imp_show_price" name="<?= CFG_OPTION ?>[imp_show_price]" value="1" <?= checked( $s['imp_show_price'], '1', false ) ?> onchange="document.getElementById('imp-price-rows').style.display=this.checked?'block':'none';document.getElementById('imp-noprice-rows').style.display=this.checked?'none':'block'"/>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  2 · PRICING                                         -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#f0fdf4;">💰</div>
+            <div>
+                <h3>Pricing Ranges</h3>
+                <p>Bone graft cost is added on top when the patient selects "Yes" or "Not sure"</p>
             </div>
         </div>
 
-        <!-- ── PRICE REVEAL ─────────────────────────────────────── -->
-        <div class="cfg-section-title" style="margin-top:24px;">Price Reveal</div>
-        <div class="cfg-toggle-row" style="margin-bottom:12px;">
-            <input type="checkbox" id="imp_show_price" name="<?= CFG_OPTION ?>[imp_show_price]" value="1" <?= checked( $s['imp_show_price'], '1', false ) ?> onchange="document.getElementById('imp-price-rows').style.display=this.checked?'block':'none';document.getElementById('imp-noprice-rows').style.display=this.checked?'none':'block'"/>
-            <label for="imp_show_price"><strong>Show estimated price range</strong> on the results screen</label>
-        </div>
-        <!-- Fields shown when price IS shown -->
-        <div id="imp-price-rows" style="display:<?= $s['imp_show_price'] === '1' ? 'block' : 'none' ?>;">
-            <div class="cfg-card-section">
-                <h4>Results Screen — Price Shown</h4>
-                <div class="cfg-grid">
-                    <div class="cfg-field"><label>Title <span style="font-weight:400;color:#646970;">(small caps label above price)</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_result_title]" value="<?= esc_attr( $s['imp_result_title'] ) ?>"/></div>
-                    <div class="cfg-field cfg-full"><label>Subtitle <span style="font-weight:400;color:#646970;">(shown below title, above price)</span></label><textarea name="<?= CFG_OPTION ?>[imp_result_subtitle]"><?= esc_textarea( $s['imp_result_subtitle'] ) ?></textarea></div>
-                    <div class="cfg-field cfg-full"><label>Financing Note <span class="cfg-badge">shown when financing toggle is on</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_financing_text]" value="<?= esc_attr( $s['imp_financing_text'] ) ?>"/></div>
-                </div>
-            </div>
-        </div>
-        <!-- Fields shown when price is HIDDEN -->
-        <div id="imp-noprice-rows" style="display:<?= $s['imp_show_price'] === '1' ? 'none' : 'block' ?>;">
-            <div class="cfg-card-section" style="border-left:3px solid #2271b1;">
-                <h4>Results Screen — Price Hidden</h4>
-                <p class="cfg-desc" style="margin:0 0 12px;">This is a completely separate screen shown instead of the price. Encourage the patient to book a consultation.</p>
-                <div class="cfg-grid">
-                    <div class="cfg-field cfg-full"><label>Heading</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_title]" value="<?= esc_attr( $s['imp_no_price_title'] ) ?>"/></div>
-                    <div class="cfg-field cfg-full"><label>Body Text</label><textarea name="<?= CFG_OPTION ?>[imp_no_price_subtitle]" rows="3"><?= esc_textarea( $s['imp_no_price_subtitle'] ) ?></textarea></div>
-                    <div class="cfg-field"><label>Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_btn]" value="<?= esc_attr( $s['imp_no_price_btn'] ) ?>"/></div>
-                </div>
-                <p class="cfg-desc" style="margin-top:8px;">The button links to the Success Redirect URL set above. Make sure to set that.</p>
-            </div>
-        </div>
-
-        <!-- ── PRICING ──────────────────────────────────────────── -->
-        <div class="cfg-section-title" style="margin-top:24px;">Pricing Ranges</div>
-        <div class="cfg-grid">
+        <div class="cfg-grid" style="margin-bottom:14px;">
             <div class="cfg-field">
                 <label>Currency Symbol</label>
-                <input type="text" name="<?= CFG_OPTION ?>[imp_currency]" value="<?= esc_attr( $s['imp_currency'] ) ?>" maxlength="5" placeholder="$" style="max-width:100px;"/>
+                <input type="text" name="<?= CFG_OPTION ?>[imp_currency]" value="<?= esc_attr( $s['imp_currency'] ) ?>" maxlength="5" placeholder="$" style="max-width:110px;"/>
                 <span class="cfg-desc">E.g. <code>$</code>, <code>CAD $</code>, <code>£</code></span>
             </div>
-            <div class="cfg-full">
-                <p class="cfg-desc">Graft cost is added on top of the base price when the patient answers Yes or Not sure to bone grafting.</p>
-            </div>
-            <div class="cfg-card-section cfg-full">
-                <h4>Single Tooth Implant</h4>
-                <div class="cfg-grid">
+        </div>
+
+        <div class="imp-pricing-grid">
+            <div class="imp-price-card">
+                <div class="imp-price-card-label"><span class="dot" style="background:#3b82f6;"></span> Single Tooth</div>
+                <div class="imp-price-range-row">
                     <div class="cfg-field"><label>Min</label><input type="text" name="<?= CFG_OPTION ?>[imp_single_min]" value="<?= esc_attr( $s['imp_single_min'] ) ?>" maxlength="8" placeholder="3000"/></div>
                     <div class="cfg-field"><label>Max</label><input type="text" name="<?= CFG_OPTION ?>[imp_single_max]" value="<?= esc_attr( $s['imp_single_max'] ) ?>" maxlength="8" placeholder="6000"/></div>
                 </div>
             </div>
-            <div class="cfg-card-section cfg-full">
-                <h4>Multiple Teeth (2–4 teeth &amp; 5+ teeth)</h4>
-                <div class="cfg-grid">
+            <div class="imp-price-card">
+                <div class="imp-price-card-label"><span class="dot" style="background:#8b5cf6;"></span> Multiple Teeth</div>
+                <div class="imp-price-range-row">
                     <div class="cfg-field"><label>Min</label><input type="text" name="<?= CFG_OPTION ?>[imp_multi_min]" value="<?= esc_attr( $s['imp_multi_min'] ) ?>" maxlength="8" placeholder="5000"/></div>
                     <div class="cfg-field"><label>Max</label><input type="text" name="<?= CFG_OPTION ?>[imp_multi_max]" value="<?= esc_attr( $s['imp_multi_max'] ) ?>" maxlength="8" placeholder="20000"/></div>
                 </div>
             </div>
-            <div class="cfg-card-section cfg-full" id="imp-arch-pricing" style="<?= $s['imp_show_full_arch'] === '1' ? '' : 'opacity:0.4;pointer-events:none;' ?>">
-                <h4>Full Arch <span class="cfg-badge">requires Full Arch toggle above</span></h4>
-                <div class="cfg-grid">
+            <div class="imp-price-card <?= $s['imp_show_full_arch'] !== '1' ? 'disabled-card' : '' ?>" id="imp-arch-price-card">
+                <div class="imp-price-card-label"><span class="dot" style="background:#10b981;"></span> Full Arch <span class="cfg-badge" style="font-size:10px;">toggle above</span></div>
+                <div class="imp-price-range-row">
                     <div class="cfg-field"><label>Min</label><input type="text" name="<?= CFG_OPTION ?>[imp_arch_min]" value="<?= esc_attr( $s['imp_arch_min'] ) ?>" maxlength="8" placeholder="24000"/></div>
                     <div class="cfg-field"><label>Max</label><input type="text" name="<?= CFG_OPTION ?>[imp_arch_max]" value="<?= esc_attr( $s['imp_arch_max'] ) ?>" maxlength="8" placeholder="30000"/></div>
                 </div>
             </div>
-            <div class="cfg-card-section cfg-full">
-                <h4>Bone Graft Add-On <span style="font-weight:400;color:#646970;">(added when patient selects Yes or Not sure)</span></h4>
-                <div class="cfg-grid">
+            <div class="imp-price-card">
+                <div class="imp-price-card-label"><span class="dot" style="background:#f59e0b;"></span> Bone Graft Add-On</div>
+                <div class="imp-price-range-row">
                     <div class="cfg-field"><label>Min</label><input type="text" name="<?= CFG_OPTION ?>[imp_graft_min]" value="<?= esc_attr( $s['imp_graft_min'] ) ?>" maxlength="8" placeholder="650"/></div>
                     <div class="cfg-field"><label>Max</label><input type="text" name="<?= CFG_OPTION ?>[imp_graft_max]" value="<?= esc_attr( $s['imp_graft_max'] ) ?>" maxlength="8" placeholder="1100"/></div>
                 </div>
             </div>
         </div>
 
-        <!-- ── STEP CONTENT ─────────────────────────────────────── -->
-        <div class="cfg-section-title" style="margin-top:24px;">Step Content</div>
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  3 · QUESTION TITLES (collapsible path groups)       -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fdf4ff;">📝</div>
+            <div>
+                <h3>Question Titles</h3>
+                <p>Customise the heading shown on each question panel — answer options are fixed</p>
+            </div>
+        </div>
+
+        <!-- Router -->
+        <div class="imp-path-accordion">
+            <div class="imp-path-header" onclick="impTogglePath(this)">
+                <span class="imp-path-dot" style="background:#6b7280;"></span>
+                <span class="imp-path-title">Router Question</span>
+                <span class="imp-path-count">1 question</span>
+                <span class="imp-path-chevron">▼</span>
+            </div>
+            <div class="imp-path-body">
+                <div class="cfg-grid">
+                    <div class="cfg-field cfg-full">
+                        <div class="imp-q-label">Router Title</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_router_title]" value="<?= esc_attr( $s['imp_router_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field cfg-full">
+                        <div class="imp-q-label">Router Sub-label</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_router_sub]" value="<?= esc_attr( $s['imp_router_sub'] ) ?>"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single Tooth Path -->
+        <div class="imp-path-accordion">
+            <div class="imp-path-header" onclick="impTogglePath(this)">
+                <span class="imp-path-dot" style="background:#3b82f6;"></span>
+                <span class="imp-path-title">Single Tooth Path</span>
+                <span class="imp-path-count">4 questions &nbsp;·&nbsp; A1 – A4</span>
+                <span class="imp-path-chevron">▼</span>
+            </div>
+            <div class="imp-path-body">
+                <div class="cfg-grid">
+                    <div class="cfg-field">
+                        <div class="imp-q-label">A1 — Tooth Location</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_a1_title]" value="<?= esc_attr( $s['imp_a1_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">A2 — How Long Missing</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_a2_title]" value="<?= esc_attr( $s['imp_a2_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">A3 — Bone Graft</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_a3_title]" value="<?= esc_attr( $s['imp_a3_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">A4 — Situation</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_a4_title]" value="<?= esc_attr( $s['imp_a4_title'] ) ?>"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multiple Teeth Path -->
+        <div class="imp-path-accordion">
+            <div class="imp-path-header" onclick="impTogglePath(this)">
+                <span class="imp-path-dot" style="background:#8b5cf6;"></span>
+                <span class="imp-path-title">Multiple Teeth Path</span>
+                <span class="imp-path-count">5 questions &nbsp;·&nbsp; M1 – M5</span>
+                <span class="imp-path-chevron">▼</span>
+            </div>
+            <div class="imp-path-body">
+                <div class="cfg-grid">
+                    <div class="cfg-field">
+                        <div class="imp-q-label">M1 — How Many Teeth</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_m1_title]" value="<?= esc_attr( $s['imp_m1_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">M2 — Teeth Location</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_m2_title]" value="<?= esc_attr( $s['imp_m2_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">M3 — How Long Missing</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_m3_title]" value="<?= esc_attr( $s['imp_m3_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">M4 — Bone Graft</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_m4_title]" value="<?= esc_attr( $s['imp_m4_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field cfg-full">
+                        <div class="imp-q-label">M5 — Situation</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_m5_title]" value="<?= esc_attr( $s['imp_m5_title'] ) ?>"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full Arch Path -->
+        <div class="imp-path-accordion">
+            <div class="imp-path-header" onclick="impTogglePath(this)">
+                <span class="imp-path-dot" style="background:#10b981;"></span>
+                <span class="imp-path-title">Full Arch Path</span>
+                <span class="imp-path-count">3 questions &nbsp;·&nbsp; B1 – B3</span>
+                <span class="imp-path-chevron">▼</span>
+            </div>
+            <div class="imp-path-body">
+                <div class="cfg-grid">
+                    <div class="cfg-field">
+                        <div class="imp-q-label">B1 — Which Arch</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_b1_title]" value="<?= esc_attr( $s['imp_b1_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field">
+                        <div class="imp-q-label">B2 — Current Situation</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_b2_title]" value="<?= esc_attr( $s['imp_b2_title'] ) ?>"/>
+                    </div>
+                    <div class="cfg-field cfg-full">
+                        <div class="imp-q-label">B3 — Duration</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_b3_title]" value="<?= esc_attr( $s['imp_b3_title'] ) ?>"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insurance Question -->
+        <div class="imp-path-accordion">
+            <div class="imp-path-header" onclick="impTogglePath(this)">
+                <span class="imp-path-dot" style="background:#f59e0b;"></span>
+                <span class="imp-path-title">Insurance Question</span>
+                <span class="imp-path-count">optional &nbsp;·&nbsp; toggle above</span>
+                <span class="imp-path-chevron">▼</span>
+            </div>
+            <div class="imp-path-body">
+                <div class="cfg-grid">
+                    <div class="cfg-field cfg-full">
+                        <div class="imp-q-label">Insurance Question Title</div>
+                        <input type="text" name="<?= CFG_OPTION ?>[imp_ins_title]" value="<?= esc_attr( $s['imp_ins_title'] ) ?>"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  4 · INTRO SCREEN                                    -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fff7ed;">🏠</div>
+            <div>
+                <h3>Intro Screen</h3>
+                <p>The first thing patients see before they start the estimator</p>
+            </div>
+        </div>
 
         <div class="cfg-card-section">
-            <h4>Intro Screen</h4>
             <div class="cfg-grid">
                 <div class="cfg-field cfg-full">
-                    <label>Badge / Tag Text</label>
+                    <label>Badge / Tag Text <span style="font-weight:400;color:#9ca3af;">— small pill above the heading</span></label>
                     <input type="text" name="<?= CFG_OPTION ?>[imp_intro_title]" value="<?= esc_attr( $s['imp_intro_title'] ) ?>"/>
-                    <span class="cfg-desc">Small pill text shown above the heading (e.g. "Get Your Free Implant Cost Estimate")</span>
                 </div>
                 <div class="cfg-field cfg-full">
-                    <label>Main Heading <span style="font-weight:400;color:#646970;">(use a newline to create a line break)</span></label>
+                    <label>Main Heading</label>
                     <input type="text" name="<?= CFG_OPTION ?>[imp_intro_heading]" value="<?= esc_attr( $s['imp_intro_heading'] ) ?>"/>
                 </div>
                 <div class="cfg-field cfg-full">
@@ -1303,61 +1513,105 @@ function cfg_settings_page() {
                     <textarea name="<?= CFG_OPTION ?>[imp_intro_subtitle]"><?= esc_textarea( $s['imp_intro_subtitle'] ) ?></textarea>
                 </div>
                 <div class="cfg-field cfg-full">
-                    <label>Bullet Points <span style="font-weight:400;color:#666;">(one per line)</span></label>
+                    <label>Bullet Points <span style="font-weight:400;color:#9ca3af;">— one per line</span></label>
                     <textarea name="<?= CFG_OPTION ?>[imp_intro_bullets]"><?= esc_textarea( $s['imp_intro_bullets'] ) ?></textarea>
                 </div>
-                <div class="cfg-field"><label>Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_intro_btn]" value="<?= esc_attr( $s['imp_intro_btn'] ) ?>"/></div>
+                <div class="cfg-field">
+                    <label>Button Text</label>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_intro_btn]" value="<?= esc_attr( $s['imp_intro_btn'] ) ?>"/>
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  5 · RESULTS SCREEN                                  -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#f0fdf4;">📊</div>
+            <div>
+                <h3>Results Screen</h3>
+                <p>What the patient sees after completing the quiz</p>
+            </div>
+        </div>
+
+        <!-- Price shown -->
+        <div id="imp-price-rows" style="display:<?= $s['imp_show_price'] === '1' ? 'block' : 'none' ?>;">
+            <div class="cfg-card-section">
+                <h4 style="display:flex;align-items:center;gap:8px;"><span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">PRICE SHOWN</span> Results Screen</h4>
+                <div class="cfg-grid">
+                    <div class="cfg-field"><label>Title <span style="font-weight:400;color:#9ca3af;">— small label above price</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_result_title]" value="<?= esc_attr( $s['imp_result_title'] ) ?>"/></div>
+                    <div class="cfg-field cfg-full"><label>Subtitle <span style="font-weight:400;color:#9ca3af;">— shown below title, above price</span></label><textarea name="<?= CFG_OPTION ?>[imp_result_subtitle]"><?= esc_textarea( $s['imp_result_subtitle'] ) ?></textarea></div>
+                    <div class="cfg-field cfg-full"><label>Financing Note <span class="cfg-badge">shown only when financing toggle is on</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_financing_text]" value="<?= esc_attr( $s['imp_financing_text'] ) ?>"/></div>
+                </div>
+            </div>
+            <div class="cfg-card-section">
+                <h4>Price Suffix by Path</h4>
+                <div class="imp-result-suffix-grid">
+                    <div class="cfg-field"><div class="imp-q-label" style="color:#3b82f6;">Single Tooth</div><input type="text" name="<?= CFG_OPTION ?>[imp_result_single_suffix]" value="<?= esc_attr( $s['imp_result_single_suffix'] ) ?>"/></div>
+                    <div class="cfg-field"><div class="imp-q-label" style="color:#8b5cf6;">Multiple Teeth</div><input type="text" name="<?= CFG_OPTION ?>[imp_result_multiple_suffix]" value="<?= esc_attr( $s['imp_result_multiple_suffix'] ) ?>"/></div>
+                    <div class="cfg-field"><div class="imp-q-label" style="color:#10b981;">Full Arch</div><input type="text" name="<?= CFG_OPTION ?>[imp_result_fullarch_suffix]" value="<?= esc_attr( $s['imp_result_fullarch_suffix'] ) ?>"/></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price hidden -->
+        <div id="imp-noprice-rows" style="display:<?= $s['imp_show_price'] === '1' ? 'none' : 'block' ?>;">
+            <div class="cfg-card-section" style="border-left:3px solid #2271b1;">
+                <h4 style="display:flex;align-items:center;gap:8px;"><span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">PRICE HIDDEN</span> Results Screen</h4>
+                <p class="cfg-desc" style="margin:0 0 12px;">Shown instead of the price — encourage the patient to book.</p>
+                <div class="cfg-grid">
+                    <div class="cfg-field cfg-full"><label>Heading</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_title]" value="<?= esc_attr( $s['imp_no_price_title'] ) ?>"/></div>
+                    <div class="cfg-field cfg-full"><label>Body Text</label><textarea name="<?= CFG_OPTION ?>[imp_no_price_subtitle]" rows="3"><?= esc_textarea( $s['imp_no_price_subtitle'] ) ?></textarea></div>
+                    <div class="cfg-field"><label>Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_btn]" value="<?= esc_attr( $s['imp_no_price_btn'] ) ?>"/></div>
+                </div>
+                <p class="cfg-desc" style="margin-top:8px;">Button links to the Success Redirect URL set above.</p>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  6 · CONTACT FORM STEP                               -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fef3c7;">📬</div>
+            <div>
+                <h3>Contact Form Step</h3>
+                <p>The lead capture screen shown after the patient sees their estimate</p>
             </div>
         </div>
 
         <div class="cfg-card-section">
-            <h4>Question Titles</h4>
-            <p class="cfg-desc" style="margin:0 0 14px;">Edit the heading shown on each question panel. Options and logic are fixed by the 3-path flow.</p>
-            <div class="cfg-grid">
-                <div class="cfg-field cfg-full"><label>Router — "What are you looking to replace?"</label><input type="text" name="<?= CFG_OPTION ?>[imp_router_title]" value="<?= esc_attr( $s['imp_router_title'] ) ?>"/></div>
-                <div class="cfg-field cfg-full"><label>Router Sub-label</label><input type="text" name="<?= CFG_OPTION ?>[imp_router_sub]" value="<?= esc_attr( $s['imp_router_sub'] ) ?>"/></div>
-
-                <div class="cfg-field"><label>A1 — Single: tooth location</label><input type="text" name="<?= CFG_OPTION ?>[imp_a1_title]" value="<?= esc_attr( $s['imp_a1_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>A2 — Single: how long missing</label><input type="text" name="<?= CFG_OPTION ?>[imp_a2_title]" value="<?= esc_attr( $s['imp_a2_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>A3 — Single: bone graft</label><input type="text" name="<?= CFG_OPTION ?>[imp_a3_title]" value="<?= esc_attr( $s['imp_a3_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>A4 — Single: situation</label><input type="text" name="<?= CFG_OPTION ?>[imp_a4_title]" value="<?= esc_attr( $s['imp_a4_title'] ) ?>"/></div>
-
-                <div class="cfg-field"><label>M1 — Multiple: how many teeth</label><input type="text" name="<?= CFG_OPTION ?>[imp_m1_title]" value="<?= esc_attr( $s['imp_m1_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>M2 — Multiple: teeth location</label><input type="text" name="<?= CFG_OPTION ?>[imp_m2_title]" value="<?= esc_attr( $s['imp_m2_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>M3 — Multiple: how long missing</label><input type="text" name="<?= CFG_OPTION ?>[imp_m3_title]" value="<?= esc_attr( $s['imp_m3_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>M4 — Multiple: bone graft</label><input type="text" name="<?= CFG_OPTION ?>[imp_m4_title]" value="<?= esc_attr( $s['imp_m4_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>M5 — Multiple: situation</label><input type="text" name="<?= CFG_OPTION ?>[imp_m5_title]" value="<?= esc_attr( $s['imp_m5_title'] ) ?>"/></div>
-
-                <div class="cfg-field"><label>B1 — Full arch: which arch</label><input type="text" name="<?= CFG_OPTION ?>[imp_b1_title]" value="<?= esc_attr( $s['imp_b1_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>B2 — Full arch: situation</label><input type="text" name="<?= CFG_OPTION ?>[imp_b2_title]" value="<?= esc_attr( $s['imp_b2_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>B3 — Full arch: duration</label><input type="text" name="<?= CFG_OPTION ?>[imp_b3_title]" value="<?= esc_attr( $s['imp_b3_title'] ) ?>"/></div>
-
-                <div class="cfg-field"><label>Insurance question title</label><input type="text" name="<?= CFG_OPTION ?>[imp_ins_title]" value="<?= esc_attr( $s['imp_ins_title'] ) ?>"/></div>
-
-                <div class="cfg-field"><label>Result suffix — Single</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_single_suffix]" value="<?= esc_attr( $s['imp_result_single_suffix'] ) ?>"/></div>
-                <div class="cfg-field"><label>Result suffix — Multiple</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_multiple_suffix]" value="<?= esc_attr( $s['imp_result_multiple_suffix'] ) ?>"/></div>
-                <div class="cfg-field"><label>Result suffix — Full Arch</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_fullarch_suffix]" value="<?= esc_attr( $s['imp_result_fullarch_suffix'] ) ?>"/></div>
-            </div>
-        </div>
-
-
-
-        <div class="cfg-card-section">
-            <h4>Disclaimer <span style="font-weight:400;color:#646970;">(shown on results screen regardless of price toggle)</span></h4>
-            <div class="cfg-field cfg-full">
-                <textarea name="<?= CFG_OPTION ?>[imp_disclaimer]"><?= esc_textarea( $s['imp_disclaimer'] ) ?></textarea>
-                <span class="cfg-desc">Shown in small text below the estimate. Protects against patients holding you to the estimate.</span>
-            </div>
-        </div>
-
-        <div class="cfg-card-section">
-            <h4>Contact Form Step</h4>
             <div class="cfg-grid">
                 <div class="cfg-field"><label>Title</label><input type="text" name="<?= CFG_OPTION ?>[imp_contact_title]" value="<?= esc_attr( $s['imp_contact_title'] ) ?>"/></div>
                 <div class="cfg-field cfg-full"><label>Subtitle</label><textarea name="<?= CFG_OPTION ?>[imp_contact_subtitle]"><?= esc_textarea( $s['imp_contact_subtitle'] ) ?></textarea></div>
                 <div class="cfg-field"><label>Submit Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_contact_btn]" value="<?= esc_attr( $s['imp_contact_btn'] ) ?>"/></div>
             </div>
         </div>
+
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  7 · DISCLAIMER                                      -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fef2f2;">⚠️</div>
+            <div>
+                <h3>Disclaimer</h3>
+                <p>Shown in small text below the estimate on the results screen</p>
+            </div>
+        </div>
+
+        <div class="cfg-card-section">
+            <div class="cfg-field cfg-full">
+                <textarea name="<?= CFG_OPTION ?>[imp_disclaimer]"><?= esc_textarea( $s['imp_disclaimer'] ) ?></textarea>
+                <span class="cfg-desc">Protects against patients holding you to the estimate price.</span>
+            </div>
+        </div>
+
+        <script>
+        function impTogglePath(hdr) {
+            hdr.classList.toggle('open');
+            var body = hdr.nextElementSibling;
+            body.classList.toggle('open');
+        }
+        </script>
 
     </div>
 
