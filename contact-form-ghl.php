@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.6.1
+ * Version:     1.7.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -166,27 +166,24 @@ function cfg_defaults() {
         'imp_intro_subtitle'   => "Answer 4 quick questions and we'll give you a personalised cost range for your dental implant treatment.",
         'imp_intro_bullets'    => "Takes under 2 minutes\nNo obligation — 100% free\nInstant, personalised estimate",
         'imp_intro_btn'        => 'Get My Estimate',
-        'imp_q1_title'         => 'What best describes your situation?',
-        'imp_q1_opts'          => [
-            "I'm missing a tooth",
-            'I need a tooth extracted first',
-            'I want to replace my dentures',
-            'My crown or implant is broken',
-        ],
-        'imp_q2_title'         => 'How many teeth need implants?',
-        'imp_q2_opts'          => [
-            [ 'label' => 'Just one tooth',       'tier' => 'single' ],
-            [ 'label' => '2 – 4 teeth',          'tier' => 'multi'  ],
-            [ 'label' => 'Full arch (all teeth)', 'tier' => 'arch'   ],
-            [ 'label' => '5+ teeth',              'tier' => 'multi'  ],
-        ],
-        'imp_q3_title'         => 'Has a dentist mentioned you may need bone grafting?',
-        'imp_q3_opt1'          => 'Yes',
-        'imp_q3_opt2'          => 'Not sure',
-        'imp_q3_opt3'          => 'No, I have sufficient bone',
-        'imp_q4_title'         => 'Do you have dental insurance?',
-        'imp_q4_opt1'          => 'Yes, I have coverage',
-        'imp_q4_opt2'          => 'No',
+        'imp_router_title'     => 'What are you looking to replace?',
+        'imp_router_sub'       => 'Select the option that best describes your situation.',
+        'imp_a1_title'         => 'Where is the tooth located?',
+        'imp_a2_title'         => 'How long has the tooth been missing?',
+        'imp_a3_title'         => 'Has a dentist mentioned bone loss or the need for bone grafting?',
+        'imp_a4_title'         => 'What best describes your situation?',
+        'imp_m1_title'         => 'How many teeth are you looking to replace?',
+        'imp_m2_title'         => 'Where are the teeth located?',
+        'imp_m3_title'         => 'How long have the teeth been missing?',
+        'imp_m4_title'         => 'Has a dentist mentioned bone loss or the need for bone grafting?',
+        'imp_m5_title'         => 'What best describes your situation?',
+        'imp_b1_title'         => 'Which arch are you looking to replace?',
+        'imp_b2_title'         => 'What best describes your current situation?',
+        'imp_b3_title'         => 'How long have you had missing or failing teeth?',
+        'imp_ins_title'        => 'Do you have dental insurance?',
+        'imp_result_single_suffix'   => 'for a single dental implant',
+        'imp_result_multiple_suffix' => 'Based on number of teeth at the per-implant rate',
+        'imp_result_fullarch_suffix' => 'per arch',
         'imp_result_title'     => 'Your Estimated Investment',
         'imp_result_subtitle'  => "Based on your answers, here's a personalised cost range:",
         'imp_contact_title'    => 'Book Your Free Consultation',
@@ -245,33 +242,8 @@ function cfg_sanitize( $input ) {
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
     ];
 
-    // ── Dynamic option arrays (handle before the general loop) ──
-    $valid_tiers = [ 'single', 'multi', 'arch' ];
-
-    $q1_raw = $input['imp_q1_opts'] ?? null;
-    if ( is_array( $q1_raw ) ) {
-        $clean['imp_q1_opts'] = array_values( array_filter( array_map( 'sanitize_text_field', $q1_raw ) ) );
-        if ( empty( $clean['imp_q1_opts'] ) ) $clean['imp_q1_opts'] = $defaults['imp_q1_opts'];
-    } else {
-        $clean['imp_q1_opts'] = $defaults['imp_q1_opts'];
-    }
-
-    $q2_raw = $input['imp_q2_opts'] ?? null;
-    $clean['imp_q2_opts'] = [];
-    if ( is_array( $q2_raw ) ) {
-        foreach ( $q2_raw as $item ) {
-            if ( ! is_array( $item ) ) continue;
-            $label = sanitize_text_field( $item['label'] ?? '' );
-            $tier  = in_array( $item['tier'] ?? '', $valid_tiers, true ) ? $item['tier'] : 'multi';
-            if ( $label !== '' ) $clean['imp_q2_opts'][] = [ 'label' => $label, 'tier' => $tier ];
-        }
-    }
-    if ( empty( $clean['imp_q2_opts'] ) ) $clean['imp_q2_opts'] = $defaults['imp_q2_opts'];
-
-    // ── General loop (skip array fields already handled) ──
-    $skip = [ 'imp_q1_opts', 'imp_q2_opts' ];
+    // ── General loop ──
     foreach ( $defaults as $key => $default ) {
-        if ( in_array( $key, $skip, true ) ) continue;
         if ( in_array( $key, $bool_fields ) ) {
             $clean[ $key ] = ! empty( $input[ $key ] ) ? '1' : '0';
         } elseif ( in_array( $key, $color_fields ) ) {
@@ -280,9 +252,6 @@ function cfg_sanitize( $input ) {
             $clean[ $key ] = sanitize_textarea_field( $input[ $key ] ?? '' );
         } elseif ( in_array( $key, $url_fields ) ) {
             $clean[ $key ] = esc_url_raw( $input[ $key ] ?? '' );
-        } elseif ( is_array( $default ) ) {
-            // any other array default — preserve as-is from DB (already handled above or leave as default)
-            if ( ! isset( $clean[ $key ] ) ) $clean[ $key ] = $default;
         } else {
             $clean[ $key ] = sanitize_text_field( $input[ $key ] ?? $default );
         }
@@ -1233,10 +1202,6 @@ function cfg_settings_page() {
                 <label for="imp_show_full_arch"><strong>Show "Full Arch" option</strong> in question 2 and enable arch pricing</label>
             </div>
             <div class="cfg-toggle-row">
-                <input type="checkbox" id="imp_q2_opt4_enabled" name="<?= CFG_OPTION ?>[imp_q2_opt4_enabled]" value="1" <?= checked( $s['imp_q2_opt4_enabled'], '1', false ) ?>/>
-                <label for="imp_q2_opt4_enabled"><strong>Show "5+ teeth" option</strong> in question 2 (uses the multi-teeth price range)</label>
-            </div>
-            <div class="cfg-toggle-row">
                 <input type="checkbox" id="imp_show_financing" name="<?= CFG_OPTION ?>[imp_show_financing]" value="1" <?= checked( $s['imp_show_financing'], '1', false ) ?>/>
                 <label for="imp_show_financing"><strong>Show financing note</strong> on the results screen</label>
             </div>
@@ -1346,59 +1311,36 @@ function cfg_settings_page() {
         </div>
 
         <div class="cfg-card-section">
-            <h4>Question 1 — Situation</h4>
-            <p class="cfg-desc" style="margin:0 0 12px;">Add or remove options freely. All options lead to question 2. Drag to reorder (coming soon).</p>
-            <div class="cfg-grid" style="margin-bottom:10px;">
-                <div class="cfg-field cfg-full"><label>Question Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_q1_title]" value="<?= esc_attr( $s['imp_q1_title'] ) ?>"/></div>
-            </div>
-            <div id="imp-q1-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-            <button type="button" onclick="impAddQ1()" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#f0f6fc;border:1px dashed #2271b1;color:#2271b1;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
-                <span style="font-size:16px;line-height:1;">+</span> Add Option
-            </button>
-            <!-- Hidden: PHP-generated JSON of current Q1 opts for JS to hydrate -->
-            <input type="hidden" id="imp-q1-json" value="<?= esc_attr( wp_json_encode( array_values( (array)$s['imp_q1_opts'] ) ) ) ?>"/>
-        </div>
-
-        <div class="cfg-card-section">
-            <h4>Question 2 — How Many Teeth</h4>
-            <p class="cfg-desc" style="margin:0 0 12px;">For each option, choose the price tier it triggers. You control the label and the pricing logic.</p>
-            <div class="cfg-grid" style="margin-bottom:10px;">
-                <div class="cfg-field cfg-full"><label>Question Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_q2_title]" value="<?= esc_attr( $s['imp_q2_title'] ) ?>"/></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;padding:4px 0;margin-bottom:4px;">
-                <span style="font-size:11px;font-weight:700;color:#1d2327;padding-left:4px;">Option Label</span>
-                <span style="font-size:11px;font-weight:700;color:#1d2327;min-width:170px;text-align:center;">Price Tier</span>
-            </div>
-            <div id="imp-q2-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-            <button type="button" onclick="impAddQ2()" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:#f0f6fc;border:1px dashed #2271b1;color:#2271b1;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">
-                <span style="font-size:16px;line-height:1;">+</span> Add Option
-            </button>
-            <!-- Hidden: PHP-generated JSON of current Q2 opts for JS to hydrate -->
-            <input type="hidden" id="imp-q2-json" value="<?= esc_attr( wp_json_encode( array_values( (array)$s['imp_q2_opts'] ) ) ) ?>"/>
-            <div style="margin-top:12px;padding:10px 12px;background:#f0f6fc;border-radius:6px;">
-                <p style="font-size:11.5px;color:#2271b1;margin:0;"><strong>Price tiers:</strong> Single = 1 implant price &nbsp;|&nbsp; Multiple = 2–4+ teeth price &nbsp;|&nbsp; Full Arch = arch price. Arch options are hidden if the Full Arch toggle is off.</p>
-            </div>
-        </div>
-
-        <div class="cfg-card-section">
-            <h4>Question 3 — Bone Grafting</h4>
-            <p class="cfg-desc" style="margin:0 0 12px;">Options 1 and 2 add the bone graft cost to the estimate. Option 3 does not.</p>
+            <h4>Question Titles</h4>
+            <p class="cfg-desc" style="margin:0 0 14px;">Edit the heading shown on each question panel. Options and logic are fixed by the 3-path flow.</p>
             <div class="cfg-grid">
-                <div class="cfg-field cfg-full"><label>Question Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_q3_title]" value="<?= esc_attr( $s['imp_q3_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 1 <span class="cfg-badge">+ graft cost</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q3_opt1]" value="<?= esc_attr( $s['imp_q3_opt1'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 2 <span class="cfg-badge">+ graft cost</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q3_opt2]" value="<?= esc_attr( $s['imp_q3_opt2'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 3 <span class="cfg-badge">no graft cost</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_q3_opt3]" value="<?= esc_attr( $s['imp_q3_opt3'] ) ?>"/></div>
+                <div class="cfg-field cfg-full"><label>Router — "What are you looking to replace?"</label><input type="text" name="<?= CFG_OPTION ?>[imp_router_title]" value="<?= esc_attr( $s['imp_router_title'] ) ?>"/></div>
+                <div class="cfg-field cfg-full"><label>Router Sub-label</label><input type="text" name="<?= CFG_OPTION ?>[imp_router_sub]" value="<?= esc_attr( $s['imp_router_sub'] ) ?>"/></div>
+
+                <div class="cfg-field"><label>A1 — Single: tooth location</label><input type="text" name="<?= CFG_OPTION ?>[imp_a1_title]" value="<?= esc_attr( $s['imp_a1_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>A2 — Single: how long missing</label><input type="text" name="<?= CFG_OPTION ?>[imp_a2_title]" value="<?= esc_attr( $s['imp_a2_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>A3 — Single: bone graft</label><input type="text" name="<?= CFG_OPTION ?>[imp_a3_title]" value="<?= esc_attr( $s['imp_a3_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>A4 — Single: situation</label><input type="text" name="<?= CFG_OPTION ?>[imp_a4_title]" value="<?= esc_attr( $s['imp_a4_title'] ) ?>"/></div>
+
+                <div class="cfg-field"><label>M1 — Multiple: how many teeth</label><input type="text" name="<?= CFG_OPTION ?>[imp_m1_title]" value="<?= esc_attr( $s['imp_m1_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>M2 — Multiple: teeth location</label><input type="text" name="<?= CFG_OPTION ?>[imp_m2_title]" value="<?= esc_attr( $s['imp_m2_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>M3 — Multiple: how long missing</label><input type="text" name="<?= CFG_OPTION ?>[imp_m3_title]" value="<?= esc_attr( $s['imp_m3_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>M4 — Multiple: bone graft</label><input type="text" name="<?= CFG_OPTION ?>[imp_m4_title]" value="<?= esc_attr( $s['imp_m4_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>M5 — Multiple: situation</label><input type="text" name="<?= CFG_OPTION ?>[imp_m5_title]" value="<?= esc_attr( $s['imp_m5_title'] ) ?>"/></div>
+
+                <div class="cfg-field"><label>B1 — Full arch: which arch</label><input type="text" name="<?= CFG_OPTION ?>[imp_b1_title]" value="<?= esc_attr( $s['imp_b1_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>B2 — Full arch: situation</label><input type="text" name="<?= CFG_OPTION ?>[imp_b2_title]" value="<?= esc_attr( $s['imp_b2_title'] ) ?>"/></div>
+                <div class="cfg-field"><label>B3 — Full arch: duration</label><input type="text" name="<?= CFG_OPTION ?>[imp_b3_title]" value="<?= esc_attr( $s['imp_b3_title'] ) ?>"/></div>
+
+                <div class="cfg-field"><label>Insurance question title</label><input type="text" name="<?= CFG_OPTION ?>[imp_ins_title]" value="<?= esc_attr( $s['imp_ins_title'] ) ?>"/></div>
+
+                <div class="cfg-field"><label>Result suffix — Single</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_single_suffix]" value="<?= esc_attr( $s['imp_result_single_suffix'] ) ?>"/></div>
+                <div class="cfg-field"><label>Result suffix — Multiple</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_multiple_suffix]" value="<?= esc_attr( $s['imp_result_multiple_suffix'] ) ?>"/></div>
+                <div class="cfg-field"><label>Result suffix — Full Arch</label><input type="text" name="<?= CFG_OPTION ?>[imp_result_fullarch_suffix]" value="<?= esc_attr( $s['imp_result_fullarch_suffix'] ) ?>"/></div>
             </div>
         </div>
 
-        <div class="cfg-card-section">
-            <h4>Question 4 — Insurance</h4>
-            <div class="cfg-grid">
-                <div class="cfg-field cfg-full"><label>Question Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_q4_title]" value="<?= esc_attr( $s['imp_q4_title'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 1 — Yes</label><input type="text" name="<?= CFG_OPTION ?>[imp_q4_opt1]" value="<?= esc_attr( $s['imp_q4_opt1'] ) ?>"/></div>
-                <div class="cfg-field"><label>Option 2 — No</label><input type="text" name="<?= CFG_OPTION ?>[imp_q4_opt2]" value="<?= esc_attr( $s['imp_q4_opt2'] ) ?>"/></div>
-            </div>
-        </div>
+
 
         <div class="cfg-card-section">
             <h4>Disclaimer <span style="font-weight:400;color:#646970;">(shown on results screen regardless of price toggle)</span></h4>
@@ -1601,78 +1543,6 @@ function cfg_settings_page() {
         if (/^#[0-9a-f]{6}$/i.test(val)) { var el = document.getElementById(pickerId); if (el) el.value = val; }
     }
 
-    /* ── Dynamic Q1 (situation) options ── */
-    var impQ1List = document.getElementById('imp-q1-list');
-    var impQ1Data = JSON.parse(document.getElementById('imp-q1-json').value || '[]');
-
-    function impRenderQ1() {
-        impQ1List.innerHTML = '';
-        impQ1Data.forEach(function(label, i) { impQ1Row(i, label); });
-    }
-    function impQ1Row(i, label) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;';
-        row.innerHTML =
-            '<span style="font-size:11px;font-weight:600;color:#646970;min-width:20px;">' + (i+1) + '.</span>'
-          + '<input type="text" name="<?= CFG_OPTION ?>[imp_q1_opts][]" value="' + escAttr(label) + '" placeholder="Option label" style="flex:1;" oninput="impQ1Data[' + i + ']=this.value"/>'
-          + '<button type="button" onclick="impRemoveQ1(' + i + ')" title="Remove" style="background:none;border:none;cursor:pointer;color:#b32d2e;font-size:18px;line-height:1;padding:0 4px;">&times;</button>';
-        impQ1List.appendChild(row);
-    }
-    function impAddQ1() {
-        impQ1Data.push('');
-        impRenderQ1();
-        impQ1List.querySelectorAll('input[type=text]')[impQ1Data.length - 1].focus();
-    }
-    function impRemoveQ1(i) {
-        if (impQ1Data.length <= 1) return;
-        impQ1Data.splice(i, 1);
-        impRenderQ1();
-    }
-    impRenderQ1();
-
-    /* ── Dynamic Q2 (count) options ── */
-    var impQ2List = document.getElementById('imp-q2-list');
-    var impQ2Data = JSON.parse(document.getElementById('imp-q2-json').value || '[]');
-    var impQ2Tiers = {
-        single: 'Single tooth price',
-        multi:  'Multiple teeth price',
-        arch:   'Full arch price'
-    };
-
-    function impRenderQ2() {
-        impQ2List.innerHTML = '';
-        impQ2Data.forEach(function(item, i) { impQ2Row(i, item.label, item.tier); });
-    }
-    function impQ2Row(i, label, tier) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;';
-        var sel = '<select name="<?= CFG_OPTION ?>[imp_q2_opts][' + i + '][tier]" onchange="impQ2Data[' + i + '].tier=this.value" style="min-width:160px;">';
-        Object.keys(impQ2Tiers).forEach(function(t) {
-            sel += '<option value="' + t + '"' + (tier === t ? ' selected' : '') + '>' + impQ2Tiers[t] + '</option>';
-        });
-        sel += '</select>';
-        row.innerHTML =
-            '<input type="text" name="<?= CFG_OPTION ?>[imp_q2_opts][' + i + '][label]" value="' + escAttr(label) + '" placeholder="Option label" oninput="impQ2Data[' + i + '].label=this.value"/>'
-          + sel
-          + '<button type="button" onclick="impRemoveQ2(' + i + ')" title="Remove" style="background:none;border:none;cursor:pointer;color:#b32d2e;font-size:18px;line-height:1;padding:0 4px;">&times;</button>';
-        impQ2List.appendChild(row);
-    }
-    function impAddQ2() {
-        impQ2Data.push({ label: '', tier: 'multi' });
-        impRenderQ2();
-        impQ2List.querySelectorAll('input[type=text]')[impQ2Data.length - 1].focus();
-    }
-    function impRemoveQ2(i) {
-        if (impQ2Data.length <= 1) return;
-        impQ2Data.splice(i, 1);
-        impRenderQ2();
-    }
-    impRenderQ2();
-
-    /* ── Utility ── */
-    function escAttr(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
     </script>
     <?php
 }
@@ -3188,7 +3058,7 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
             <?= esc_html( $s['imp_intro_subtitle'] ) ?>
           </p>
           <div>
-            <button onclick="<?= $uid ?>Nav('q1')" class="imp-cta-btn">
+            <button onclick="<?= $uid ?>Nav('router')" class="imp-cta-btn">
               <?= esc_html( $s['imp_intro_btn'] ) ?>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
@@ -3231,47 +3101,110 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
   </main>
 </div>
 
-<!-- Q1: SITUATION -->
 <?php
-$q1_opts_html = '';
-foreach ( (array)$s['imp_q1_opts'] as $idx => $label ) {
-    $label = trim( (string)$label );
-    if ( $label !== '' ) {
-        $q1_opts_html .= $opt( 'q1', 'q1_' . $idx, $label, 'q2' );
-    }
-}
-echo $qpanel( 'q1', $s['imp_q1_title'], 'Select the option that best describes your situation.', $q1_opts_html );
+// ── insurance next helper ──
+$ins_next = $show_insurance ? 'ins' : 'summary';
 ?>
 
-<!-- Q2: COUNT -->
+<!-- ROUTER -->
 <?php
-$q2_opts_html = '';
-foreach ( (array)$s['imp_q2_opts'] as $item ) {
-    $lbl  = trim( (string)( $item['label'] ?? '' ) );
-    $tier = $item['tier'] ?? 'multi';
-    // Hide arch options when full arch is turned off
-    if ( $tier === 'arch' && ! $show_arch ) continue;
-    if ( $lbl !== '' ) {
-        $q2_opts_html .= $opt( 'q2', $tier, $lbl, 'q3' );
-    }
+$router_opts = $opt( 'router', 'single',   'One missing tooth',                    'a1', 'Replace a single tooth with an implant' )
+             . $opt( 'router', 'multiple',  'Several missing teeth',                'm1', 'Replace 2 to 5 individual teeth' );
+if ( $show_arch ) {
+    $router_opts .= $opt( 'router', 'fullarch', 'A denture or most/all teeth in an arch', 'b1', 'Full-arch or All-on-4 / All-on-6' );
 }
-echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your personalised range.", $q2_opts_html );
+echo $qpanel( 'router', $s['imp_router_title'], $s['imp_router_sub'], $router_opts );
 ?>
 
-<!-- Q3: BONE GRAFT -->
-<?php
-$q3_next = $show_insurance ? 'q4' : 'summary';
-echo $qpanel( 'q3', $s['imp_q3_title'], 'This helps us assess whether your estimate should include preparatory work.',
-    $opt( 'q3', 'yes',     $s['imp_q3_opt1'], $q3_next )
-  . $opt( 'q3', 'notsure', $s['imp_q3_opt2'], $q3_next )
-  . $opt( 'q3', 'no',      $s['imp_q3_opt3'], $q3_next )
+<!-- SINGLE-TOOTH FLOW -->
+<?php echo $qpanel( 'a1', $s['imp_a1_title'], 'Location affects restoration complexity and the materials used.',
+    $opt('toothLocation','front',    'Front',    'a2', 'Visible when smiling')
+  . $opt('toothLocation','back',     'Back',     'a2', 'Chewing tooth (molar or premolar)')
+  . $opt('toothLocation','not-sure', 'Not sure', 'a2')
 ); ?>
 
-<!-- Q4: INSURANCE -->
+<?php echo $qpanel( 'a2', $s['imp_a2_title'], 'This helps us assess potential bone changes at the site.',
+    $opt('timeMissing','under-6mo', 'Less than 6 months', 'a3')
+  . $opt('timeMissing','6-12mo',   '6–12 months',        'a3')
+  . $opt('timeMissing','1-3yr',    '1–3 years',          'a3')
+  . $opt('timeMissing','3yr+',     '3+ years',           'a3')
+  . $opt('timeMissing','not-sure', 'Not sure',           'a3')
+); ?>
+
+<?php echo $qpanel( 'a3', $s['imp_a3_title'], 'This can affect your treatment plan and overall timeline.',
+    $opt('boneGraft','yes',      'Yes',      'a4')
+  . $opt('boneGraft','no',       'No',       'a4')
+  . $opt('boneGraft','not-sure', 'Not sure', 'a4')
+); ?>
+
+<?php echo $qpanel( 'a4', $s['imp_a4_title'], 'This helps us tailor your estimate to your current needs.',
+    $opt('situationSingle','already-missing', 'Tooth already missing',       $ins_next)
+  . $opt('situationSingle','needs-removal',   'Tooth needs to be removed',   $ins_next)
+  . $opt('situationSingle','bridge-crown',    'Replacing a bridge or crown', $ins_next)
+  . $opt('situationSingle','not-sure',        'Not sure',                    $ins_next)
+); ?>
+
+<!-- MULTIPLE-TEETH FLOW -->
+<?php echo $qpanel( 'm1', $s['imp_m1_title'], "We'll use this to calculate your personalized range.",
+    $opt('teethCount','2',     '2 teeth',  'm2')
+  . $opt('teethCount','3',     '3 teeth',  'm2')
+  . $opt('teethCount','4',     '4 teeth',  'm2')
+  . $opt('teethCount','5plus', '5+ teeth', 'm2')
+); ?>
+
+<?php echo $qpanel( 'm2', $s['imp_m2_title'], 'Location affects restoration complexity and materials.',
+    $opt('teethLocation','front',    'Front',               'm3', 'Visible when smiling')
+  . $opt('teethLocation','back',     'Back',                'm3', 'Chewing teeth')
+  . $opt('teethLocation','both',     'Both front and back', 'm3')
+  . $opt('teethLocation','not-sure', 'Not sure',            'm3')
+); ?>
+
+<?php echo $qpanel( 'm3', $s['imp_m3_title'], 'This helps us assess potential bone changes at the sites.',
+    $opt('timeMissingMult','under-6mo', 'Less than 6 months', 'm4')
+  . $opt('timeMissingMult','6-12mo',   '6–12 months',        'm4')
+  . $opt('timeMissingMult','1-3yr',    '1–3 years',          'm4')
+  . $opt('timeMissingMult','3yr+',     '3+ years',           'm4')
+  . $opt('timeMissingMult','not-sure', 'Not sure',           'm4')
+); ?>
+
+<?php echo $qpanel( 'm4', $s['imp_m4_title'], 'This can affect your treatment plan and overall timeline.',
+    $opt('boneGraftMult','yes',      'Yes',      'm5')
+  . $opt('boneGraftMult','no',       'No',       'm5')
+  . $opt('boneGraftMult','not-sure', 'Not sure', 'm5')
+); ?>
+
+<?php echo $qpanel( 'm5', $s['imp_m5_title'], 'This helps us tailor your estimate to your current needs.',
+    $opt('situationMult','already-missing', 'Teeth already missing',           $ins_next)
+  . $opt('situationMult','needs-removal',   'Some teeth need to be removed',   $ins_next)
+  . $opt('situationMult','bridge-crown',    'Replacing bridges or crowns',     $ins_next)
+  . $opt('situationMult','not-sure',        'Not sure',                        $ins_next)
+); ?>
+
+<!-- FULL-ARCH FLOW -->
+<?php echo $qpanel( 'b1', $s['imp_b1_title'], 'Upper, lower, or both — this shapes your treatment overview.',
+    $opt('archSelection','upper', 'Upper', 'b2', 'Top teeth')
+  . $opt('archSelection','lower', 'Lower', 'b2', 'Bottom teeth')
+  . $opt('archSelection','both',  'Both',  'b2', 'Full mouth restoration')
+); ?>
+
+<?php echo $qpanel( 'b2', $s['imp_b2_title'], 'This helps us understand your starting point.',
+    $opt('situationArch','wearing-denture', 'Wearing a denture',        'b3')
+  . $opt('situationArch','failing-teeth',   'Multiple failing teeth',   'b3')
+  . $opt('situationArch','beyond-repair',   'Teeth beyond repair',      'b3')
+  . $opt('situationArch','not-sure',        'Not sure',                 'b3')
+); ?>
+
+<?php echo $qpanel( 'b3', $s['imp_b3_title'], 'Duration helps determine bone volume and treatment complexity.',
+    $opt('archDuration','under-1yr', 'Less than 1 year', 'summary')
+  . $opt('archDuration','1-5yr',     '1–5 years',        'summary')
+  . $opt('archDuration','5yr+',      '5+ years',         'summary')
+); ?>
+
+<!-- INSURANCE -->
 <?php if ( $show_insurance ) :
-echo $qpanel( 'q4', $s['imp_q4_title'], 'Insurance can reduce your out-of-pocket cost.',
-    $opt( 'q4', 'yes', $s['imp_q4_opt1'], 'summary' )
-  . $opt( 'q4', 'no',  $s['imp_q4_opt2'], 'summary' )
+echo $qpanel( 'ins', $s['imp_ins_title'], 'Insurance can reduce your out-of-pocket cost.',
+    $opt('insurance','yes', 'Yes (I have coverage)', 'summary')
+  . $opt('insurance','no',  'No',                    'summary')
 );
 endif; ?>
 
@@ -3358,8 +3291,39 @@ endif; ?>
   </main>
 </div>
 
-<!-- RESULT -->
-<div class="die-panel" id="<?= $uid ?>-panel-result">
+<?php
+// ── Helper: result check-item ──
+$rci = function( $label ) {
+    return '<div style="display:flex;align-items:center;gap:.5rem;">'
+         . '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;"><polyline points="20 6 9 13 4 10"/></svg>'
+         . '<span style="font-family:Inter,sans-serif;color:hsl(var(--foreground));font-size:.875rem;">' . esc_html($label) . '</span>'
+         . '</div>';
+};
+$single_items  = ['Implant surgery','Abutment','Final crown','Surgical planning'];
+$arch_items    = ['All-on-4/6 implant system','Temporary arch','Final prosthesis','Surgical guides'];
+$np_href = ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '#';
+$cta_btn = ! empty( $s['imp_success_url'] )
+    ? '<div style="display:flex;justify-content:center;"><a href="' . esc_url($s['imp_success_url']) . '" class="imp-cta-btn" style="text-decoration:none;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> Book My Free Consultation</a></div>'
+    : '';
+$fin_block = ( $show_fin && ! empty( $s['imp_financing_text'] ) )
+    ? '<div style="display:flex;align-items:flex-start;gap:.75rem;background:hsl(var(--accent)/.4);padding:1rem 1.25rem;border:1px solid hsl(var(--border));border-radius:.75rem;margin-bottom:1rem;">'
+      . '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;margin-top:1px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>'
+      . '<p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;">' . esc_html($s['imp_financing_text']) . '</p>'
+      . '</div>'
+    : '';
+$disc_block = ! empty( $s['imp_disclaimer'] )
+    ? '<div style="margin-bottom:1.5rem;text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;">' . esc_html($s['imp_disclaimer']) . '</p></div>'
+    : '';
+$no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">'
+    . '<div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:hsl(var(--primary)/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
+    . '<h2 style="font-family:\'Cormorant Garamond\',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,4vw,2rem);line-height:1.25;margin:0 0 1rem;">' . esc_html($no_price_title) . '</h2>'
+    . '<p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;margin:0 auto 2rem;max-width:26rem;">' . esc_html($no_price_sub) . '</p>'
+    . '<a href="' . $np_href . '" class="imp-cta-btn" style="text-decoration:none;margin:0 auto;">' . esc_html($no_price_btn)
+    . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></div>';
+?>
+
+<!-- RESULT: SINGLE -->
+<div class="die-panel" id="<?= $uid ?>-panel-result-single">
   <main style="display:flex;flex-direction:column;flex:1;">
     <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:48rem;box-sizing:border-box;">
       <div style="display:flex;justify-content:center;margin-bottom:1.5rem;">
@@ -3368,67 +3332,91 @@ endif; ?>
           Your Estimate Is Ready
         </div>
       </div>
-
       <?php if ( $show_price ): ?>
-      <!-- ── PRICE SHOWN ── -->
       <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
         <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;margin-bottom:1.5rem;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
-        <p id="<?= $uid ?>-result-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
-        <p id="<?= $uid ?>-result-suffix" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"></p>
+        <p id="<?= $uid ?>-result-single-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"><?= esc_html( $s['imp_result_single_suffix'] ) ?></p>
         <div style="display:flex;flex-direction:column;gap:.625rem;max-width:18rem;margin:0 auto 1.5rem;text-align:left;">
           <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Included:</p>
-          <?php foreach(['Implant surgery','Abutment','Final crown'] as $item): ?>
-          <div style="display:flex;align-items:center;gap:.5rem;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;"><polyline points="20 6 9 13 4 10"/></svg>
-            <span style="font-family:Inter,sans-serif;color:hsl(var(--foreground));font-size:.875rem;"><?= esc_html($item) ?></span>
-          </div>
-          <?php endforeach; ?>
+          <?php foreach($single_items as $item): echo $rci($item); endforeach; ?>
         </div>
-        <div id="<?= $uid ?>-graft-note" style="display:none;background:hsl(var(--accent)/.5);padding:1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-bottom:1rem;">
+        <div id="<?= $uid ?>-graft-note-single" style="display:none;background:hsl(var(--accent)/.5);padding:1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-bottom:1rem;">
           <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;"><strong style="font-weight:600;">Bone grafting,</strong> if required, adds an estimated <?= esc_html($currency) ?><?= esc_html( number_format( (int)($s['imp_graft_min'] ?? 650) ) ) ?> &ndash; <?= esc_html($currency) ?><?= esc_html( number_format( (int)($s['imp_graft_max'] ?? 1100) ) ) ?>. Confirmed after a clinical exam.</p>
         </div>
       </div>
-      <?php if ( $show_fin && ! empty( $s['imp_financing_text'] ) ): ?>
-      <div style="display:flex;align-items:flex-start;gap:.75rem;background:hsl(var(--accent)/.4);padding:1rem 1.25rem;border:1px solid hsl(var(--border));border-radius:.75rem;margin-bottom:1rem;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;margin-top:1px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;"><?= esc_html( $s['imp_financing_text'] ) ?></p>
-      </div>
-      <?php endif; ?>
-      <?php if ( ! empty( $s['imp_disclaimer'] ) ): ?>
-      <div style="margin-bottom:1.5rem;text-align:center;">
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;"><?= esc_html( $s['imp_disclaimer'] ) ?></p>
-      </div>
-      <?php endif; ?>
-      <?php if ( ! empty( $s['imp_success_url'] ) ): ?>
-      <div style="display:flex;justify-content:center;">
-        <a href="<?= esc_url( $s['imp_success_url'] ) ?>" class="imp-cta-btn" style="text-decoration:none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          Book My Free Consultation
-        </a>
-      </div>
-      <?php endif; ?>
-
+      <?= $fin_block ?>
+      <?= $disc_block ?>
+      <?= $cta_btn ?>
       <?php else: ?>
-      <!-- ── PRICE HIDDEN — fully separate message ── -->
-      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
-        <div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:hsl(var(--primary)/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        </div>
-        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,4vw,2rem);line-height:1.25;margin:0 0 1rem;"><?= esc_html( $no_price_title ) ?></h2>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;margin:0 auto 2rem;max-width:26rem;"><?= esc_html( $no_price_sub ) ?></p>
-        <?php $np_href = ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '#'; ?>
-        <a href="<?= $np_href ?>" class="imp-cta-btn" style="text-decoration:none;margin:0 auto;">
-          <?= esc_html( $no_price_btn ) ?>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </a>
-      </div>
-      <?php if ( ! empty( $s['imp_disclaimer'] ) ): ?>
-      <div style="text-align:center;">
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;"><?= esc_html( $s['imp_disclaimer'] ) ?></p>
-      </div>
+      <?= $no_price_card ?>
+      <?php if ( ! empty( $s['imp_disclaimer'] ) ): ?><div style="text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;"><?= esc_html( $s['imp_disclaimer'] ) ?></p></div><?php endif; ?>
       <?php endif; ?>
-      <?php endif; // end show_price toggle ?>
+    </div>
+  </main>
+</div>
+
+<!-- RESULT: MULTIPLE -->
+<div class="die-panel" id="<?= $uid ?>-panel-result-multiple">
+  <main style="display:flex;flex-direction:column;flex:1;">
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:48rem;box-sizing:border-box;">
+      <div style="display:flex;justify-content:center;margin-bottom:1.5rem;">
+        <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--accent)/.6);padding:.375rem 1rem;border:1px solid hsl(var(--border));border-radius:9999px;font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Your Estimate Is Ready
+        </div>
+      </div>
+      <?php if ( $show_price ): ?>
+      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
+        <p id="<?= $uid ?>-result-multiple-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
+        <p id="<?= $uid ?>-result-multiple-count" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"><?= esc_html( $s['imp_result_multiple_suffix'] ) ?></p>
+        <div style="display:flex;flex-direction:column;gap:.625rem;max-width:18rem;margin:0 auto 1.5rem;text-align:left;">
+          <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Included (per implant):</p>
+          <?php foreach($single_items as $item): echo $rci($item); endforeach; ?>
+        </div>
+        <div id="<?= $uid ?>-graft-note-multiple" style="display:none;background:hsl(var(--accent)/.5);padding:1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-bottom:1rem;">
+          <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;"><strong style="font-weight:600;">Bone grafting,</strong> if required, adds an estimated <?= esc_html($currency) ?><?= esc_html( number_format( (int)($s['imp_graft_min'] ?? 650) ) ) ?> &ndash; <?= esc_html($currency) ?><?= esc_html( number_format( (int)($s['imp_graft_max'] ?? 1100) ) ) ?> per site. Confirmed after a clinical exam.</p>
+        </div>
+      </div>
+      <?= $fin_block ?>
+      <?= $disc_block ?>
+      <?= $cta_btn ?>
+      <?php else: ?>
+      <?= $no_price_card ?>
+      <?php if ( ! empty( $s['imp_disclaimer'] ) ): ?><div style="text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;"><?= esc_html( $s['imp_disclaimer'] ) ?></p></div><?php endif; ?>
+      <?php endif; ?>
+    </div>
+  </main>
+</div>
+
+<!-- RESULT: FULL ARCH -->
+<div class="die-panel" id="<?= $uid ?>-panel-result-fullarch">
+  <main style="display:flex;flex-direction:column;flex:1;">
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:48rem;box-sizing:border-box;">
+      <div style="display:flex;justify-content:center;margin-bottom:1.5rem;">
+        <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--accent)/.6);padding:.375rem 1rem;border:1px solid hsl(var(--border));border-radius:9999px;font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Your Overview Is Ready
+        </div>
+      </div>
+      <?php if ( $show_price ): ?>
+      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
+        <p id="<?= $uid ?>-result-fullarch-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"><?= esc_html( $s['imp_result_fullarch_suffix'] ) ?></p>
+        <div style="display:flex;flex-direction:column;gap:.625rem;max-width:18rem;margin:0 auto 1.5rem;text-align:left;">
+          <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Included:</p>
+          <?php foreach($arch_items as $item): echo $rci($item); endforeach; ?>
+        </div>
+      </div>
+      <?= $fin_block ?>
+      <?= $disc_block ?>
+      <?= $cta_btn ?>
+      <?php else: ?>
+      <?= $no_price_card ?>
+      <?php if ( ! empty( $s['imp_disclaimer'] ) ): ?><div style="text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;"><?= esc_html( $s['imp_disclaimer'] ) ?></p></div><?php endif; ?>
+      <?php endif; ?>
     </div>
   </main>
 </div>
@@ -3445,83 +3433,150 @@ endif; ?>
     nonce:    '<?= esc_js($nonce) ?>',
     currency: '<?= esc_js($currency) ?>',
     prices:   <?= $prices_json ?>,
-    honeypot: <?= $honeypot ? 'true' : 'false' ?>
+    honeypot: <?= $honeypot ? 'true' : 'false' ?>,
+    showIns:  <?= $show_insurance ? 'true' : 'false' ?>
   };
 
-  var state        = { q1:null,q1l:null, q2:null,q2l:null, q3:null,q3l:null, q4:null,q4l:null };
+  /* ── STATE ── */
+  var s = {
+    flow: null,
+    // single
+    toothLocation: null, toothLocationL: null,
+    timeMissing: null, timeMissingL: null,
+    boneGraft: null, boneGraftL: null,
+    situationSingle: null, situationSingleL: null,
+    // multiple
+    teethCount: null, teethCountN: 2, teethCountL: null,
+    teethLocation: null, teethLocationL: null,
+    timeMissingMult: null, timeMissingMultL: null,
+    boneGraftMult: null, boneGraftMultL: null,
+    situationMult: null, situationMultL: null,
+    // full-arch
+    archSelection: null, archSelectionL: null,
+    situationArch: null, situationArchL: null,
+    archDuration: null, archDurationL: null,
+    // insurance
+    insurance: null, insuranceL: null
+  };
+
   var currentPanel = 'intro';
   var navHistory   = [];
 
-  var stepMap = <?= $show_insurance ? '{
-    intro:   { label:"Get Started",   pct:5   },
-    q1:      { label:"Step 1 of 4",   pct:25  },
-    q2:      { label:"Step 2 of 4",   pct:50  },
-    q3:      { label:"Step 3 of 4",   pct:75  },
-    q4:      { label:"Step 4 of 4",   pct:88  },
-    summary: { label:"Step 5 of 6",   pct:94  },
-    lead:    { label:"Step 6 of 6",   pct:97  },
-    result:  { label:"Your Estimate", pct:100 }
-  }' : '{
-    intro:   { label:"Get Started",   pct:5   },
-    q1:      { label:"Step 1 of 3",   pct:28  },
-    q2:      { label:"Step 2 of 3",   pct:56  },
-    q3:      { label:"Step 3 of 3",   pct:78  },
-    summary: { label:"Step 4 of 5",   pct:90  },
-    lead:    { label:"Step 5 of 5",   pct:97  },
-    result:  { label:"Your Estimate", pct:100 }
-  }' ?>;
-
-  var msgs = {
-    q1:      ['Starting your estimate\u2026',      'A few short questions'],
-    q2:      ['Personalizing your estimate\u2026', 'Adjusting for your case'],
-    q3:      ['Narrowing your range\u2026',        'Adjusting for tooth count'],
-    q4:      ['Almost there\u2026',                'One final detail'],
-    summary: ['Reviewing your answers\u2026',      'Your estimate is being prepared'],
-    lead:    ['Ready to reveal\u2026',             'Just one more step'],
-    result:  ['Finalizing your estimate\u2026',    'Calculating your range']
+  /* ── STEP MAP ── */
+  // single=9 steps total (router+a1-a4+ins+summary+lead+result)
+  // multiple=10, fullarch=7 (no insurance for fullarch)
+  var stepMap = {
+    intro:  { label: 'Get Started',       pct: 5   },
+    router: { label: 'Step 1',            pct: 11  },
+    a1:     { label: 'Step 2 of 9',       pct: 22  },
+    a2:     { label: 'Step 3 of 9',       pct: 33  },
+    a3:     { label: 'Step 4 of 9',       pct: 44  },
+    a4:     { label: 'Step 5 of 9',       pct: 55  },
+    ins:    { label: 'Step 6 of 9',       pct: 65  },
+    m1:     { label: 'Step 2 of 10',      pct: 20  },
+    m2:     { label: 'Step 3 of 10',      pct: 30  },
+    m3:     { label: 'Step 4 of 10',      pct: 40  },
+    m4:     { label: 'Step 5 of 10',      pct: 50  },
+    m5:     { label: 'Step 6 of 10',      pct: 60  },
+    b1:     { label: 'Step 2 of 7',       pct: 28  },
+    b2:     { label: 'Step 3 of 7',       pct: 42  },
+    b3:     { label: 'Step 4 of 7',       pct: 57  }
   };
 
-  function fmt(n){ return config.currency + n.toLocaleString('en-US'); }
-
-  function getRange(){
-    var p = config.prices;
-    var bMin, bMax, suffix = '';
-    if(state.q2 === 'arch'){
-      bMin = p.arch_min; bMax = p.arch_max; suffix = ' per arch';
-    } else if(state.q2 === 'multi'){
-      bMin = p.multi_min; bMax = p.multi_max;
-    } else {
-      bMin = p.single_min; bMax = p.single_max;
-    }
-    if(state.q3 === 'yes' || state.q3 === 'notsure'){
-      bMin += p.graft_min; bMax += p.graft_max;
-    }
-    return { label: fmt(bMin) + ' \u2013 ' + fmt(bMax), suffix: suffix };
+  function getStepInfo(id) {
+    if (stepMap[id]) return stepMap[id];
+    var total = s.flow === 'multiple' ? 10 : (s.flow === 'fullarch' ? 7 : 9);
+    if (id === 'summary') return { label: 'Step ' + (total - 2) + ' of ' + total, pct: 76 };
+    if (id === 'lead')    return { label: 'Step ' + (total - 1) + ' of ' + total, pct: 88 };
+    if (id.indexOf('result') === 0) return { label: 'Step ' + total + ' of ' + total, pct: 100 };
+    return { label: '', pct: 0 };
   }
 
-  function showPanel(id){
+  var msgs = {
+    router:           ['Starting your estimate\u2026',          'A few short questions'],
+    a1:               ['Personalizing your estimate\u2026',     'Adjusting for your case'],
+    a2:               ['Updating your estimate\u2026',          'Adjusting for tooth location'],
+    a3:               ['Narrowing your range\u2026',            'Adjusting for timeline'],
+    a4:               ['Almost there\u2026',                    'One more detail'],
+    m1:               ['Starting your estimate\u2026',          'A few short questions'],
+    m2:               ['Calculating your range\u2026',          'Based on tooth count'],
+    m3:               ['Updating your estimate\u2026',          'Adjusting for location'],
+    m4:               ['Narrowing your range\u2026',            'Adjusting for timeline'],
+    m5:               ['Almost there\u2026',                    'One more detail'],
+    b1:               ['Starting your full-arch estimate\u2026','A few short questions'],
+    b2:               ['Updating your estimate\u2026',          'Adjusting for your arch'],
+    b3:               ['Almost there\u2026',                    'One more detail'],
+    ins:              ['Final detail\u2026',                     'Insurance information'],
+    summary:          ['Reviewing your answers\u2026',           'Your estimate is being prepared'],
+    lead:             ['Ready to reveal\u2026',                  'Just one more step'],
+    'result-single':  ['Preparing your estimate\u2026',          'Finalizing your range'],
+    'result-multiple':['Calculating your range\u2026',           'Based on your answers'],
+    'result-fullarch':['Preparing your overview\u2026',          'Reviewing full-arch options']
+  };
+
+  /* ── HELPERS ── */
+  function fmt(n){ return config.currency + n.toLocaleString('en-US'); }
+
+  function getRange() {
+    var p = config.prices;
+    if (s.flow === 'fullarch') {
+      return { label: fmt(p.arch_min) + ' \u2013 ' + fmt(p.arch_max), suffix: ' <?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>' };
+    }
+    var bMin, bMax;
+    if (s.flow === 'multiple') {
+      bMin = p.multi_min; bMax = p.multi_max;
+      var gv = s.boneGraftMult || '';
+      if (gv === 'yes' || gv === 'not-sure') { bMin += p.graft_min; bMax += p.graft_max; }
+      return { label: fmt(bMin) + ' \u2013 ' + fmt(bMax), suffix: ' <?= esc_js( $s['imp_result_multiple_suffix'] ) ?>' };
+    }
+    // single
+    bMin = p.single_min; bMax = p.single_max;
+    var gvs = s.boneGraft || '';
+    if (gvs === 'yes' || gvs === 'not-sure') { bMin += p.graft_min; bMax += p.graft_max; }
+    return { label: fmt(bMin) + ' \u2013 ' + fmt(bMax), suffix: ' <?= esc_js( $s['imp_result_single_suffix'] ) ?>' };
+  }
+
+  /* ── SHOW PANEL ── */
+  function showPanel(id) {
     document.querySelectorAll('#' + uid + '-app .die-panel').forEach(function(p){
       p.classList.remove('die-panel-active');
     });
     var el = document.getElementById(uid + '-panel-' + id);
-    if(el) el.classList.add('die-panel-active');
+    if (el) el.classList.add('die-panel-active');
     window.scrollTo(0, 0);
   }
 
-  function updateStepBar(id){
-    var info = stepMap[id] || {label:'',pct:0};
+  function updateStepBar(id) {
+    var info = getStepInfo(id);
     var lel = document.getElementById(uid + '-step-label');
     var pel = document.getElementById(uid + '-step-progress');
-    if(lel) lel.textContent = info.label;
-    if(pel) pel.style.width = info.pct + '%';
+    if (lel) lel.textContent = info.label;
+    if (pel) pel.style.width = info.pct + '%';
   }
 
-  function updateSidebar(){
+  /* ── SIDEBAR ── */
+  function updateSidebar() {
     var tags = [];
-    if(state.q1){ tags.push({l:'Situation:', v:state.q1l}); }
-    if(state.q2){ tags.push({l:'Teeth:',     v:state.q2l}); }
-    if(state.q3){ tags.push({l:'Bone graft:',v:state.q3l}); }
-    if(state.q4){ tags.push({l:'Insurance:', v:state.q4l}); }
+    if (s.flow === 'single') {
+      tags.push({l:'Replacing:',   v:'One missing tooth'});
+      if (s.toothLocation)   tags.push({l:'Location:',   v:s.toothLocationL});
+      if (s.timeMissing)     tags.push({l:'Missing for:',v:s.timeMissingL});
+      if (s.boneGraft)       tags.push({l:'Bone graft:', v:s.boneGraftL});
+      if (s.situationSingle) tags.push({l:'Situation:',  v:s.situationSingleL});
+    } else if (s.flow === 'multiple') {
+      tags.push({l:'Replacing:',  v:'Several missing teeth'});
+      if (s.teethCount)      tags.push({l:'Teeth:',      v:s.teethCountL});
+      if (s.teethLocation)   tags.push({l:'Location:',   v:s.teethLocationL});
+      if (s.timeMissingMult) tags.push({l:'Missing for:',v:s.timeMissingMultL});
+      if (s.boneGraftMult)   tags.push({l:'Bone graft:', v:s.boneGraftMultL});
+      if (s.situationMult)   tags.push({l:'Situation:',  v:s.situationMultL});
+    } else if (s.flow === 'fullarch') {
+      tags.push({l:'Replacing:',  v:'Full arch / denture'});
+      if (s.archSelection)   tags.push({l:'Arch:',       v:s.archSelectionL});
+      if (s.situationArch)   tags.push({l:'Situation:',  v:s.situationArchL});
+      if (s.archDuration)    tags.push({l:'Duration:',   v:s.archDurationL});
+    }
+    if (s.insurance) tags.push({l:'Insurance:', v:s.insuranceL});
 
     var html = tags.length
       ? tags.map(function(t){
@@ -3534,21 +3589,23 @@ endif; ?>
 
     document.querySelectorAll('.imp-st-' + uid).forEach(function(el){ el.innerHTML = html; });
 
-    if(state.q2 !== null){
+    if (s.flow !== null) {
       var r   = getRange();
-      var pct = Math.max(5, Math.min(90, (tags.length / 4) * 90));
+      var maxA = s.flow === 'multiple' ? 6 : (s.flow === 'fullarch' ? 4 : 5);
+      var pct = Math.max(5, Math.min(90, (tags.length / maxA) * 90));
       document.querySelectorAll('.imp-sr-' + uid).forEach(function(el){ el.textContent = r.label + r.suffix; });
       document.querySelectorAll('.imp-rb-' + uid).forEach(function(el){ el.style.width = pct + '%'; });
     }
   }
 
-  function navigate(panelId){
+  /* ── NAVIGATE ── */
+  function navigate(panelId) {
     navHistory.push(currentPanel);
-    var m = msgs[panelId] || ['Loading\u2026',''];
-    var curEl = document.getElementById(uid + '-panel-' + currentPanel);
+    var m = msgs[panelId] || ['Loading\u2026', ''];
+    var curEl  = document.getElementById(uid + '-panel-' + currentPanel);
     var cardEl = curEl ? curEl.querySelector('.die-question-card') : null;
 
-    if(cardEl){
+    if (cardEl) {
       cardEl.style.position = 'relative';
       var ov = document.createElement('div');
       ov.id = uid + '-spinner-ov';
@@ -3571,81 +3628,120 @@ endif; ?>
 
     setTimeout(function(){
       var old = document.getElementById(uid + '-spinner-ov');
-      if(old) old.parentNode.removeChild(old);
+      if (old) old.parentNode.removeChild(old);
       currentPanel = panelId;
       showPanel(panelId);
       updateStepBar(panelId);
-      if(panelId === 'summary') buildSummary();
-      if(panelId === 'result')  renderResult();
+      if (panelId === 'summary') buildSummary();
+      if (panelId === 'result-single' || panelId === 'result-multiple' || panelId === 'result-fullarch') renderResult(panelId);
     }, 1700);
   }
 
-  function goBack(){
-    if(!navHistory.length) return;
+  function goBack() {
+    if (!navHistory.length) return;
     currentPanel = navHistory.pop();
     showPanel(currentPanel);
     updateStepBar(currentPanel);
     updateSidebar();
   }
 
-  function selectOpt(btn, key, val, label, next){
-    state[key]        = val;
-    state[key + 'l']  = label;
+  /* ── SELECT OPTION ── */
+  function selectOpt(btn, key, val, label, next) {
+    s[key] = val;
+    s[key + 'L'] = label;
+    if (key === 'router') {
+      s.flow = val === 'single' ? 'single' : (val === 'multiple' ? 'multiple' : 'fullarch');
+    }
+    if (key === 'teethCount') {
+      s.teethCountN = {'2':2,'3':3,'4':4,'5plus':5}[val] || 2;
+    }
     var par = btn.parentNode;
-    if(par){
+    if (par) {
       var btns = par.querySelectorAll('.option-btn');
-      for(var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
+      for (var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
     }
     btn.classList.add('selected');
     navigate(next);
   }
 
-  function buildSummary(){
+  /* ── SUMMARY ── */
+  function buildSummary() {
     var items = [];
-    var ck = function(text){
+    var ck = function(text) {
       return '<div style="display:flex;align-items:center;gap:.625rem;">'
            + '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;"><polyline points="20 6 9 13 4 10"/></svg>'
            + '<span style="font-family:Inter,sans-serif;color:hsl(var(--foreground));font-size:.875rem;">' + text + '</span>'
            + '</div>';
     };
-    if(state.q1) items.push(ck('Situation: <strong>' + state.q1l + '</strong>'));
-    if(state.q2) items.push(ck('Teeth: <strong>' + state.q2l + '</strong>'));
-    if(state.q3) items.push(ck('Bone graft indicated: <strong>' + state.q3l + '</strong>'));
-    if(state.q4) items.push(ck('Insurance: <strong>' + state.q4l + '</strong>'));
-
+    var desc = '';
+    if (s.flow === 'single') {
+      items.push(ck('Replacing: <strong>one missing tooth</strong>'));
+      if (s.toothLocation)   items.push(ck('Location: <strong>' + s.toothLocationL + '</strong>'));
+      if (s.timeMissing)     items.push(ck('Missing for: <strong>' + s.timeMissingL + '</strong>'));
+      if (s.boneGraft)       items.push(ck('Bone graft indicated: <strong>' + s.boneGraftL + '</strong>'));
+      if (s.situationSingle) items.push(ck('Situation: <strong>' + s.situationSingleL + '</strong>'));
+      if (s.insurance)       items.push(ck('Insurance: <strong>' + s.insuranceL + '</strong>'));
+      desc = 'We\u2019ve prepared your likely treatment range based on a single missing tooth. Enter your details to unlock the full estimate.';
+    } else if (s.flow === 'multiple') {
+      items.push(ck('Replacing: <strong>multiple missing teeth</strong>'));
+      if (s.teethCount)      items.push(ck('Number of teeth: <strong>' + s.teethCountL + '</strong>'));
+      if (s.teethLocation)   items.push(ck('Location: <strong>' + s.teethLocationL + '</strong>'));
+      if (s.timeMissingMult) items.push(ck('Missing for: <strong>' + s.timeMissingMultL + '</strong>'));
+      if (s.boneGraftMult)   items.push(ck('Bone graft indicated: <strong>' + s.boneGraftMultL + '</strong>'));
+      if (s.situationMult)   items.push(ck('Situation: <strong>' + s.situationMultL + '</strong>'));
+      if (s.insurance)       items.push(ck('Insurance: <strong>' + s.insuranceL + '</strong>'));
+      var n = s.teethCountL ? s.teethCountL.toLowerCase() : 'multiple';
+      desc = 'We\u2019ve prepared your likely treatment range based on ' + n + ' missing teeth. Enter your details to unlock the full estimate.';
+    } else if (s.flow === 'fullarch') {
+      items.push(ck('Replacing: <strong>full arch / denture</strong>'));
+      if (s.archSelection) items.push(ck('Arch: <strong>' + s.archSelectionL + '</strong>'));
+      if (s.situationArch) items.push(ck('Situation: <strong>' + s.situationArchL + '</strong>'));
+      if (s.archDuration)  items.push(ck('Duration: <strong>' + s.archDurationL + '</strong>'));
+      desc = 'We\u2019ve prepared your likely treatment range based on full-arch restoration. Enter your details to unlock the full estimate.';
+    }
     var listEl = document.getElementById(uid + '-summary-list');
     var descEl = document.getElementById(uid + '-summary-desc');
-    if(listEl) listEl.innerHTML = items.join('');
-    if(descEl){
-      var n = state.q2 === 'arch' ? 'full-arch restoration' : (state.q2 === 'multi' ? 'multiple missing teeth' : 'a single missing tooth');
-      descEl.textContent = 'We\u2019ve prepared your likely treatment range based on ' + n + '. Enter your details to unlock the full estimate.';
+    if (listEl) listEl.innerHTML = items.join('');
+    if (descEl) descEl.textContent = desc;
+  }
+
+  /* ── RENDER RESULT ── */
+  function animateRange(elId, val) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    el.style.opacity = '0'; el.style.transform = 'scale(0.92) translateY(10px)';
+    setTimeout(function(){
+      el.textContent = val;
+      el.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1)';
+      el.style.opacity = '1'; el.style.transform = 'scale(1) translateY(0)';
+    }, 120);
+  }
+
+  function renderResult(panelId) {
+    var r = getRange();
+    if (panelId === 'result-single') {
+      animateRange(uid + '-result-single-range', r.label);
+      var gns = document.getElementById(uid + '-graft-note-single');
+      if (gns) gns.style.display = (s.boneGraft === 'yes' || s.boneGraft === 'not-sure') ? 'block' : 'none';
+    } else if (panelId === 'result-multiple') {
+      animateRange(uid + '-result-multiple-range', r.label);
+      var gnm = document.getElementById(uid + '-graft-note-multiple');
+      if (gnm) gnm.style.display = (s.boneGraftMult === 'yes' || s.boneGraftMult === 'not-sure') ? 'block' : 'none';
+      var cnt = document.getElementById(uid + '-result-multiple-count');
+      if (cnt) cnt.textContent = 'Based on ' + (s.teethCountL || 'multiple teeth') + ' at the per-implant rate';
+    } else if (panelId === 'result-fullarch') {
+      animateRange(uid + '-result-fullarch-range', r.label);
     }
   }
 
-  function renderResult(){
-    var r  = getRange();
-    var el = document.getElementById(uid + '-result-range');
-    var sx = document.getElementById(uid + '-result-suffix');
-    var gn = document.getElementById(uid + '-graft-note');
-    if(el){
-      el.style.opacity = '0'; el.style.transform = 'scale(0.92) translateY(10px)';
-      setTimeout(function(){
-        el.textContent = r.label;
-        el.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1)';
-        el.style.opacity = '1'; el.style.transform = 'scale(1) translateY(0)';
-      }, 120);
-    }
-    if(sx) sx.textContent = r.suffix;
-    if(gn) gn.style.display = (state.q3 === 'yes' || state.q3 === 'notsure') ? 'block' : 'none';
-  }
-
-  function checkValidity(){
+  /* ── FORM VALIDATION ── */
+  function checkValidity() {
     var fn  = document.getElementById(uid + '-firstName');
     var ln  = document.getElementById(uid + '-lastName');
     var em  = document.getElementById(uid + '-email');
     var ph  = document.getElementById(uid + '-phone');
     var btn = document.getElementById(uid + '-reveal-btn');
-    if(!fn || !ln || !em || !ph || !btn) return;
+    if (!fn || !ln || !em || !ph || !btn) return;
     var ok = fn.value.trim().length > 0
           && ln.value.trim().length > 0
           && em.value.trim().indexOf('@') > 0
@@ -3655,55 +3751,68 @@ endif; ?>
     btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
   }
 
+  /* ── FORM SUBMIT ── */
   var isSubmitting = false;
-  function handleSubmit(e){
+  function handleSubmit(e) {
     e.preventDefault();
-    if(isSubmitting) return;
+    if (isSubmitting) return;
     isSubmitting = true;
     var fn = document.getElementById(uid + '-firstName').value.trim();
     var ln = document.getElementById(uid + '-lastName').value.trim();
     var em = document.getElementById(uid + '-email').value.trim();
     var ph = document.getElementById(uid + '-phone').value.trim();
-    if(!fn || !ln || !em || !ph){ isSubmitting = false; return; }
+    if (!fn || !ln || !em || !ph) { isSubmitting = false; return; }
     <?php if($honeypot): ?>
     var hp = document.getElementById(uid + '-hp');
-    if(hp && hp.value){ isSubmitting = false; return; }
+    if (hp && hp.value) { isSubmitting = false; return; }
     <?php endif; ?>
     var btn = document.getElementById(uid + '-reveal-btn');
-    if(btn){ btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
-    var r  = getRange();
-    var fd = new FormData();
-    fd.append('action',      'cfg_implant_submit');
-    fd.append('imp_nonce',   config.nonce);
-    fd.append('firstName',   fn);
-    fd.append('lastName',    ln);
-    fd.append('email',       em);
-    fd.append('phone',       ph);
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
+
+    var r      = getRange();
+    var panel  = 'result-' + (s.flow || 'single');
+    var fd     = new FormData();
+    fd.append('action',          'cfg_implant_submit');
+    fd.append('imp_nonce',       config.nonce);
+    fd.append('firstName',       fn);
+    fd.append('lastName',        ln);
+    fd.append('email',           em);
+    fd.append('phone',           ph);
     <?php if($honeypot): ?>fd.append('imp_hp', '');<?php endif; ?>
-    fd.append('imp_answers', JSON.stringify({
-      situation: state.q1 || '', situation_label: state.q1l || '',
-      teeth:     state.q2 || '', teeth_label:     state.q2l || '',
-      bone_graft:state.q3 || '', bone_graft_label:state.q3l || '',
-      insurance: state.q4 || '', insurance_label: state.q4l || '',
-      range:     r.label + r.suffix
-    }));
-    var _up=new URLSearchParams(window.location.search);
-    ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ fd.append(k,_up.get(k)||''); });
+    fd.append('flow',            s.flow             || '');
+    fd.append('toothLocation',   s.toothLocation    || '');
+    fd.append('timeMissing',     s.timeMissing      || '');
+    fd.append('boneGraft',       s.boneGraft        || '');
+    fd.append('situationSingle', s.situationSingle  || '');
+    fd.append('teethCount',      s.teethCount       || '');
+    fd.append('teethLocation',   s.teethLocation    || '');
+    fd.append('timeMissingMult', s.timeMissingMult  || '');
+    fd.append('boneGraftMult',   s.boneGraftMult    || '');
+    fd.append('situationMult',   s.situationMult    || '');
+    fd.append('archSelection',   s.archSelection    || '');
+    fd.append('archDuration',    s.archDuration     || '');
+    fd.append('situationArch',   s.situationArch    || '');
+    fd.append('insurance',       s.insurance        || '');
+    fd.append('range',           r.label + r.suffix);
+    fd.append('rangeType',       panel);
+    var _up = new URLSearchParams(window.location.search);
+    ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
     fetch(config.ajaxUrl, { method:'POST', body:fd }).catch(function(){});
-    navigate('result');
+    navigate(panel);
   }
 
+  /* ── INIT ── */
   var initialized = false;
-  function init(){
-    if(initialized) return;
+  function init() {
+    if (initialized) return;
     initialized = true;
     showPanel('intro');
     updateStepBar('intro');
     var form = document.getElementById(uid + '-lead-form');
-    if(form) form.addEventListener('submit', handleSubmit);
+    if (form) form.addEventListener('submit', handleSubmit);
     ['firstName','lastName','email','phone'].forEach(function(f){
       var el = document.getElementById(uid + '-' + f);
-      if(el) el.addEventListener('input', checkValidity);
+      if (el) el.addEventListener('input', checkValidity);
     });
   }
 
@@ -3711,7 +3820,7 @@ endif; ?>
   window[uid + 'Back'] = goBack;
   window[uid + 'Sel']  = selectOpt;
 
-  if(document.readyState === 'loading'){
+  if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else { init(); }
 })();
@@ -3754,20 +3863,48 @@ function cfg_implant_ajax_submit() {
         wp_send_json_error( 'Form is not fully configured. Please contact us directly.' );
     }
 
-    // Quiz answers
-    $ans_raw = sanitize_text_field( $_POST['imp_answers'] ?? '' );
-    $answers = json_decode( wp_unslash( $ans_raw ), true ) ?: [];
+    // Quiz answers — individual fields from 3-path flow
+    $flow              = sanitize_text_field( $_POST['flow']            ?? '' );
+    $tooth_location    = sanitize_text_field( $_POST['toothLocation']   ?? '' );
+    $time_missing      = sanitize_text_field( $_POST['timeMissing']     ?? '' );
+    $bone_graft        = sanitize_text_field( $_POST['boneGraft']       ?? '' );
+    $situation_single  = sanitize_text_field( $_POST['situationSingle'] ?? '' );
+    $teeth_count       = sanitize_text_field( $_POST['teethCount']      ?? '' );
+    $teeth_location    = sanitize_text_field( $_POST['teethLocation']   ?? '' );
+    $time_missing_mult = sanitize_text_field( $_POST['timeMissingMult'] ?? '' );
+    $bone_graft_mult   = sanitize_text_field( $_POST['boneGraftMult']   ?? '' );
+    $situation_mult    = sanitize_text_field( $_POST['situationMult']   ?? '' );
+    $arch_selection    = sanitize_text_field( $_POST['archSelection']   ?? '' );
+    $situation_arch    = sanitize_text_field( $_POST['situationArch']   ?? '' );
+    $arch_duration     = sanitize_text_field( $_POST['archDuration']    ?? '' );
+    $insurance         = sanitize_text_field( $_POST['insurance']       ?? '' );
+    $range             = sanitize_text_field( $_POST['range']           ?? '' );
+    $range_type        = sanitize_text_field( $_POST['rangeType']       ?? '' );
 
     // Tags
     $tags = [ 'implant-estimator', 'website-lead' ];
-    foreach ( $answers as $key => $val ) {
-        $tags[] = sanitize_title( $key . '-' . $val );
-    }
+    if ( $flow === 'single' )   $tags[] = 'implant-single';
+    elseif ( $flow === 'multiple' ) $tags[] = 'implant-multiple';
+    elseif ( $flow === 'fullarch' ) $tags[] = 'implant-fullarch';
 
     // Custom fields
     $custom = [];
-    foreach ( $answers as $key => $val ) {
-        $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
+    $custom_map = [
+        'implant_flow'           => $flow,
+        'implant_tooth_location' => $tooth_location,
+        'implant_time_missing'   => $flow === 'multiple' ? $time_missing_mult : $time_missing,
+        'implant_bone_graft'     => $flow === 'multiple' ? $bone_graft_mult   : $bone_graft,
+        'implant_situation'      => $flow === 'single' ? $situation_single : ( $flow === 'multiple' ? $situation_mult : $situation_arch ),
+        'implant_teeth_count'    => $teeth_count,
+        'implant_teeth_location' => $teeth_location,
+        'implant_arch_selection' => $arch_selection,
+        'implant_arch_duration'  => $arch_duration,
+        'implant_insurance'      => $insurance,
+        'implant_range'          => $range,
+        'implant_range_type'     => $range_type,
+    ];
+    foreach ( $custom_map as $key => $val ) {
+        if ( $val !== '' ) $custom[] = [ 'key' => $key, 'field_value' => $val ];
     }
     foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
         $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
