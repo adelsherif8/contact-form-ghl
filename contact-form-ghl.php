@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.5.0
+ * Version:     1.6.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -356,6 +356,7 @@ function cfg_settings_page() {
         <div class="cfg-tab"         onclick="cfgTab(this,'ty')">✅ Thank You Page</div>
         <div class="cfg-tab"         onclick="cfgTab(this,'alg')">🦷 Aligner Form</div>
         <div class="cfg-tab"         onclick="cfgTab(this,'imp')">🦷 Implant Estimator</div>
+        <div class="cfg-tab"         onclick="cfgTab(this,'guide')">📖 Setup Guide</div>
     </div>
 
     <!-- ═══ GHL + SECURITY TAB ═══ -->
@@ -1413,6 +1414,181 @@ function cfg_settings_page() {
 
     </div>
 
+    <!-- ═══ SETUP GUIDE TAB ═══ -->
+    <div id="cfg-guide" class="cfg-panel">
+
+        <style>
+        .cfg-guide-step{display:flex;gap:16px;align-items:flex-start;padding:18px 0;border-bottom:1px solid #f0f0f1;}
+        .cfg-guide-step:last-child{border-bottom:none;}
+        .cfg-guide-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#2271b1;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;}
+        .cfg-guide-body h3{margin:0 0 6px;font-size:14px;font-weight:700;color:#1d2327;}
+        .cfg-guide-body p{margin:0 0 8px;font-size:13px;color:#3c434a;line-height:1.6;}
+        .cfg-guide-body ul{margin:6px 0 0 18px;padding:0;font-size:13px;color:#3c434a;line-height:1.7;}
+        .cfg-guide-code{display:inline-block;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;padding:1px 6px;font-family:monospace;font-size:12px;color:#1d2327;}
+        .cfg-guide-section{font-size:15px;font-weight:700;margin:28px 0 4px;padding-bottom:8px;border-bottom:2px solid #2271b1;color:#1d2327;}
+        .cfg-guide-section:first-of-type{margin-top:0;}
+        .cfg-guide-tip{background:#fff8e1;border-left:4px solid #f0b429;padding:10px 14px;font-size:13px;color:#3c434a;border-radius:0 4px 4px 0;margin-top:8px;}
+        </style>
+
+        <p class="cfg-desc" style="margin-bottom:20px;">Follow these steps to connect the plugin to GoHighLevel and make sure every form submission lands in your CRM correctly.</p>
+
+        <!-- ══ SECTION 1 — GHL API ══ -->
+        <div class="cfg-guide-section">Step 1 — Connect to GoHighLevel</div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">1</div>
+            <div class="cfg-guide-body">
+                <h3>Create a Private Integration API Key</h3>
+                <p>In GHL go to <strong>Settings → Integrations → Private Integrations</strong> and click <strong>+ Add Integration</strong>. Give it any name (e.g. <em>WordPress Contact Form</em>), select <strong>Location level</strong>, and grant at minimum:</p>
+                <ul>
+                    <li>Contacts — Read &amp; Write</li>
+                    <li>Conversations — Read &amp; Write (optional, for notes)</li>
+                </ul>
+                <p>Copy the generated <strong>Bearer Token</strong> and paste it into the <em>API Key / Bearer Token</em> field on the <strong>⚡ GHL + Security</strong> tab.</p>
+            </div>
+        </div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">2</div>
+            <div class="cfg-guide-body">
+                <h3>Find Your Location ID</h3>
+                <p>In GHL go to <strong>Settings → Business Profile</strong>. Scroll down to find the <strong>Location ID</strong> string (e.g. <code class="cfg-guide-code">AbCdEfGhIj123456</code>). Paste it into the <em>Location ID</em> field on the <strong>⚡ GHL + Security</strong> tab.</p>
+            </div>
+        </div>
+
+        <!-- ══ SECTION 2 — Custom Fields ══ -->
+        <div class="cfg-guide-section">Step 2 — Create Custom Fields in GHL</div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">3</div>
+            <div class="cfg-guide-body">
+                <h3>Add a Trigger / Source Custom Field</h3>
+                <p>Go to <strong>Settings → Custom Fields → Contacts</strong> and add a new <strong>Text</strong> field with the following settings:</p>
+                <ul>
+                    <li>Label: <code class="cfg-guide-code">Lead Source</code> (or any friendly name)</li>
+                    <li>Key: <code class="cfg-guide-code">lead_source</code></li>
+                </ul>
+                <p>This receives the form source string (e.g. <em>Website Contact Form</em>, <em>Implant Estimator Form</em>, <em>Aligner Quiz Form</em>).</p>
+            </div>
+        </div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">4</div>
+            <div class="cfg-guide-body">
+                <h3>Add Treatment Type Custom Field</h3>
+                <p>For the main contact form, add a <strong>Text</strong> field:</p>
+                <ul>
+                    <li>Key: <code class="cfg-guide-code">treatment_type</code></li>
+                </ul>
+                <p>This stores the treatment the patient selected in the form dropdown.</p>
+            </div>
+        </div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">5</div>
+            <div class="cfg-guide-body">
+                <h3>Add UTM Tracking Custom Fields</h3>
+                <p>Create five <strong>Text</strong> custom fields (one per UTM parameter). The plugin automatically reads these from the page URL and sends them with every form submission:</p>
+                <ul>
+                    <li>Key: <code class="cfg-guide-code">utm_campaign</code> — e.g. <em>implant-promo-2025</em></li>
+                    <li>Key: <code class="cfg-guide-code">utm_medium</code> — e.g. <em>cpc</em>, <em>email</em></li>
+                    <li>Key: <code class="cfg-guide-code">utm_content</code> — e.g. <em>banner-a</em></li>
+                    <li>Key: <code class="cfg-guide-code">utm_keyword</code> — the paid search keyword</li>
+                    <li>Key: <code class="cfg-guide-code">gclid</code> — Google Ads click ID (auto-tagged by Google)</li>
+                </ul>
+                <div class="cfg-guide-tip">
+                    <strong>Tip:</strong> Fields that are empty (no UTM in the URL) are simply not sent — GHL will leave that field blank on the contact.
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ SECTION 3 — Implant Estimator fields ══ -->
+        <div class="cfg-guide-section">Step 3 — Implant Estimator Answer Fields <span class="cfg-badge">optional</span></div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">6</div>
+            <div class="cfg-guide-body">
+                <h3>Add Estimator Answer Custom Fields</h3>
+                <p>The implant estimator sends the patient's quiz answers as custom fields. Create <strong>Text</strong> fields for each answer you want to store:</p>
+                <ul>
+                    <li>Key: <code class="cfg-guide-code">situation</code> — Q1 answer key (e.g. <em>q1_0</em>)</li>
+                    <li>Key: <code class="cfg-guide-code">situation_label</code> — Q1 readable label</li>
+                    <li>Key: <code class="cfg-guide-code">teeth</code> — Q2 tier (single / multi / arch)</li>
+                    <li>Key: <code class="cfg-guide-code">teeth_label</code> — Q2 readable label</li>
+                    <li>Key: <code class="cfg-guide-code">bone_graft</code> — Q3 answer</li>
+                    <li>Key: <code class="cfg-guide-code">insurance</code> — Q4 answer</li>
+                    <li>Key: <code class="cfg-guide-code">range</code> — The final estimated price range shown to the patient</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ══ SECTION 4 — Tags & Workflows ══ -->
+        <div class="cfg-guide-section">Step 4 — Tags &amp; Workflow Triggers</div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">7</div>
+            <div class="cfg-guide-body">
+                <h3>Understand the Tags Each Form Sends</h3>
+                <p>Every submission automatically applies tags to the GHL contact. Use these tags as workflow triggers:</p>
+                <ul>
+                    <li><strong>Contact Form:</strong> <code class="cfg-guide-code">website-contact-form</code></li>
+                    <li><strong>Implant Estimator:</strong> <code class="cfg-guide-code">implant-estimator</code>, <code class="cfg-guide-code">website-lead</code></li>
+                    <li><strong>Aligner Quiz:</strong> <code class="cfg-guide-code">aligner-quiz</code>, <code class="cfg-guide-code">website-lead</code></li>
+                </ul>
+                <p>The implant and aligner forms also add answer-specific tags like <code class="cfg-guide-code">teeth-single</code>, <code class="cfg-guide-code">bone_graft-yes</code> etc. — useful for segmenting automations.</p>
+            </div>
+        </div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">8</div>
+            <div class="cfg-guide-body">
+                <h3>Create Workflows Triggered by Tags</h3>
+                <p>In GHL go to <strong>Automation → Workflows → + New Workflow</strong>. Set the trigger to <strong>Contact Tag</strong> and enter the tag to listen for. Recommended workflows to create:</p>
+                <ul>
+                    <li><strong>Tag: <code class="cfg-guide-code">website-contact-form</code></strong> → Send confirmation SMS/email, assign to pipeline stage <em>New Lead</em></li>
+                    <li><strong>Tag: <code class="cfg-guide-code">implant-estimator</code></strong> → Send personalised implant follow-up with price range, book consultation</li>
+                    <li><strong>Tag: <code class="cfg-guide-code">aligner-quiz</code></strong> → Send aligner offer email sequence</li>
+                    <li><strong>Tag: <code class="cfg-guide-code">website-lead</code></strong> → General lead nurture sequence (fires for both implant and aligner)</li>
+                </ul>
+                <div class="cfg-guide-tip">
+                    <strong>Tip:</strong> Use <em>Contact Tag Added</em> as the trigger type (not <em>Contact Created</em>) so the workflow fires even if the contact already exists in GHL.
+                </div>
+            </div>
+        </div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">9</div>
+            <div class="cfg-guide-body">
+                <h3>Add Contacts to a Pipeline</h3>
+                <p>Inside each workflow, add a <strong>Add to Pipeline</strong> action to move the contact into your sales pipeline at the appropriate stage. Suggested setup:</p>
+                <ul>
+                    <li>Pipeline: <em>New Leads</em> (or your main dental pipeline)</li>
+                    <li>Stage: <em>New Lead</em> → moves to <em>Consultation Booked</em> when they book</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ══ SECTION 5 — Test ══ -->
+        <div class="cfg-guide-section">Step 5 — Test &amp; Verify</div>
+
+        <div class="cfg-guide-step">
+            <div class="cfg-guide-num">10</div>
+            <div class="cfg-guide-body">
+                <h3>Submit a Test Lead</h3>
+                <p>Open a form page on your site and append UTM parameters to the URL to test tracking, e.g.:</p>
+                <p><code class="cfg-guide-code">/contact-form?utm_campaign=test&amp;utm_medium=cpc&amp;gclid=abc123</code></p>
+                <p>Submit the form and then check in GHL <strong>Contacts</strong> that:</p>
+                <ul>
+                    <li>Contact was created with correct name/email/phone</li>
+                    <li>Tags were applied (<code class="cfg-guide-code">website-contact-form</code> etc.)</li>
+                    <li>Custom fields show the UTM values</li>
+                    <li>Workflow was triggered (check the contact's workflow history)</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
     <?php submit_button( 'Save All Settings', 'primary large' ); ?>
     </form>
     </div>
@@ -1710,6 +1886,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
         function showErr(msg){ errBox.textContent=msg; errBox.style.display='block'; okBox.style.display='none'; }
         function hideErr(){ errBox.style.display='none'; }
 
+        var _up = new URLSearchParams(window.location.search);
         function doSubmit(token) {
             if (RC_KEY) {
                 var tf = document.getElementById('cfg_recaptcha_token');
@@ -1717,15 +1894,20 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             }
             var hp = form.querySelector('[name="cfg_hp_website"]');
             var payload = {
-                action:    'cfg_submit',
-                cfg_nonce: NONCE,
-                cfg_hp:    hp ? hp.value : '',
-                cfg_rc:    (RC_KEY && document.getElementById('cfg_recaptcha_token')) ? document.getElementById('cfg_recaptcha_token').value : '',
-                firstName: (form.querySelector('[name="firstName"]') || {}).value || '',
-                lastName:  (form.querySelector('[name="lastName"]')  || {}).value || '',
-                email:     (form.querySelector('[name="email"]')     || {}).value || '',
-                phone:     (form.querySelector('[name="phone"]')     || {}).value || '',
-                treatment: (form.querySelector('[name="treatment"]') || {value:''}).value || ''
+                action:       'cfg_submit',
+                cfg_nonce:    NONCE,
+                cfg_hp:       hp ? hp.value : '',
+                cfg_rc:       (RC_KEY && document.getElementById('cfg_recaptcha_token')) ? document.getElementById('cfg_recaptcha_token').value : '',
+                firstName:    (form.querySelector('[name="firstName"]') || {}).value || '',
+                lastName:     (form.querySelector('[name="lastName"]')  || {}).value || '',
+                email:        (form.querySelector('[name="email"]')     || {}).value || '',
+                phone:        (form.querySelector('[name="phone"]')     || {}).value || '',
+                treatment:    (form.querySelector('[name="treatment"]') || {value:''}).value || '',
+                utm_campaign: _up.get('utm_campaign') || '',
+                utm_medium:   _up.get('utm_medium')   || '',
+                utm_content:  _up.get('utm_content')  || '',
+                utm_keyword:  _up.get('utm_keyword')  || '',
+                gclid:        _up.get('gclid')        || ''
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             fetch(AJAX, {
@@ -1887,19 +2069,25 @@ function cfg_embed_shortcode_OLD_UNUSED() {
         function showErr(msg){ errBox.textContent=msg; errBox.style.display='block'; okBox.style.display='none'; }
         function hideErr(){ errBox.style.display='none'; }
 
+        var _up = new URLSearchParams(window.location.search);
         function doSubmit(token) {
             if (RC_KEY) { var tf = document.getElementById('cfge_recaptcha_token'); if (tf) tf.value = token||''; }
             var hp = form.querySelector('[name="cfg_hp_website"]');
             var payload = {
-                action:    'cfg_submit',
-                cfg_nonce: NONCE,
-                cfg_hp:    hp ? hp.value : '',
-                cfg_rc:    (RC_KEY && document.getElementById('cfge_recaptcha_token')) ? document.getElementById('cfge_recaptcha_token').value : '',
-                firstName: (form.querySelector('[name="firstName"]') || {}).value || '',
-                lastName:  (form.querySelector('[name="lastName"]')  || {}).value || '',
-                email:     (form.querySelector('[name="email"]')     || {}).value || '',
-                phone:     (form.querySelector('[name="phone"]')     || {}).value || '',
-                treatment: (form.querySelector('[name="treatment"]') || {value:''}).value || ''
+                action:       'cfg_submit',
+                cfg_nonce:    NONCE,
+                cfg_hp:       hp ? hp.value : '',
+                cfg_rc:       (RC_KEY && document.getElementById('cfge_recaptcha_token')) ? document.getElementById('cfge_recaptcha_token').value : '',
+                firstName:    (form.querySelector('[name="firstName"]') || {}).value || '',
+                lastName:     (form.querySelector('[name="lastName"]')  || {}).value || '',
+                email:        (form.querySelector('[name="email"]')     || {}).value || '',
+                phone:        (form.querySelector('[name="phone"]')     || {}).value || '',
+                treatment:    (form.querySelector('[name="treatment"]') || {value:''}).value || '',
+                utm_campaign: _up.get('utm_campaign') || '',
+                utm_medium:   _up.get('utm_medium')   || '',
+                utm_content:  _up.get('utm_content')  || '',
+                utm_keyword:  _up.get('utm_keyword')  || '',
+                gclid:        _up.get('gclid')        || ''
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             fetch(AJAX, {
@@ -2233,6 +2421,15 @@ function cfg_ajax_submit() {
     }
 
     // ── Build GHL payload ────────────────────────────────────
+    $custom_fields = [];
+    if ( ! empty( $treatment ) ) {
+        $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
+    }
+    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
+        $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
+        if ( $val !== '' ) $custom_fields[] = [ 'key' => $utm_key, 'field_value' => $val ];
+    }
+
     $payload = [
         'firstName'  => $first,
         'lastName'   => $last,
@@ -2242,9 +2439,7 @@ function cfg_ajax_submit() {
         'source'     => 'Website Contact Form',
         'tags'       => [ 'website-contact-form' ],
     ];
-    if ( ! empty( $treatment ) ) {
-        $payload['customFields'] = [ [ 'key' => 'treatment_type', 'field_value' => $treatment ] ];
-    }
+    if ( $custom_fields ) $payload['customFields'] = $custom_fields;
 
     // ── POST to GHL ──────────────────────────────────────────
     $response = wp_remote_post( 'https://services.leadconnectorhq.com/contacts/upsert', [
@@ -2651,7 +2846,10 @@ function cfg_aligner_shortcode() {
             var ansEl=document.getElementById(uid+'-ans');
             if(ansEl) ansEl.value=JSON.stringify(answers);
             sbtn.disabled=true; slbl.textContent='Sending\u2026';
-            fetch(ajaxUrl,{method:'POST',body:new FormData(form)})
+            var _up=new URLSearchParams(window.location.search);
+            var _fd=new FormData(form);
+            ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ _fd.append(k,_up.get(k)||''); });
+            fetch(ajaxUrl,{method:'POST',body:_fd})
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
@@ -2741,6 +2939,10 @@ function cfg_aligner_ajax_submit() {
     $custom = [];
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
+    }
+    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
+        $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $utm_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -3479,6 +3681,8 @@ echo $qpanel( 'q2', $s['imp_q2_title'], "We'll use this to calculate your person
       insurance: state.q4 || '', insurance_label: state.q4l || '',
       range:     r.label + r.suffix
     }));
+    var _up=new URLSearchParams(window.location.search);
+    ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ fd.append(k,_up.get(k)||''); });
     fetch(config.ajaxUrl, { method:'POST', body:fd }).catch(function(){});
     navigate('result');
   }
@@ -3558,6 +3762,10 @@ function cfg_implant_ajax_submit() {
     $custom = [];
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
+    }
+    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
+        $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $utm_key, 'field_value' => $val ];
     }
 
     $payload = [
