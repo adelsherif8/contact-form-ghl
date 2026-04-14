@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.7
+ * Version:     1.7.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -13,6 +13,40 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'CFG_SLUG',   'contact-form-ghl' );
 define( 'CFG_OPTION', 'cfg_settings' );
+define( 'CFG_ENTRIES_DB_VER', '1.0' );
+
+// ═══════════════════════════════════════════════════════════════
+//  DATABASE — ENTRIES TABLE
+// ═══════════════════════════════════════════════════════════════
+register_activation_hook( __FILE__, 'cfg_create_entries_table' );
+
+function cfg_create_entries_table() {
+    global $wpdb;
+    $table           = $wpdb->prefix . 'cfg_entries';
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE IF NOT EXISTS {$table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        form_type   VARCHAR(20)  NOT NULL DEFAULT 'contact',
+        first_name  VARCHAR(100) NOT NULL DEFAULT '',
+        last_name   VARCHAR(100) NOT NULL DEFAULT '',
+        email       VARCHAR(200) NOT NULL DEFAULT '',
+        phone       VARCHAR(50)  NOT NULL DEFAULT '',
+        meta        LONGTEXT,
+        ghl_status  VARCHAR(10)  NOT NULL DEFAULT 'ok',
+        created_at  DATETIME     NOT NULL,
+        PRIMARY KEY (id)
+    ) {$charset_collate};";
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta( $sql );
+    update_option( 'cfg_entries_db_version', CFG_ENTRIES_DB_VER );
+}
+
+// Auto-create on plugin update without re-activation
+add_action( 'plugins_loaded', function () {
+    if ( get_option( 'cfg_entries_db_version' ) !== CFG_ENTRIES_DB_VER ) {
+        cfg_create_entries_table();
+    }
+} );
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTO-UPDATE FROM GITHUB
@@ -263,6 +297,30 @@ function cfg_get( $key = null ) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  ENTRY LOGGER
+// ═══════════════════════════════════════════════════════════════
+function cfg_log_entry( $form_type, $first, $last, $email, $phone, $meta = [], $ghl_status = 'ok' ) {
+    global $wpdb;
+    if ( get_option( 'cfg_entries_db_version' ) !== CFG_ENTRIES_DB_VER ) {
+        cfg_create_entries_table();
+    }
+    $wpdb->insert(
+        $wpdb->prefix . 'cfg_entries',
+        [
+            'form_type'  => $form_type,
+            'first_name' => $first,
+            'last_name'  => $last,
+            'email'      => $email,
+            'phone'      => $phone,
+            'meta'       => wp_json_encode( $meta ),
+            'ghl_status' => $ghl_status,
+            'created_at' => current_time( 'mysql' ),
+        ],
+        [ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ]
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  REGISTER & SANITIZE
 // ═══════════════════════════════════════════════════════════════
 add_action( 'admin_init', function () {
@@ -422,6 +480,7 @@ function cfg_settings_page() {
         <div class="cfg-tab"         onclick="cfgTab(this,'alg')">🦷 Aligner Form</div>
         <div class="cfg-tab"         onclick="cfgTab(this,'imp')">🦷 Implant Estimator</div>
         <div class="cfg-tab"         onclick="cfgTab(this,'guide')">📖 Setup Guide</div>
+        <div class="cfg-tab"         onclick="cfgTab(this,'entries')">📥 Entries</div>
     </div>
 
     <!-- ═══ GHL + SECURITY TAB ═══ -->
@@ -2167,168 +2226,512 @@ function cfg_settings_page() {
     <div id="cfg-guide" class="cfg-panel">
 
         <style>
-        .cfg-guide-step{display:flex;gap:16px;align-items:flex-start;padding:18px 0;border-bottom:1px solid #f0f0f1;}
-        .cfg-guide-step:last-child{border-bottom:none;}
-        .cfg-guide-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#2271b1;color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;}
-        .cfg-guide-body h3{margin:0 0 6px;font-size:14px;font-weight:700;color:#1d2327;}
-        .cfg-guide-body p{margin:0 0 8px;font-size:13px;color:#3c434a;line-height:1.6;}
-        .cfg-guide-body ul{margin:6px 0 0 18px;padding:0;font-size:13px;color:#3c434a;line-height:1.7;}
-        .cfg-guide-code{display:inline-block;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;padding:1px 6px;font-family:monospace;font-size:12px;color:#1d2327;}
-        .cfg-guide-section{font-size:15px;font-weight:700;margin:28px 0 4px;padding-bottom:8px;border-bottom:2px solid #2271b1;color:#1d2327;}
-        .cfg-guide-section:first-of-type{margin-top:0;}
-        .cfg-guide-tip{background:#fff8e1;border-left:4px solid #f0b429;padding:10px 14px;font-size:13px;color:#3c434a;border-radius:0 4px 4px 0;margin-top:8px;}
+        .og-wrap{max-width:860px;}
+        .og-phase{display:flex;align-items:center;gap:12px;margin:32px 0 16px;padding-bottom:10px;border-bottom:2px solid #2271b1;}
+        .og-phase:first-of-type{margin-top:0;}
+        .og-phase-badge{background:#2271b1;color:#fff;font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+        .og-phase-title{font-size:16px;font-weight:700;color:#1d2327;margin:0;}
+        .og-phase-sub{font-size:12px;color:#646970;margin:2px 0 0;}
+        .og-step{display:flex;gap:14px;align-items:flex-start;padding:16px 0;border-bottom:1px solid #f0f0f1;}
+        .og-step:last-child{border-bottom:none;}
+        .og-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#2271b1;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+        .og-body{flex:1;min-width:0;}
+        .og-body h3{margin:0 0 5px;font-size:13.5px;font-weight:700;color:#1d2327;}
+        .og-body p{margin:0 0 8px;font-size:13px;color:#3c434a;line-height:1.6;}
+        .og-body p:last-child{margin-bottom:0;}
+        .og-body ul{margin:6px 0 8px 18px;padding:0;font-size:13px;color:#3c434a;line-height:1.75;}
+        .og-body ul:last-child{margin-bottom:0;}
+        .og-code{display:inline-block;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;padding:1px 6px;font-family:monospace;font-size:12px;color:#1d2327;}
+        .og-tip{background:#fff8e1;border-left:4px solid #f0b429;padding:10px 14px;font-size:12.5px;color:#3c434a;border-radius:0 4px 4px 0;margin-top:10px;line-height:1.6;}
+        .og-warn{background:#fef2f2;border-left:4px solid #ef4444;padding:10px 14px;font-size:12.5px;color:#3c434a;border-radius:0 4px 4px 0;margin-top:10px;line-height:1.6;}
+        .og-table{width:100%;border-collapse:collapse;font-size:12.5px;margin:10px 0 4px;}
+        .og-table th{background:#f0f6fc;padding:7px 11px;text-align:left;border:1px solid #dde3e9;font-weight:700;color:#1d2327;}
+        .og-table td{padding:6px 11px;border:1px solid #e5e5e5;color:#3c434a;vertical-align:top;line-height:1.55;}
+        .og-table tr:nth-child(even) td{background:#fafafa;}
+        .og-tag{display:inline-block;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:4px;font-family:monospace;}
+        .og-field{display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:4px;font-family:monospace;}
+        .og-checklist{list-style:none;margin:8px 0 0;padding:0;}
+        .og-checklist li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#3c434a;line-height:1.6;margin-bottom:5px;}
+        .og-checklist li::before{content:"☐";font-size:15px;line-height:1.2;color:#9ca3af;flex-shrink:0;}
+        .og-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin:16px 0 6px;}
         </style>
 
-        <p class="cfg-desc" style="margin-bottom:20px;">Follow these steps to connect the plugin to GoHighLevel and make sure every form submission lands in your CRM correctly.</p>
+        <div class="og-wrap">
 
-        <!-- ══ SECTION 1 — GHL API ══ -->
-        <div class="cfg-guide-section">Step 1 — Connect to GoHighLevel</div>
+        <p style="font-size:13px;color:#3c434a;line-height:1.65;margin:0 0 24px;padding:14px 16px;background:#f0f6fc;border-radius:6px;border-left:4px solid #2271b1;">
+            This checklist walks you through everything needed to connect the implant estimator to GoHighLevel — from API keys through to live workflow testing. Complete the steps in order the first time you set up a new sub-account.
+        </p>
 
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">1</div>
-            <div class="cfg-guide-body">
+        <!-- ═══ PHASE 1 — API CONNECTION ═══ -->
+        <div class="og-phase">
+            <span class="og-phase-badge">Phase 1</span>
+            <div><p class="og-phase-title">Connect the Plugin to GHL</p><p class="og-phase-sub">One-time setup per sub-account — takes about 5 minutes</p></div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">1</div>
+            <div class="og-body">
                 <h3>Create a Private Integration API Key</h3>
-                <p>In GHL go to <strong>Settings → Integrations → Private Integrations</strong> and click <strong>+ Add Integration</strong>. Give it any name (e.g. <em>WordPress Contact Form</em>), select <strong>Location level</strong>, and grant at minimum:</p>
+                <p>In GHL go to <strong>Settings → Integrations → Private Integrations</strong> and click <strong>+ Add Integration</strong>.</p>
                 <ul>
-                    <li>Contacts — Read &amp; Write</li>
-                    <li>Conversations — Read &amp; Write (optional, for notes)</li>
+                    <li>Name it anything — e.g. <em>WordPress Implant Estimator</em></li>
+                    <li>Select <strong>Location level</strong></li>
+                    <li>Enable scope: <strong>Contacts — Read &amp; Write</strong></li>
                 </ul>
-                <p>Copy the generated <strong>Bearer Token</strong> and paste it into the <em>API Key / Bearer Token</em> field on the <strong>⚡ GHL + Security</strong> tab.</p>
+                <p>Copy the <strong>Bearer Token</strong> and paste it into <em>API Key / Bearer Token</em> on the <strong>⚡ GHL + Security</strong> tab.</p>
             </div>
         </div>
 
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">2</div>
-            <div class="cfg-guide-body">
+        <div class="og-step">
+            <div class="og-num">2</div>
+            <div class="og-body">
                 <h3>Find Your Location ID</h3>
-                <p>In GHL go to <strong>Settings → Business Profile</strong>. Scroll down to find the <strong>Location ID</strong> string (e.g. <code class="cfg-guide-code">AbCdEfGhIj123456</code>). Paste it into the <em>Location ID</em> field on the <strong>⚡ GHL + Security</strong> tab.</p>
+                <p>Go to <strong>Settings → Business Profile</strong> and scroll to the <strong>Location ID</strong> field (looks like <code class="og-code">AbCdEfGhIj123456</code>). Paste it into the <em>Location ID</em> field on the <strong>⚡ GHL + Security</strong> tab.</p>
+                <div class="og-tip"><strong>Tip:</strong> The Location ID is also in your GHL browser URL — it's the string after <code class="og-code">/location/</code> in the address bar.</div>
             </div>
         </div>
 
-        <!-- ══ SECTION 2 — Custom Fields ══ -->
-        <div class="cfg-guide-section">Step 2 — Create Custom Fields in GHL</div>
-
-        <p class="cfg-desc" style="margin-bottom:16px;">Go to <strong>Settings → Custom Fields → Contacts</strong> and create all the fields below. Every field type is <strong>Text</strong> unless noted. The <em>Key</em> column is what matters — it must match exactly.</p>
-
-        <style>
-        .cfg-cft{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:20px;}
-        .cfg-cft th{background:#f0f6fc;padding:8px 12px;text-align:left;border:1px solid #dde3e9;font-weight:700;color:#1d2327;}
-        .cfg-cft td{padding:7px 12px;border:1px solid #e5e5e5;color:#3c434a;vertical-align:top;}
-        .cfg-cft tr:nth-child(even) td{background:#fafafa;}
-        .cfg-cft .req{color:#b32d2e;font-weight:700;}
-        .cfg-cft .opt{color:#646970;}
-        </style>
-
-        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">All Forms — Required</p>
-        <table class="cfg-cft">
-            <tr><th>Key</th><th>Label (suggestion)</th><th>Sent by</th></tr>
-            <tr><td><code class="cfg-guide-code">utm_campaign</code></td><td>UTM Campaign</td><td>All 3 forms</td></tr>
-            <tr><td><code class="cfg-guide-code">utm_medium</code></td><td>UTM Medium</td><td>All 3 forms</td></tr>
-            <tr><td><code class="cfg-guide-code">utm_content</code></td><td>UTM Content</td><td>All 3 forms</td></tr>
-            <tr><td><code class="cfg-guide-code">utm_keyword</code></td><td>UTM Keyword</td><td>All 3 forms</td></tr>
-            <tr><td><code class="cfg-guide-code">gclid</code></td><td>Google Click ID</td><td>All 3 forms</td></tr>
-        </table>
-
-        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">Contact Form</p>
-        <table class="cfg-cft">
-            <tr><th>Key</th><th>Label (suggestion)</th><th>Notes</th></tr>
-            <tr><td><code class="cfg-guide-code">treatment_type</code></td><td>Treatment Type</td><td>Treatment selected from dropdown</td></tr>
-        </table>
-
-        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">Implant Estimator</p>
-        <table class="cfg-cft">
-            <tr><th>Key</th><th>Label (suggestion)</th><th>Example value</th></tr>
-            <tr><td><code class="cfg-guide-code">situation</code></td><td>Implant Situation</td><td><em>q1_0</em> (internal key)</td></tr>
-            <tr><td><code class="cfg-guide-code">situation_label</code></td><td>Implant Situation (label)</td><td><em>I'm missing a tooth</em></td></tr>
-            <tr><td><code class="cfg-guide-code">teeth</code></td><td>Teeth Count Tier</td><td><em>single</em>, <em>multi</em>, or <em>arch</em></td></tr>
-            <tr><td><code class="cfg-guide-code">teeth_label</code></td><td>Teeth Count (label)</td><td><em>Just one tooth</em></td></tr>
-            <tr><td><code class="cfg-guide-code">bone_graft</code></td><td>Bone Graft</td><td><em>yes</em>, <em>notsure</em>, or <em>no</em></td></tr>
-            <tr><td><code class="cfg-guide-code">bone_graft_label</code></td><td>Bone Graft (label)</td><td><em>Not sure</em></td></tr>
-            <tr><td><code class="cfg-guide-code">insurance</code></td><td>Has Insurance</td><td><em>yes</em> or <em>no</em> (if Q4 is enabled)</td></tr>
-            <tr><td><code class="cfg-guide-code">insurance_label</code></td><td>Insurance (label)</td><td><em>Yes, I have coverage</em></td></tr>
-            <tr><td><code class="cfg-guide-code">range</code></td><td>Estimated Price Range</td><td><em>$3,000 – $6,000</em></td></tr>
-        </table>
-
-        <p style="font-size:13px;font-weight:700;color:#1d2327;margin:12px 0 6px;">Aligner Quiz</p>
-        <table class="cfg-cft">
-            <tr><th>Key</th><th>Notes</th></tr>
-            <tr><td colspan="2" style="color:#646970;font-style:italic;">Keys are generated automatically from your quiz step IDs. Each answer is sent as its own custom field using the step key you configure in the Aligner Form tab.</td></tr>
-        </table>
-
-        <div class="cfg-guide-tip" style="margin-top:4px;">
-            <strong>Tip:</strong> Only non-empty fields are sent. If a patient skips the insurance question (or it is turned off), the <code class="cfg-guide-code">insurance</code> field simply won't appear on the contact.
+        <!-- ═══ PHASE 2 — CUSTOM FIELDS ═══ -->
+        <div class="og-phase">
+            <span class="og-phase-badge">Phase 2</span>
+            <div><p class="og-phase-title">Create Custom Fields in GHL</p><p class="og-phase-sub">Settings → Custom Fields → Contacts — all fields are type <strong>Text</strong></p></div>
         </div>
 
-        <!-- ══ SECTION 3 — Tags & Workflows ══ -->
-        <div class="cfg-guide-section">Step 3 — Tags &amp; Workflow Triggers</div>
+        <div class="og-step">
+            <div class="og-num">3</div>
+            <div class="og-body">
+                <h3>UTM Tracking Fields</h3>
+                <p>These capture ad campaign data from the page URL and are sent on every form submission. Create one Text field for each:</p>
+                <table class="og-table">
+                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>What it captures</th></tr>
+                    <tr><td><span class="og-field">utm_campaign</span></td><td>UTM Campaign</td><td>Google Ads campaign name</td></tr>
+                    <tr><td><span class="og-field">utm_medium</span></td><td>UTM Medium</td><td>Traffic medium (e.g. <em>cpc</em>, <em>email</em>)</td></tr>
+                    <tr><td><span class="og-field">utm_content</span></td><td>UTM Content</td><td>Ad variation / creative ID</td></tr>
+                    <tr><td><span class="og-field">utm_keyword</span></td><td>UTM Keyword</td><td>Search keyword that triggered the ad</td></tr>
+                    <tr><td><span class="og-field">gclid</span></td><td>Google Click ID</td><td>Google auto-tagging ID (for import into Google Ads)</td></tr>
+                </table>
+                <div class="og-tip"><strong>Why this matters:</strong> These fields let you see exactly which campaign, ad, and keyword produced each lead — and import offline conversions back into Google Ads via the <code class="og-code">gclid</code>.</div>
+            </div>
+        </div>
 
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">3</div>
-            <div class="cfg-guide-body">
-                <h3>Understand the Tags Each Form Sends</h3>
-                <p>Every submission automatically applies tags to the GHL contact. Use these tags as workflow triggers:</p>
+        <div class="og-step">
+            <div class="og-num">4</div>
+            <div class="og-body">
+                <h3>Implant Estimator Answer Fields</h3>
+                <p>These capture what the patient selected during the quiz. Each answer is stored in its own field so you can filter and segment in GHL.</p>
+                <table class="og-table">
+                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Example value</th></tr>
+                    <tr><td><span class="og-field">implant_flow</span></td><td>Implant Path</td><td><em>single</em>, <em>multiple</em>, or <em>fullarch</em></td></tr>
+                    <tr><td><span class="og-field">implant_toothLocation</span></td><td>Tooth Location</td><td><em>front</em> or <em>back</em></td></tr>
+                    <tr><td><span class="og-field">implant_boneGraft</span></td><td>Bone Graft Needed</td><td><em>yes</em>, <em>no</em>, or <em>not-sure</em></td></tr>
+                    <tr><td><span class="og-field">implant_teethCount</span></td><td>Teeth Count</td><td><em>2</em>, <em>3</em> … <em>7</em></td></tr>
+                    <tr><td><span class="og-field">implant_archSelection</span></td><td>Arch Selection</td><td><em>upper</em>, <em>lower</em>, or <em>both</em></td></tr>
+                    <tr><td><span class="og-field">implant_insurance</span></td><td>Has Dental Insurance</td><td><em>yes</em> or <em>no</em></td></tr>
+                    <tr><td><span class="og-field">implant_range</span></td><td>Estimated Price Range</td><td><em>$9,750 – $13,500 — 2 implants</em></td></tr>
+                </table>
+                <div class="og-tip"><strong>Note:</strong> Field keys are prefixed with <code class="og-code">implant_</code> followed by the quiz field name exactly as configured in the estimator settings. Only fields with a non-empty answer are sent — blank answers are skipped.</div>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">5</div>
+            <div class="og-body">
+                <h3>Lead Source / Trigger Field</h3>
+                <p>Create one additional Text field to identify which tool the lead came from. This makes it easy to filter contacts and trigger workflows by source.</p>
+                <table class="og-table">
+                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Values sent</th></tr>
+                    <tr><td><span class="og-field">lead_source</span></td><td>Lead Source</td><td><em>implant-estimator</em>, <em>contact-form</em>, <em>aligner-quiz</em></td></tr>
+                </table>
+                <div class="og-warn"><strong>Important:</strong> This field is not yet sent automatically — the plugin sends <strong>tags</strong> to identify the source (see Phase 3). You can set the value in a GHL workflow action using the tag as the trigger. Alternatively, you can use the tag directly as your workflow trigger without needing this field.</div>
+            </div>
+        </div>
+
+        <!-- ═══ PHASE 3 — TAGS ═══ -->
+        <div class="og-phase">
+            <span class="og-phase-badge">Phase 3</span>
+            <div><p class="og-phase-title">Understand the Tags the Plugin Sends</p><p class="og-phase-sub">Tags are applied automatically on every submission — use them as workflow triggers</p></div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">6</div>
+            <div class="og-body">
+                <h3>Tags Applied per Form</h3>
+                <p>Every submission adds tags to the contact in GHL. No setup needed — they are applied automatically. Here is the full list:</p>
+                <div class="og-section-label">Implant Estimator</div>
                 <ul>
-                    <li><strong>Contact Form:</strong> <code class="cfg-guide-code">website-contact-form</code></li>
-                    <li><strong>Implant Estimator:</strong> <code class="cfg-guide-code">implant-estimator</code>, <code class="cfg-guide-code">website-lead</code></li>
-                    <li><strong>Aligner Quiz:</strong> <code class="cfg-guide-code">aligner-quiz</code>, <code class="cfg-guide-code">website-lead</code></li>
+                    <li><span class="og-tag">implant-estimator</span> — applied on every implant lead</li>
+                    <li><span class="og-tag">website-lead</span> — applied on every implant and aligner lead</li>
+                    <li><span class="og-tag">implant-single</span> / <span class="og-tag">implant-multiple</span> / <span class="og-tag">implant-fullarch</span> — the path they took</li>
+                    <li><span class="og-tag">bone-graft-yes</span> / <span class="og-tag">bone-graft-no</span> / <span class="og-tag">bone-graft-not-sure</span> — their bone graft answer</li>
+                    <li><span class="og-tag">has-insurance</span> / <span class="og-tag">no-insurance</span> — their insurance answer (if enabled)</li>
                 </ul>
-                <p>The implant and aligner forms also add answer-specific tags like <code class="cfg-guide-code">teeth-single</code>, <code class="cfg-guide-code">bone_graft-yes</code> etc. — useful for segmenting automations.</p>
-            </div>
-        </div>
-
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">4</div>
-            <div class="cfg-guide-body">
-                <h3>Create Workflows Triggered by Tags</h3>
-                <p>In GHL go to <strong>Automation → Workflows → + New Workflow</strong>. Set the trigger to <strong>Contact Tag</strong> and enter the tag to listen for. Recommended workflows to create:</p>
+                <div class="og-section-label">Contact Form</div>
                 <ul>
-                    <li><strong>Tag: <code class="cfg-guide-code">website-contact-form</code></strong> → Send confirmation SMS/email, assign to pipeline stage <em>New Lead</em></li>
-                    <li><strong>Tag: <code class="cfg-guide-code">implant-estimator</code></strong> → Send personalised implant follow-up with price range, book consultation</li>
-                    <li><strong>Tag: <code class="cfg-guide-code">aligner-quiz</code></strong> → Send aligner offer email sequence</li>
-                    <li><strong>Tag: <code class="cfg-guide-code">website-lead</code></strong> → General lead nurture sequence (fires for both implant and aligner)</li>
+                    <li><span class="og-tag">website-contact-form</span></li>
                 </ul>
-                <div class="cfg-guide-tip">
-                    <strong>Tip:</strong> Use <em>Contact Tag Added</em> as the trigger type (not <em>Contact Created</em>) so the workflow fires even if the contact already exists in GHL.
-                </div>
-            </div>
-        </div>
-
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">5</div>
-            <div class="cfg-guide-body">
-                <h3>Add Contacts to a Pipeline</h3>
-                <p>Inside each workflow, add a <strong>Add to Pipeline</strong> action to move the contact into your sales pipeline at the appropriate stage. Suggested setup:</p>
+                <div class="og-section-label">Aligner Quiz</div>
                 <ul>
-                    <li>Pipeline: <em>New Leads</em> (or your main dental pipeline)</li>
-                    <li>Stage: <em>New Lead</em> → moves to <em>Consultation Booked</em> when they book</li>
+                    <li><span class="og-tag">aligner-quiz</span>, <span class="og-tag">website-lead</span></li>
                 </ul>
+                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> (not <em>Contact Created</em>) as your workflow trigger type. This fires even when an existing patient re-submits the form.</div>
             </div>
         </div>
 
-        <!-- ══ SECTION 4 — Test ══ -->
-        <div class="cfg-guide-section">Step 4 — Test &amp; Verify</div>
+        <!-- ═══ PHASE 4 — WORKFLOWS ═══ -->
+        <div class="og-phase">
+            <span class="og-phase-badge">Phase 4</span>
+            <div><p class="og-phase-title">Build Workflows in GHL</p><p class="og-phase-sub">Automation → Workflows → + New Workflow</p></div>
+        </div>
 
-        <div class="cfg-guide-step">
-            <div class="cfg-guide-num">6</div>
-            <div class="cfg-guide-body">
-                <h3>Submit a Test Lead</h3>
-                <p>Open a form page on your site and append UTM parameters to the URL to test tracking, e.g.:</p>
-                <p><code class="cfg-guide-code">/contact-form?utm_campaign=test&amp;utm_medium=cpc&amp;gclid=abc123</code></p>
-                <p>Submit the form and then check in GHL <strong>Contacts</strong> that:</p>
+        <div class="og-step">
+            <div class="og-num">7</div>
+            <div class="og-body">
+                <h3>Workflow 1 — Implant Lead Follow-Up</h3>
+                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-estimator</span></p>
+                <p>Recommended actions in order:</p>
                 <ul>
-                    <li>Contact was created with correct name/email/phone</li>
-                    <li>Tags were applied (<code class="cfg-guide-code">website-contact-form</code> etc.)</li>
-                    <li>Custom fields show the UTM values</li>
-                    <li>Workflow was triggered (check the contact's workflow history)</li>
+                    <li><strong>Wait 0 min</strong> → Send SMS: <em>"Hi [First Name], thanks for using our implant cost estimator! Your estimated range is [Custom Value: implant_range]. We'd love to get you in for a free consultation — reply YES to book."</em></li>
+                    <li><strong>Wait 5 min</strong> → Send Email: personalised implant follow-up with their range and a booking link</li>
+                    <li><strong>Wait 1 day</strong> → Internal notification to assign to a team member for manual follow-up</li>
+                    <li><strong>Add to Pipeline:</strong> Pipeline = <em>Implant Leads</em>, Stage = <em>Estimator Completed</em></li>
+                    <li><strong>Assign User</strong> to the appropriate team member or round-robin</li>
+                </ul>
+                <div class="og-tip"><strong>Personalisation tip:</strong> Use GHL custom value syntax <code class="og-code">{{contact.implant_range}}</code> in your SMS/email body to pull in the exact price range the patient saw.</div>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">8</div>
+            <div class="og-body">
+                <h3>Workflow 2 — Full-Arch Leads (high-value segment)</h3>
+                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-fullarch</span></p>
+                <p>These are your highest-value leads. Route them differently:</p>
+                <ul>
+                    <li>Immediate internal SMS notification to a designated team member</li>
+                    <li>Higher-priority pipeline stage (e.g. <em>High Value — Call Now</em>)</li>
+                    <li>Different email sequence focused on All-on-4 / All-on-6 treatment</li>
                 </ul>
             </div>
         </div>
+
+        <div class="og-step">
+            <div class="og-num">9</div>
+            <div class="og-body">
+                <h3>Workflow 3 — Bone Graft Segment</h3>
+                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">bone-graft-yes</span> <em>or</em> <span class="og-tag">bone-graft-not-sure</span></p>
+                <p>These patients may need an additional procedure. Tailor your messaging:</p>
+                <ul>
+                    <li>Add a note to their contact: <em>"Patient indicated possible bone grafting need"</em></li>
+                    <li>Include bone graft context in the follow-up email (the <code class="og-code">implant_range</code> field already reflects the graft add-on price if the estimator is set to <em>addon</em> mode)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">10</div>
+            <div class="og-body">
+                <h3>Workflow 4 — Contact Form Enquiries</h3>
+                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">website-contact-form</span></p>
+                <ul>
+                    <li>Send confirmation email: <em>"Thanks for reaching out, we'll be in touch within [X] hours."</em></li>
+                    <li>Create task / assign to front desk</li>
+                    <li>Add to pipeline: <em>New Leads → Contacted</em></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">11</div>
+            <div class="og-body">
+                <h3>Add Contacts to Your Pipeline on Every Workflow</h3>
+                <p>Every workflow above should include an <strong>Add to Pipeline / Stage</strong> action so new leads don't fall through the cracks. Suggested pipeline stages:</p>
+                <table class="og-table">
+                    <tr><th>Stage</th><th>Who goes here</th></tr>
+                    <tr><td>Estimator Completed</td><td>All implant estimator leads</td></tr>
+                    <tr><td>High Value — Call Now</td><td>Full-arch leads</td></tr>
+                    <tr><td>Consultation Booked</td><td>Moved here manually or via booking trigger</td></tr>
+                    <tr><td>New Enquiry</td><td>Contact form submissions</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- ═══ PHASE 5 — TEST ═══ -->
+        <div class="og-phase">
+            <span class="og-phase-badge">Phase 5</span>
+            <div><p class="og-phase-title">Test &amp; Verify Everything</p><p class="og-phase-sub">Do this before going live</p></div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">12</div>
+            <div class="og-body">
+                <h3>Submit a Test Implant Lead</h3>
+                <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL:</p>
+                <p><code class="og-code">?utm_campaign=test-campaign&amp;utm_medium=cpc&amp;utm_keyword=dental+implants&amp;gclid=test123</code></p>
+                <p>Complete the full quiz and submit your details. Then in GHL <strong>Contacts</strong>, find your test contact and verify:</p>
+                <ul class="og-checklist">
+                    <li>Contact was created with correct name, email, and phone</li>
+                    <li>Tag <span class="og-tag">implant-estimator</span> was applied</li>
+                    <li>Path tag (<span class="og-tag">implant-single</span>, <span class="og-tag">implant-multiple</span>, or <span class="og-tag">implant-fullarch</span>) was applied</li>
+                    <li>Custom field <span class="og-field">implant_range</span> shows the correct price range</li>
+                    <li>Custom field <span class="og-field">utm_campaign</span> shows <em>test-campaign</em></li>
+                    <li>Custom field <span class="og-field">gclid</span> shows <em>test123</em></li>
+                    <li>Workflow was triggered (check the contact's <strong>Workflow History</strong> tab)</li>
+                    <li>Contact was added to the correct pipeline stage</li>
+                </ul>
+                <div class="og-tip"><strong>Workflow not triggered?</strong> Check that the workflow is <strong>Published</strong> (not Draft), and that the trigger is set to <em>Contact Tag Added</em> — not <em>Contact Created</em> or <em>Tag Changed</em>.</div>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">13</div>
+            <div class="og-body">
+                <h3>Submit a Test Contact Form Lead</h3>
+                <p>Fill out the main contact form (not the estimator) with a test email and verify:</p>
+                <ul class="og-checklist">
+                    <li>Contact created / updated in GHL</li>
+                    <li>Tag <span class="og-tag">website-contact-form</span> applied</li>
+                    <li>UTM custom fields populated (if URL has UTM params)</li>
+                    <li>Contact form workflow triggered</li>
+                </ul>
+            </div>
+        </div>
+
+        </div><!-- /og-wrap -->
 
     </div>
 
+    <div id="cfg-save-bar">
     <?php submit_button( 'Save All Settings', 'primary large' ); ?>
+    </div>
     </form>
     </div>
+
+    <?php
+    // ── Entries panel (outside the settings form) ──
+    global $wpdb;
+    $entries_table = $wpdb->prefix . 'cfg_entries';
+
+    // Handle delete/clear actions
+    if ( isset( $_GET['cfg_action'] ) && current_user_can( 'manage_options' ) ) {
+        check_admin_referer( 'cfg_entries_action' );
+        if ( $_GET['cfg_action'] === 'delete' && ! empty( $_GET['entry_id'] ) ) {
+            $wpdb->delete( $entries_table, [ 'id' => absint( $_GET['entry_id'] ) ], [ '%d' ] );
+            echo '<div class="notice notice-success is-dismissible"><p>Entry deleted.</p></div>';
+        } elseif ( $_GET['cfg_action'] === 'clear_all' ) {
+            $wpdb->query( "TRUNCATE TABLE {$entries_table}" );
+            echo '<div class="notice notice-success is-dismissible"><p>All entries cleared.</p></div>';
+        }
+    }
+
+    // Handle bulk delete
+    if ( isset( $_POST['cfg_bulk_delete'] ) && ! empty( $_POST['entry_ids'] ) && current_user_can( 'manage_options' ) ) {
+        check_admin_referer( 'cfg_bulk_delete' );
+        $ids = array_map( 'absint', (array) $_POST['entry_ids'] );
+        if ( $ids ) {
+            $placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+            $wpdb->query( $wpdb->prepare( "DELETE FROM {$entries_table} WHERE id IN ({$placeholders})", $ids ) );
+            echo '<div class="notice notice-success is-dismissible"><p>' . count( $ids ) . ' entries deleted.</p></div>';
+        }
+    }
+
+    // Handle CSV export
+    if ( isset( $_GET['cfg_action'] ) && $_GET['cfg_action'] === 'export_csv' && current_user_can( 'manage_options' ) ) {
+        check_admin_referer( 'cfg_entries_action' );
+        $all = $wpdb->get_results( "SELECT * FROM {$entries_table} ORDER BY created_at DESC", ARRAY_A );
+        header( 'Content-Type: text/csv; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename="form-entries-' . date('Y-m-d') . '.csv"' );
+        $out = fopen( 'php://output', 'w' );
+        fputcsv( $out, [ 'ID', 'Date', 'Form', 'First Name', 'Last Name', 'Email', 'Phone', 'GHL Status', 'Meta' ] );
+        foreach ( $all as $row ) {
+            fputcsv( $out, [ $row['id'], $row['created_at'], $row['form_type'], $row['first_name'], $row['last_name'], $row['email'], $row['phone'], $row['ghl_status'], $row['meta'] ] );
+        }
+        fclose( $out );
+        exit;
+    }
+
+    // Filters
+    $filter_type   = sanitize_text_field( $_GET['filter_type'] ?? '' );
+    $filter_search = sanitize_text_field( $_GET['filter_search'] ?? '' );
+    $filter_status = sanitize_text_field( $_GET['filter_status'] ?? '' );
+    $per_page      = 25;
+    $current_page  = max( 1, absint( $_GET['entries_page'] ?? 1 ) );
+    $offset        = ( $current_page - 1 ) * $per_page;
+
+    $where  = 'WHERE 1=1';
+    $params = [];
+    if ( $filter_type )   { $where .= ' AND form_type = %s';                         $params[] = $filter_type; }
+    if ( $filter_status ) { $where .= ' AND ghl_status = %s';                        $params[] = $filter_status; }
+    if ( $filter_search ) {
+        $like = '%' . $wpdb->esc_like( $filter_search ) . '%';
+        $where .= ' AND (first_name LIKE %s OR last_name LIKE %s OR email LIKE %s OR phone LIKE %s)';
+        $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
+    }
+
+    $count_sql = $params
+        ? $wpdb->prepare( "SELECT COUNT(*) FROM {$entries_table} {$where}", $params )
+        : "SELECT COUNT(*) FROM {$entries_table} {$where}";
+    $total = (int) $wpdb->get_var( $count_sql );
+
+    $rows_sql = $params
+        ? $wpdb->prepare( "SELECT * FROM {$entries_table} {$where} ORDER BY created_at DESC LIMIT %d OFFSET %d", array_merge( $params, [ $per_page, $offset ] ) )
+        : $wpdb->prepare( "SELECT * FROM {$entries_table} {$where} ORDER BY created_at DESC LIMIT %d OFFSET %d", $per_page, $offset );
+    $rows = $wpdb->get_results( $rows_sql, ARRAY_A );
+
+    $total_pages = max( 1, ceil( $total / $per_page ) );
+    $base_url    = admin_url( 'options-general.php?page=' . CFG_SLUG . '&cfg_tab=entries' );
+    $nonce_url   = wp_nonce_url( $base_url, 'cfg_entries_action' );
+    ?>
+
+    <div id="cfg-entries-wrap" style="display:none;max-width:1100px;margin-top:0;">
+
+    <style>
+    .cfg-entries-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0 12px;}
+    .cfg-entries-toolbar input[type=text]{padding:6px 10px;border:1px solid #8c8f94;border-radius:4px;font-size:13px;width:220px;}
+    .cfg-entries-toolbar select{padding:6px 10px;border:1px solid #8c8f94;border-radius:4px;font-size:13px;}
+    .cfg-entries-toolbar .spacer{flex:1;}
+    #cfg-entries-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #c3c4c7;border-radius:4px;overflow:hidden;}
+    #cfg-entries-table th{background:#f6f7f7;padding:9px 12px;font-size:12px;font-weight:700;text-align:left;border-bottom:1px solid #c3c4c7;color:#1d2327;white-space:nowrap;}
+    #cfg-entries-table td{padding:9px 12px;font-size:13px;border-bottom:1px solid #f0f0f1;vertical-align:middle;}
+    #cfg-entries-table tr:last-child td{border-bottom:none;}
+    #cfg-entries-table tr:hover td{background:#f9f9f9;}
+    .cfg-badge-ok{display:inline-block;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+    .cfg-badge-error{display:inline-block;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+    .cfg-badge-form{display:inline-block;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
+    .cfg-entry-details{display:none;background:#f9fafb;border-top:1px solid #e5e7eb;padding:12px 14px;font-size:12px;}
+    .cfg-entry-details table{border-collapse:collapse;width:100%;}
+    .cfg-entry-details td{padding:4px 8px;vertical-align:top;font-size:12px;}
+    .cfg-entry-details td:first-child{font-weight:600;color:#374151;white-space:nowrap;width:150px;}
+    .cfg-pagination{display:flex;align-items:center;gap:6px;margin-top:14px;font-size:13px;}
+    .cfg-pagination a,.cfg-pagination span{padding:5px 10px;border:1px solid #c3c4c7;border-radius:4px;text-decoration:none;color:#2271b1;background:#fff;}
+    .cfg-pagination span.current{background:#2271b1;color:#fff;border-color:#2271b1;}
+    .cfg-count-bar{font-size:12px;color:#646970;margin-bottom:10px;}
+    .cfg-bulk-bar{display:flex;gap:8px;align-items:center;margin-top:10px;}
+    </style>
+
+    <div class="cfg-entries-toolbar">
+        <form method="get" action="" style="display:contents;">
+            <input type="hidden" name="page" value="<?= esc_attr( CFG_SLUG ) ?>"/>
+            <input type="hidden" name="cfg_tab" value="entries"/>
+            <input type="text" name="filter_search" value="<?= esc_attr( $filter_search ) ?>" placeholder="Search name, email, phone…"/>
+            <select name="filter_type">
+                <option value="">All forms</option>
+                <option value="contact"  <?= selected( $filter_type, 'contact',  false ) ?>>Contact Form</option>
+                <option value="aligner"  <?= selected( $filter_type, 'aligner',  false ) ?>>Aligner Quiz</option>
+                <option value="implant"  <?= selected( $filter_type, 'implant',  false ) ?>>Implant Estimator</option>
+            </select>
+            <select name="filter_status">
+                <option value="">All statuses</option>
+                <option value="ok"    <?= selected( $filter_status, 'ok',    false ) ?>>GHL OK</option>
+                <option value="error" <?= selected( $filter_status, 'error', false ) ?>>GHL Error</option>
+            </select>
+            <button type="submit" class="button">Filter</button>
+            <?php if ( $filter_type || $filter_search || $filter_status ): ?>
+            <a href="<?= esc_url( $base_url ) ?>" class="button">Clear</a>
+            <?php endif; ?>
+        </form>
+        <div class="spacer"></div>
+        <a href="<?= esc_url( add_query_arg( [ 'cfg_action' => 'export_csv' ], $nonce_url ) ) ?>" class="button">⬇ Export CSV</a>
+        <?php if ( $total > 0 ): ?>
+        <a href="<?= esc_url( add_query_arg( [ 'cfg_action' => 'clear_all' ], $nonce_url ) ) ?>"
+           class="button" style="color:#b91c1c;border-color:#fca5a5;"
+           onclick="return confirm('Delete ALL <?= $total ?> entries? This cannot be undone.')">🗑 Clear All</a>
+        <?php endif; ?>
+    </div>
+
+    <div class="cfg-count-bar">
+        Showing <?= $total === 0 ? 0 : $offset + 1 ?>–<?= min( $offset + $per_page, $total ) ?> of <strong><?= $total ?></strong> entries
+    </div>
+
+    <form method="post" action="">
+    <?php wp_nonce_field( 'cfg_bulk_delete' ); ?>
+    <input type="hidden" name="cfg_tab" value="entries"/>
+
+    <table id="cfg-entries-table">
+    <thead>
+        <tr>
+            <th><input type="checkbox" id="cfg-check-all" onclick="document.querySelectorAll('.cfg-entry-chk').forEach(c=>c.checked=this.checked)"/></th>
+            <th>Date</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Form</th>
+            <th>GHL</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php if ( empty( $rows ) ): ?>
+        <tr><td colspan="8" style="text-align:center;padding:32px;color:#646970;">No entries yet.</td></tr>
+    <?php else: foreach ( $rows as $row ):
+        $meta    = json_decode( $row['meta'] ?? '{}', true ) ?: [];
+        $form_labels = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+        $form_label  = $form_labels[ $row['form_type'] ] ?? $row['form_type'];
+    ?>
+        <tr style="cursor:pointer;" onclick="cfgToggleDetail(<?= $row['id'] ?>)">
+            <td onclick="event.stopPropagation()"><input type="checkbox" name="entry_ids[]" value="<?= $row['id'] ?>" class="cfg-entry-chk"/></td>
+            <td><?= esc_html( date( 'M j, Y g:ia', strtotime( $row['created_at'] ) ) ) ?></td>
+            <td><?= esc_html( trim( $row['first_name'] . ' ' . $row['last_name'] ) ) ?></td>
+            <td><?= esc_html( $row['email'] ) ?></td>
+            <td><?= esc_html( $row['phone'] ) ?></td>
+            <td><span class="cfg-badge-form"><?= esc_html( $form_label ) ?></span></td>
+            <td><span class="cfg-badge-<?= $row['ghl_status'] === 'ok' ? 'ok' : 'error' ?>"><?= $row['ghl_status'] === 'ok' ? '✓ Sent' : '✗ Error' ?></span></td>
+            <td onclick="event.stopPropagation()">
+                <a href="<?= esc_url( add_query_arg( [ 'cfg_action' => 'delete', 'entry_id' => $row['id'] ], $nonce_url ) ) ?>"
+                   class="button button-small" style="color:#b91c1c;"
+                   onclick="return confirm('Delete this entry?')">Delete</a>
+            </td>
+        </tr>
+        <tr id="cfg-detail-<?= $row['id'] ?>"><td colspan="8" style="padding:0;">
+            <div class="cfg-entry-details">
+                <?php if ( ! empty( $meta ) ): ?>
+                <table><?php foreach ( $meta as $k => $v ): if ( $v === '' || $v === null ) continue; ?>
+                    <tr>
+                        <td><?= esc_html( ucwords( str_replace( '_', ' ', $k ) ) ) ?></td>
+                        <td><?= esc_html( is_array( $v ) ? implode( ', ', $v ) : $v ) ?></td>
+                    </tr>
+                <?php endforeach; ?></table>
+                <?php else: ?><em>No additional data.</em><?php endif; ?>
+            </div>
+        </td></tr>
+    <?php endforeach; endif; ?>
+    </tbody>
+    </table>
+
+    <div class="cfg-bulk-bar">
+        <button type="submit" name="cfg_bulk_delete" class="button" style="color:#b91c1c;" onclick="return document.querySelectorAll('.cfg-entry-chk:checked').length > 0 || (alert('No entries selected.'), false)">Delete Selected</button>
+    </div>
+    </form>
+
+    <?php if ( $total_pages > 1 ): ?>
+    <div class="cfg-pagination">
+        <?php for ( $p = 1; $p <= $total_pages; $p++ ): ?>
+            <?php if ( $p === $current_page ): ?>
+                <span class="current"><?= $p ?></span>
+            <?php else: ?>
+                <a href="<?= esc_url( add_query_arg( [ 'entries_page' => $p, 'filter_type' => $filter_type, 'filter_search' => $filter_search, 'filter_status' => $filter_status ], $base_url ) ) ?>"><?= $p ?></a>
+            <?php endif; ?>
+        <?php endfor; ?>
+    </div>
+    <?php endif; ?>
+
+    </div><!-- /cfg-entries-wrap -->
+
+    <script>
+    function cfgToggleDetail(id) {
+        var row = document.getElementById('cfg-detail-' + id);
+        if (!row) return;
+        var detail = row.querySelector('.cfg-entry-details');
+        if (detail) detail.style.display = detail.style.display === 'block' ? 'none' : 'block';
+    }
+    (function() {
+        // Restore entries tab if coming back from filter/delete
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('cfg_tab') === 'entries') {
+            var tab = document.querySelector('.cfg-tab:last-child');
+            if (tab) tab.click();
+        }
+    })();
+    </script>
 
     <script>
     /* ── Tab navigation ── */
@@ -2336,7 +2739,18 @@ function cfg_settings_page() {
         document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
-        document.getElementById('cfg-' + id).classList.add('active');
+        var isEntries = (id === 'entries');
+        var saveBar = document.getElementById('cfg-save-bar');
+        var entriesWrap = document.getElementById('cfg-entries-wrap');
+        if (saveBar)    saveBar.style.display    = isEntries ? 'none' : '';
+        if (entriesWrap) entriesWrap.style.display = isEntries ? 'block' : 'none';
+        if (!isEntries) document.getElementById('cfg-' + id).classList.add('active');
+        // Push tab state to URL without reload
+        try {
+            var u = new URL(window.location.href);
+            u.searchParams.set('cfg_tab', id);
+            history.replaceState(null, '', u.toString());
+        } catch(e) {}
     }
     function syncColor(textId, val) {
         var el = document.getElementById(textId); if (el) el.value = val;
@@ -3125,7 +3539,18 @@ function cfg_ajax_submit() {
     $code = wp_remote_retrieve_response_code( $response );
     $body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-    if ( $code === 200 || $code === 201 ) {
+    $ghl_ok = ( $code === 200 || $code === 201 );
+    $entry_meta = array_filter( [
+        'treatment'    => $treatment,
+        'utm_campaign' => sanitize_text_field( $_POST['utm_campaign'] ?? '' ),
+        'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
+        'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
+        'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
+        'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
+    ] );
+    cfg_log_entry( 'contact', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
+
+    if ( $ghl_ok ) {
         wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
@@ -3638,7 +4063,17 @@ function cfg_aligner_ajax_submit() {
     $code = wp_remote_retrieve_response_code( $response );
     $body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-    if ( $code === 200 || $code === 201 ) {
+    $ghl_ok = ( $code === 200 || $code === 201 );
+    $entry_meta = array_filter( array_merge( $answers, [
+        'utm_campaign' => sanitize_text_field( $_POST['utm_campaign'] ?? '' ),
+        'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
+        'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
+        'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
+        'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
+    ] ) );
+    cfg_log_entry( 'aligner', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
+
+    if ( $ghl_ok ) {
         wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
@@ -4808,7 +5243,25 @@ function cfg_implant_ajax_submit() {
     $code = wp_remote_retrieve_response_code( $response );
     $body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-    if ( $code === 200 || $code === 201 ) {
+    $ghl_ok = ( $code === 200 || $code === 201 );
+    $entry_meta = array_filter( [
+        'flow'         => $flow,
+        'range'        => $range,
+        'range_type'   => $range_type,
+        'utm_campaign' => sanitize_text_field( $_POST['utm_campaign'] ?? '' ),
+        'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
+        'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
+        'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
+        'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
+    ] );
+    foreach ( $all_qs as $q ) {
+        $field = sanitize_key( $q['field'] ?? '' );
+        $val   = sanitize_text_field( $answers[ $field ] ?? '' );
+        if ( $field !== '' && $val !== '' ) $entry_meta[ $field ] = $val;
+    }
+    cfg_log_entry( 'implant', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
+
+    if ( $ghl_ok ) {
         wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
