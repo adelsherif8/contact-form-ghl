@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.8.8
+ * Version:     1.8.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5502,9 +5502,19 @@ $_badge = function($txt) use ($uid) {
     var addGraft = config.graftDisplay !== 'included' && (graftVal === 'yes' || graftVal === 'not-sure');
     var bMin, bMax;
     if (s.flow === 'multiple') {
-      var count = s.teethCountN || 2;
+      var count = s.teethCountN;
+      if (count === null || isNaN(count)) {
+        // Unknown count — show the configured multiple range as-is
+        bMin = p.multi_min;
+        bMax = p.multi_max;
+        if (addGraft) { bMin += p.graft_min; bMax += p.graft_max; }
+        return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 multiple implants'};
+      }
       bMin = p.single_min * count;
       bMax = p.single_max * count;
+      // Cap at configured multiple max
+      if (bMin > p.multi_max) bMin = p.multi_max;
+      if (bMax > p.multi_max) bMax = p.multi_max;
       if (addGraft) { bMin += p.graft_min; bMax += p.graft_max; }
       return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 '+count+' implants'};
     }
@@ -5643,7 +5653,8 @@ $_badge = function($txt) use ($uid) {
     }
     // special: teethCount numeric for pricing
     if (key === 'teethCount') {
-      s.teethCountN = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7}[val] || 2;
+      var parsed = parseInt(val, 10);
+      s.teethCountN = isNaN(parsed) ? null : parsed;
     }
     var par = btn.closest ? btn.closest('.die-options') : btn.parentNode;
     if (par) {
@@ -5720,12 +5731,13 @@ $_badge = function($txt) use ($uid) {
       if (gns) gns.style.display = (showGraft && (gv === 'yes' || gv === 'not-sure')) ? 'block' : 'none';
     } else if (panelId === 'result-multiple') {
       animateRange(uid + '-result-multiple-range', r.label);
-      var count = s.teethCountN || 2;
-      var word  = _n2w[count] || count;
+      var count = s.teethCountN;
+      var countKnown = count !== null && !isNaN(count);
+      var word  = countKnown ? (_n2w[count] || count) : 'Multiple';
       var lbl2  = document.getElementById(uid + '-result-multiple-label');
       if (lbl2) lbl2.textContent = word + '-Tooth Implant Treatment';
       var cnt   = document.getElementById(uid + '-result-multiple-count');
-      if (cnt)  cnt.textContent  = count + ' implants \u00d7 single-implant rate';
+      if (cnt)  cnt.textContent  = countKnown ? (count + ' implants \u00d7 single-implant rate') : 'Multiple implants \u2014 estimated range';
       var gvm   = getGraftVal('multiple');
       var gnm   = document.getElementById(uid + '-graft-note-multiple');
       if (gnm)  gnm.style.display = (showGraft && (gvm === 'yes' || gvm === 'not-sure')) ? 'block' : 'none';
