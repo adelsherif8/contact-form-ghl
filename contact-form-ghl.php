@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.8.9
+ * Version:     1.9.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2059,6 +2059,16 @@ function cfg_settings_page() {
             titleSpan.textContent = q.title || 'New Question';
             hdr.appendChild(titleSpan);
             if (canDelete) {
+                var upBtn = document.createElement('button'); upBtn.type='button'; upBtn.title='Move up';
+                upBtn.style='background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:12px;color:#6b7280;margin-right:2px;';
+                upBtn.textContent='↑';
+                (function(p,i){ upBtn.onclick = function(e){ e.stopPropagation(); impEdMoveQ(p, i, -1); }; })(path, qi);
+                hdr.appendChild(upBtn);
+                var dnBtn = document.createElement('button'); dnBtn.type='button'; dnBtn.title='Move down';
+                dnBtn.style='background:none;border:1px solid #d1d5db;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:12px;color:#6b7280;margin-right:6px;';
+                dnBtn.textContent='↓';
+                (function(p,i){ dnBtn.onclick = function(e){ e.stopPropagation(); impEdMoveQ(p, i, +1); }; })(path, qi);
+                hdr.appendChild(dnBtn);
                 var delBtn = document.createElement('button'); delBtn.type='button'; delBtn.className='imp-q-card-del'; delBtn.textContent='x Remove';
                 (function(p,i){ delBtn.onclick = function(){ impEdDelQ(p, i); }; })(path, qi);
                 hdr.appendChild(delBtn);
@@ -2186,6 +2196,16 @@ function cfg_settings_page() {
         function impEdDelQ(path, qi) {
             if (!confirm('Remove this question?')) return;
             impEd[path].splice(qi, 1);
+            impEdSave(path);
+            impEdRendered[path] = false;
+            impEdRender(path);
+        }
+
+        function impEdMoveQ(path, qi, dir) {
+            var qs = impEd[path];
+            var target = qi + dir;
+            if (target < 0 || target >= qs.length) return;
+            var tmp = qs[qi]; qs[qi] = qs[target]; qs[target] = tmp;
             impEdSave(path);
             impEdRendered[path] = false;
             impEdRender(path);
