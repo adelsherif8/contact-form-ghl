@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.8.3
+ * Version:     1.8.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -557,76 +557,133 @@ function cfg_settings_page() {
     <?php endif; ?>
 
     <style>
-    .cfg-wrap{max-width:1080px;}
-    /* ── Tab bar ── */
-    .cfg-tabs{
-        display:flex;align-items:stretch;gap:0;
-        background:#fff;
-        border:1px solid #dcdde1;border-bottom:none;
-        border-radius:6px 6px 0 0;
-        overflow-x:auto;scrollbar-width:none;
-        white-space:nowrap;
+    /* ── Layout ── */
+    #cfg-root{display:flex;align-items:flex-start;gap:0;margin:16px 0 0 -20px;min-height:80vh;}
+    .cfg-sidebar{
+        width:210px;flex-shrink:0;
+        background:#1a1d21;
+        border-radius:8px 0 0 8px;
+        padding:0 0 24px;
+        position:sticky;top:32px;
+        align-self:flex-start;
     }
-    .cfg-tabs::-webkit-scrollbar{display:none;}
-    .cfg-tab{
-        display:inline-flex;align-items:center;gap:5px;
-        padding:11px 15px;
-        cursor:pointer;
-        font-size:12px;font-weight:500;
-        color:#50575e;
-        white-space:nowrap;flex-shrink:0;
-        border-bottom:2px solid transparent;
-        border-top:none;border-left:none;border-right:none;
-        background:transparent;
-        transition:color .15s,border-color .15s;
+    .cfg-sidebar-brand{
+        display:flex;align-items:center;gap:10px;
+        padding:18px 16px 16px;
+        border-bottom:1px solid rgba(255,255,255,.07);
+        margin-bottom:12px;
+    }
+    .cfg-brand-icon{
+        width:32px;height:32px;border-radius:7px;
+        background:linear-gradient(135deg,#2271b1,#1a5a94);
+        display:flex;align-items:center;justify-content:center;
+        font-size:10px;font-weight:800;color:#fff;letter-spacing:.03em;flex-shrink:0;
+    }
+    .cfg-brand-name{font-size:12.5px;font-weight:700;color:#fff;line-height:1.2;}
+    .cfg-brand-sub{font-size:10.5px;color:rgba(255,255,255,.38);margin-top:1px;}
+    .cfg-nav-section{
+        padding:14px 12px 4px;
+        font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+        color:rgba(255,255,255,.3);
+    }
+    .cfg-nav-item{
+        display:flex;align-items:center;gap:8px;
+        padding:7px 16px;margin:1px 8px;border-radius:6px;
+        font-size:12.5px;color:rgba(255,255,255,.6);
+        cursor:pointer;transition:background .15s,color .15s;
         user-select:none;
     }
-    .cfg-tab:hover{color:#2271b1;}
-    .cfg-tab.active{color:#2271b1;border-bottom-color:#2271b1;font-weight:600;}
-    .cfg-tab-sep{width:1px;background:#dcdde1;margin:8px 4px;flex-shrink:0;}
+    .cfg-nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9);}
+    .cfg-nav-item.active{background:rgba(34,113,177,.25);color:#fff;font-weight:600;}
+    .cfg-nav-item.active .cfg-nav-dot{background:#2271b1;}
+    .cfg-nav-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);flex-shrink:0;transition:background .15s;}
+    .cfg-nav-sep{border:none;border-top:1px solid rgba(255,255,255,.07);margin:10px 16px;}
+    /* ── Main content ── */
+    .cfg-main{flex:1;min-width:0;padding:0 0 0 0;}
     /* ── Panels ── */
-    .cfg-panel{display:none;background:#fff;border:1px solid #dcdde1;border-top:none;border-radius:0 0 6px 6px;padding:26px 30px;}
+    .cfg-panel{
+        display:none;
+        background:#fff;
+        border:1px solid #dcdde1;
+        border-radius:0 8px 8px 0;
+        padding:28px 32px;
+        min-height:500px;
+    }
     .cfg-panel.active{display:block;}
+    /* ── Save bar ── */
+    #cfg-save-bar{
+        background:#fff;
+        border:1px solid #dcdde1;border-top:none;
+        border-radius:0 0 8px 0;
+        padding:16px 32px;
+        margin-top:-1px;
+    }
     /* ── Form elements ── */
-    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;}
+    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px;}
     .cfg-full{grid-column:span 2;}
     .cfg-field{display:flex;flex-direction:column;gap:5px;}
     .cfg-field label{font-weight:600;font-size:12.5px;color:#1d2327;}
-    .cfg-field input[type=text],.cfg-field input[type=url],.cfg-field input[type=password],.cfg-field select,.cfg-field textarea{width:100%;padding:7px 10px;border:1px solid #c3c4c7;border-radius:4px;font-size:13px;background:#fff;transition:border-color .15s;}
-    .cfg-field input:focus,.cfg-field select:focus,.cfg-field textarea:focus{border-color:#2271b1;outline:none;box-shadow:0 0 0 1px #2271b1;}
-    .cfg-field textarea{min-height:80px;font-family:monospace;resize:vertical;}
-    .cfg-desc{color:#646970;font-size:11.5px;line-height:1.5;}
-    .cfg-toggle-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f6f7f7;}
+    .cfg-field input[type=text],.cfg-field input[type=url],.cfg-field input[type=password],.cfg-field select,.cfg-field textarea{
+        width:100%;padding:8px 11px;
+        border:1px solid #dcdde1;border-radius:5px;
+        font-size:13px;background:#fff;
+        transition:border-color .15s,box-shadow .15s;color:#1d2327;
+    }
+    .cfg-field input:focus,.cfg-field select:focus,.cfg-field textarea:focus{
+        border-color:#2271b1;outline:none;box-shadow:0 0 0 2px rgba(34,113,177,.15);
+    }
+    .cfg-field textarea{min-height:80px;font-family:monospace;resize:vertical;line-height:1.5;}
+    .cfg-desc{color:#787c82;font-size:11.5px;line-height:1.5;}
+    .cfg-toggle-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f6f7f7;}
     .cfg-toggle-row:last-child{border-bottom:none;}
-    .cfg-toggle-row label{flex:1;font-size:13px;cursor:pointer;}
-    .cfg-toggle-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;}
-    .cfg-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#646970;margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid #f0f0f1;}
+    .cfg-toggle-row label{flex:1;font-size:13px;cursor:pointer;color:#1d2327;}
+    .cfg-toggle-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#2271b1;}
+    .cfg-section-title{
+        font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+        color:#9ca3af;margin:28px 0 14px;padding-bottom:10px;border-bottom:1px solid #f3f4f6;
+    }
     .cfg-section-title:first-child{margin-top:0;}
     .cfg-color-row{display:flex;align-items:center;gap:8px;}
-    .cfg-color-row input[type=color]{width:44px;height:36px;padding:2px;border:1px solid #c3c4c7;border-radius:4px;cursor:pointer;flex-shrink:0;}
+    .cfg-color-row input[type=color]{width:42px;height:36px;padding:2px;border:1px solid #dcdde1;border-radius:5px;cursor:pointer;flex-shrink:0;}
     .cfg-color-row input[type=text]{flex:1;}
-    .cfg-badge{display:inline-block;background:#e7f3ff;color:#2271b1;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;margin-left:5px;vertical-align:middle;}
-    .cfg-card-section{background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px 20px;margin-bottom:14px;}
+    .cfg-badge{display:inline-block;background:#eff6ff;color:#2271b1;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:600;margin-left:5px;vertical-align:middle;}
+    .cfg-card-section{background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:18px 22px;margin-bottom:14px;}
     .cfg-card-section h4{margin:0 0 12px;font-size:13px;font-weight:600;color:#1d2327;}
     </style>
 
-    <div class="cfg-wrap">
+    <div id="cfg-root">
+
+    <!-- ── Sidebar ── -->
+    <div class="cfg-sidebar">
+        <div class="cfg-sidebar-brand">
+            <div class="cfg-brand-icon">GHL</div>
+            <div>
+                <div class="cfg-brand-name">Contact Form</div>
+                <div class="cfg-brand-sub">GoHighLevel</div>
+            </div>
+        </div>
+
+        <div class="cfg-nav-section">Settings</div>
+        <div class="cfg-nav-item active" onclick="cfgTab(this,'ghl')"><span class="cfg-nav-dot"></span>GHL + Security</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'design')"><span class="cfg-nav-dot"></span>Design</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'form')"><span class="cfg-nav-dot"></span>Contact Form</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'bm')"><span class="cfg-nav-dot"></span>Booking Method</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'ty')"><span class="cfg-nav-dot"></span>Thank You Page</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'alg')"><span class="cfg-nav-dot"></span>Aligner Form</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'imp')"><span class="cfg-nav-dot"></span>Implant Estimator</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'guide')"><span class="cfg-nav-dot"></span>Setup Guide</div>
+
+        <hr class="cfg-nav-sep"/>
+
+        <div class="cfg-nav-section">Data</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'entries')"><span class="cfg-nav-dot"></span>Entries</div>
+        <div class="cfg-nav-item"        onclick="cfgTab(this,'analytics')"><span class="cfg-nav-dot"></span>Analytics</div>
+    </div>
+
+    <!-- ── Main ── -->
+    <div class="cfg-main">
     <form method="post" action="options.php">
     <?php settings_fields( CFG_SLUG ); ?>
-
-    <div class="cfg-tabs">
-        <div class="cfg-tab active" onclick="cfgTab(this,'ghl')">GHL + Security</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'design')">Design</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'form')">Contact Form</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'bm')">Booking Method</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'ty')">Thank You Page</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'alg')">Aligner Form</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'imp')">Implant Estimator</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'guide')">Setup Guide</div>
-        <div class="cfg-tab-sep"></div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'entries')">Entries</div>
-        <div class="cfg-tab"        onclick="cfgTab(this,'analytics')">Analytics</div>
-    </div>
 
     <!-- ═══ GHL + SECURITY TAB ═══ -->
     <div id="cfg-ghl" class="cfg-panel active">
@@ -2674,7 +2731,6 @@ function cfg_settings_page() {
     <?php submit_button( 'Save All Settings', 'primary large' ); ?>
     </div>
     </form>
-    </div>
 
     <?php
     // ── Entries panel (outside the settings form) ──
@@ -2752,7 +2808,7 @@ function cfg_settings_page() {
     $nonce_url   = wp_nonce_url( $base_url, 'cfg_entries_action' );
     ?>
 
-    <div id="cfg-entries-wrap" style="display:none;max-width:1100px;margin-top:0;">
+    <div id="cfg-entries-wrap" style="display:none;background:#fff;border:1px solid #dcdde1;border-radius:0 8px 8px 0;padding:26px 30px;min-height:500px;">
 
     <style>
     .cfg-entries-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0 12px;}
@@ -2936,7 +2992,7 @@ function cfg_settings_page() {
     $success_pct = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 100;
     ?>
 
-    <div id="cfg-analytics-wrap" style="display:none;max-width:1100px;margin-top:0;">
+    <div id="cfg-analytics-wrap" style="display:none;background:#fff;border:1px solid #dcdde1;border-radius:0 8px 8px 0;padding:26px 30px;min-height:500px;">
     <style>
     .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
     .cfg-an-card{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:20px 24px;}
@@ -3052,6 +3108,8 @@ function cfg_settings_page() {
 
     </div><!-- /cfg-an-grid -->
     </div><!-- /cfg-analytics-wrap -->
+    </div><!-- /cfg-main -->
+    </div><!-- /cfg-root -->
 
     <script>
     function cfgToggleDetail(id) {
@@ -3064,7 +3122,7 @@ function cfg_settings_page() {
         var params = new URLSearchParams(window.location.search);
         var activeTab = params.get('cfg_tab');
         if (activeTab) {
-            var tab = document.querySelector('.cfg-tab[onclick*="cfgTab(this,\'' + activeTab + '\')"]');
+            var tab = document.querySelector('.cfg-nav-item[onclick*="cfgTab(this,\'' + activeTab + '\')"]');
             if (tab) tab.click();
         }
     })();
@@ -3073,18 +3131,17 @@ function cfg_settings_page() {
     <script>
     /* ── Tab navigation ── */
     function cfgTab(el, id) {
-        document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.cfg-nav-item').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
         var isOuter = (id === 'entries' || id === 'analytics');
-        var saveBar = document.getElementById('cfg-save-bar');
-        var entriesWrap = document.getElementById('cfg-entries-wrap');
-        var analyticsWrap = document.getElementById('cfg-analytics-wrap');
+        var saveBar      = document.getElementById('cfg-save-bar');
+        var entriesWrap  = document.getElementById('cfg-entries-wrap');
+        var analyticsWrap= document.getElementById('cfg-analytics-wrap');
         if (saveBar)       saveBar.style.display       = isOuter ? 'none' : '';
         if (entriesWrap)   entriesWrap.style.display   = id === 'entries'   ? 'block' : 'none';
         if (analyticsWrap) analyticsWrap.style.display = id === 'analytics' ? 'block' : 'none';
         if (!isOuter) document.getElementById('cfg-' + id).classList.add('active');
-        // Push tab state to URL without reload
         try {
             var u = new URL(window.location.href);
             u.searchParams.set('cfg_tab', id);
