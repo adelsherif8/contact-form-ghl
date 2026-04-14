@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.9
+ * Version:     1.8.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -200,6 +200,7 @@ function cfg_defaults() {
         'imp_intro_subtitle'   => "Answer 4 quick questions and we'll give you a personalised cost range for your dental implant treatment.",
         'imp_intro_bullets'    => "Takes under 2 minutes\nNo obligation — 100% free\nInstant, personalised estimate",
         'imp_intro_btn'        => 'Get My Estimate',
+        'imp_intro_btn_url'    => '',
         'imp_router_title'     => 'What are you looking to replace?',
         'imp_router_sub'       => 'Select the option that best describes your situation.',
         'imp_router_opts'  => json_encode([
@@ -280,6 +281,10 @@ function cfg_defaults() {
         'imp_contact_title'    => 'Book Your Free Consultation',
         'imp_contact_subtitle' => "Enter your details and we'll reach out to confirm your free implant consultation.",
         'imp_contact_btn'      => 'Book My Free Consultation',
+        'imp_contact_btn_url'  => '',
+        'imp_contact_btn2_enabled' => '0',
+        'imp_contact_btn2_label'   => 'Call Instead',
+        'imp_contact_btn2_url'     => '',
         'imp_hide_header'       => '0',
         'imp_show_price'        => '1',
         'imp_show_insurance'    => '1',
@@ -318,7 +323,116 @@ function cfg_log_entry( $form_type, $first, $last, $email, $phone, $meta = [], $
         ],
         [ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ]
     );
+
+    // ── GHL error alert ──
+    if ( $ghl_status === 'error' ) {
+        $admin_email = get_option( 'admin_email' );
+        $form_labels = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+        $label       = $form_labels[ $form_type ] ?? $form_type;
+        wp_mail(
+            $admin_email,
+            '[Contact Form GHL] GHL submission failed — ' . $label,
+            "A form submission failed to reach GoHighLevel.\n\n"
+            . "Form: {$label}\n"
+            . "Name: {$first} {$last}\n"
+            . "Email: {$email}\n"
+            . "Phone: {$phone}\n\n"
+            . "Check the Entries tab in your WordPress admin for details:\n"
+            . admin_url( 'admin.php?page=' . CFG_SLUG . '&cfg_tab=entries' )
+        );
+    }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD WIDGET
+// ═══════════════════════════════════════════════════════════════
+add_action( 'wp_dashboard_setup', function () {
+    wp_add_dashboard_widget(
+        'cfg_dashboard_widget',
+        '📋 Contact Form GHL — Submissions',
+        'cfg_render_dashboard_widget'
+    );
+} );
+
+function cfg_render_dashboard_widget() {
+    global $wpdb;
+    $table  = $wpdb->prefix . 'cfg_entries';
+    $today  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE DATE(created_at) = CURDATE()" );
+    $week   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+    $month  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
+    $last   = $wpdb->get_var( "SELECT created_at FROM {$table} ORDER BY created_at DESC LIMIT 1" );
+    $errors = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE ghl_status = 'error' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+    $entries_url = admin_url( 'admin.php?page=' . CFG_SLUG . '&cfg_tab=entries' );
+    ?>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+        <div style="background:#eff6ff;border-radius:8px;padding:12px 14px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:#1d4ed8;"><?= $today ?></div>
+            <div style="font-size:11px;color:#3b82f6;margin-top:2px;font-weight:600;">TODAY</div>
+        </div>
+        <div style="background:#f0fdf4;border-radius:8px;padding:12px 14px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:#16a34a;"><?= $week ?></div>
+            <div style="font-size:11px;color:#22c55e;margin-top:2px;font-weight:600;">THIS WEEK</div>
+        </div>
+        <div style="background:#faf5ff;border-radius:8px;padding:12px 14px;text-align:center;">
+            <div style="font-size:24px;font-weight:700;color:#7c3aed;"><?= $month ?></div>
+            <div style="font-size:11px;color:#a855f7;margin-top:2px;font-weight:600;">30 DAYS</div>
+        </div>
+    </div>
+    <?php if ( $last ): ?>
+    <p style="font-size:12px;color:#6b7280;margin:0 0 6px;">
+        Last submission: <strong><?= esc_html( date( 'M j, Y g:ia', strtotime( $last ) ) ) ?></strong>
+    </p>
+    <?php endif; ?>
+    <?php if ( $errors > 0 ): ?>
+    <p style="font-size:12px;color:#b91c1c;margin:0 0 10px;">
+        ⚠ <?= $errors ?> GHL error<?= $errors > 1 ? 's' : '' ?> in the last 7 days
+    </p>
+    <?php endif; ?>
+    <a href="<?= esc_url( $entries_url ) ?>" style="font-size:12px;color:#2271b1;">View all entries →</a>
+    <?php
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PHONE FORMATTER (frontend — all forms)
+// ═══════════════════════════════════════════════════════════════
+add_action( 'wp_footer', function () {
+    ?>
+    <script>
+    (function(){
+        function cfgFmtPhone(el) {
+            var v = el.value.replace(/\D/g,'').substring(0,10);
+            if (v.length >= 7)      el.value = '(' + v.substring(0,3) + ') ' + v.substring(3,6) + '-' + v.substring(6);
+            else if (v.length >= 4) el.value = '(' + v.substring(0,3) + ') ' + v.substring(3);
+            else if (v.length > 0)  el.value = '(' + v;
+            else                    el.value = v;
+        }
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('input[type="tel"]').forEach(function(el){
+                el.addEventListener('input', function(){ cfgFmtPhone(el); });
+                el.addEventListener('blur',  function(){ cfgFmtPhone(el); });
+            });
+        });
+        // Also handle dynamically added inputs (quiz steps rendered later)
+        var _cfgPhoneObserver = new MutationObserver(function(muts){
+            muts.forEach(function(m){
+                m.addedNodes.forEach(function(n){
+                    if (n.nodeType !== 1) return;
+                    var inputs = n.querySelectorAll ? n.querySelectorAll('input[type="tel"]') : [];
+                    inputs.forEach(function(el){
+                        if (!el.dataset.cfgFmt) {
+                            el.dataset.cfgFmt = '1';
+                            el.addEventListener('input', function(){ cfgFmtPhone(el); });
+                            el.addEventListener('blur',  function(){ cfgFmtPhone(el); });
+                        }
+                    });
+                });
+            });
+        });
+        _cfgPhoneObserver.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
+    <?php
+} );
 
 // ═══════════════════════════════════════════════════════════════
 //  REGISTER & SANITIZE
@@ -335,6 +449,7 @@ function cfg_sanitize( $input ) {
         'custom_font_url','success_redirect_url',
         'bm_card1_btn_url','bm_card2_btn_url','bm_card3_btn_url','bm_card4_btn_url','bm_cta_btn1_url','bm_cta_btn2_url',
         'ty_social_url','ty_image_url','alg_success_url','imp_success_url','imp_cta_book_url',
+        'imp_intro_btn_url','imp_contact_btn_url','imp_contact_btn2_url',
     ];
     $color_fields = [
         'hero_bg_color','primary_color','bg_color','text_color','muted_color','border_color',
@@ -355,7 +470,7 @@ function cfg_sanitize( $input ) {
         'bm_show_hero','bm_show_cta','bm_show_card3','bm_show_card4',
         'ty_social_show','ty_show_image',
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
-        'imp_cta_book_enabled','imp_cta_call_enabled',
+        'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
     ];
     $json_fields = ['imp_router_opts','imp_single_qs','imp_multi_qs','imp_arch_qs','imp_ins_q','imp_result_sections','imp_single_includes','imp_fullarch_includes'];
 
@@ -416,10 +531,12 @@ function cfg_sanitize( $input ) {
 //  ADMIN MENU
 // ═══════════════════════════════════════════════════════════════
 add_action( 'admin_menu', function () {
-    add_options_page(
+    add_menu_page(
         'Contact Form GHL', 'Contact Form GHL',
-        'manage_options', CFG_SLUG, 'cfg_settings_page'
+        'manage_options', CFG_SLUG, 'cfg_settings_page',
+        'dashicons-feedback', 30
     );
+    add_submenu_page( CFG_SLUG, 'Settings — Contact Form GHL', 'Settings', 'manage_options', CFG_SLUG, 'cfg_settings_page' );
 } );
 
 // ═══════════════════════════════════════════════════════════════
@@ -481,6 +598,7 @@ function cfg_settings_page() {
         <div class="cfg-tab"         onclick="cfgTab(this,'imp')">🦷 Implant Estimator</div>
         <div class="cfg-tab"         onclick="cfgTab(this,'guide')">📖 Setup Guide</div>
         <div class="cfg-tab"         onclick="cfgTab(this,'entries')">📥 Entries</div>
+        <div class="cfg-tab"         onclick="cfgTab(this,'analytics')">📊 Analytics</div>
     </div>
 
     <!-- ═══ GHL + SECURITY TAB ═══ -->
@@ -1869,6 +1987,11 @@ function cfg_settings_page() {
                     <label>Button Text</label>
                     <input type="text" name="<?= CFG_OPTION ?>[imp_intro_btn]" value="<?= esc_attr( $s['imp_intro_btn'] ) ?>"/>
                 </div>
+                <div class="cfg-field">
+                    <label>Button URL <span style="font-weight:400;color:#9ca3af;">— leave blank to start quiz</span></label>
+                    <input type="url" name="<?= CFG_OPTION ?>[imp_intro_btn_url]" value="<?= esc_attr( $s['imp_intro_btn_url'] ) ?>" placeholder="https://… (optional, overrides quiz start)"/>
+                    <span class="cfg-desc">If set, clicking the button navigates to this URL instead of launching the quiz.</span>
+                </div>
             </div>
         </div>
 
@@ -2085,6 +2208,26 @@ function cfg_settings_page() {
                 <div class="cfg-field"><label>Title</label><input type="text" id="imp_contact_title" name="<?= CFG_OPTION ?>[imp_contact_title]" value="<?= esc_attr( $s['imp_contact_title'] ) ?>"/></div>
                 <div class="cfg-field cfg-full"><label>Subtitle</label><textarea id="imp_contact_subtitle" name="<?= CFG_OPTION ?>[imp_contact_subtitle]"><?= esc_textarea( $s['imp_contact_subtitle'] ) ?></textarea></div>
                 <div class="cfg-field"><label>Submit Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_contact_btn]" value="<?= esc_attr( $s['imp_contact_btn'] ) ?>"/></div>
+                <div class="cfg-field">
+                    <label>Redirect URL after submit <span style="font-weight:400;color:#9ca3af;">— optional</span></label>
+                    <input type="url" name="<?= CFG_OPTION ?>[imp_contact_btn_url]" value="<?= esc_attr( $s['imp_contact_btn_url'] ) ?>" placeholder="https://… (overrides global Success URL)"/>
+                    <span class="cfg-desc">Where to send the patient after they submit their details. Overrides the global Success Redirect URL for this step only.</span>
+                </div>
+            </div>
+
+            <div class="cfg-card-section" style="margin-top:14px;">
+                <h4>Secondary Button <span style="font-weight:400;color:#6b7280;font-size:12px;">— optional link shown below the form</span></h4>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:12px;">
+                    <div><div style="font-size:13px;font-weight:600;">Show secondary button</div><div style="font-size:12px;color:#6b7280;margin-top:2px;">Displays an outline button below the submit button (e.g. "Call Instead")</div></div>
+                    <label class="imp-sw" style="flex-shrink:0;">
+                        <input type="checkbox" name="<?= CFG_OPTION ?>[imp_contact_btn2_enabled]" value="1" <?= checked( $s['imp_contact_btn2_enabled'], '1', false ) ?>/>
+                        <span class="imp-sw-slider"></span>
+                    </label>
+                </div>
+                <div class="cfg-grid">
+                    <div class="cfg-field"><label>Label</label><input type="text" name="<?= CFG_OPTION ?>[imp_contact_btn2_label]" value="<?= esc_attr( $s['imp_contact_btn2_label'] ) ?>" placeholder="Call Instead"/></div>
+                    <div class="cfg-field"><label>URL</label><input type="url" name="<?= CFG_OPTION ?>[imp_contact_btn2_url]" value="<?= esc_attr( $s['imp_contact_btn2_url'] ) ?>" placeholder="tel:+1… or https://…"/></div>
+                </div>
             </div>
         </div>
 
@@ -2578,7 +2721,7 @@ function cfg_settings_page() {
     $rows = $wpdb->get_results( $rows_sql, ARRAY_A );
 
     $total_pages = max( 1, ceil( $total / $per_page ) );
-    $base_url    = admin_url( 'options-general.php?page=' . CFG_SLUG . '&cfg_tab=entries' );
+    $base_url    = admin_url( 'admin.php?page=' . CFG_SLUG . '&cfg_tab=entries' );
     $nonce_url   = wp_nonce_url( $base_url, 'cfg_entries_action' );
     ?>
 
@@ -2716,6 +2859,173 @@ function cfg_settings_page() {
 
     </div><!-- /cfg-entries-wrap -->
 
+    <?php
+    // ── Analytics panel ──
+    $an_table = $wpdb->prefix . 'cfg_entries';
+
+    // Last 30 days daily counts
+    $daily = $wpdb->get_results(
+        "SELECT DATE(created_at) AS day, COUNT(*) AS cnt
+         FROM {$an_table}
+         WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+         GROUP BY DATE(created_at)
+         ORDER BY day ASC",
+        ARRAY_A
+    );
+    // Fill in zero days
+    $daily_map = [];
+    foreach ( $daily as $row ) $daily_map[ $row['day'] ] = (int) $row['cnt'];
+    $daily_filled = [];
+    for ( $i = 29; $i >= 0; $i-- ) {
+        $d = date( 'Y-m-d', strtotime( "-{$i} days" ) );
+        $daily_filled[] = [ 'day' => date( 'M j', strtotime( $d ) ), 'cnt' => $daily_map[ $d ] ?? 0 ];
+    }
+    $max_daily = max( 1, max( array_column( $daily_filled, 'cnt' ) ) );
+
+    // Source breakdown
+    $all_meta = $wpdb->get_col( "SELECT meta FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
+    $src = [ 'Google Ads' => 0, 'UTM Campaign' => 0, 'Direct / Organic' => 0 ];
+    foreach ( $all_meta as $m ) {
+        $d = json_decode( $m, true ) ?: [];
+        if ( ! empty( $d['gclid'] ) )          $src['Google Ads']++;
+        elseif ( ! empty( $d['utm_campaign'] ) ) $src['UTM Campaign']++;
+        else                                     $src['Direct / Organic']++;
+    }
+    $src_total = max( 1, array_sum( $src ) );
+
+    // Form type breakdown
+    $by_form = $wpdb->get_results(
+        "SELECT form_type, COUNT(*) AS cnt FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY form_type",
+        ARRAY_A
+    );
+    $form_map = [];
+    foreach ( $by_form as $r ) $form_map[ $r['form_type'] ] = (int) $r['cnt'];
+    $form_labels_all = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+
+    // GHL success rate
+    $total_30   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
+    $errors_30  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE ghl_status='error' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
+    $success_30 = $total_30 - $errors_30;
+    $success_pct = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 100;
+    ?>
+
+    <div id="cfg-analytics-wrap" style="display:none;max-width:1100px;margin-top:0;">
+    <style>
+    .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+    .cfg-an-card{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:20px 24px;}
+    .cfg-an-card h3{margin:0 0 16px;font-size:13px;font-weight:700;color:#1d2327;text-transform:uppercase;letter-spacing:.05em;}
+    .cfg-bar-chart{display:flex;align-items:flex-end;gap:3px;height:100px;margin-bottom:6px;}
+    .cfg-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .cfg-bar{width:100%;background:#2271b1;border-radius:2px 2px 0 0;min-height:2px;transition:opacity .15s;}
+    .cfg-bar:hover{opacity:.75;}
+    .cfg-bar-label{font-size:9px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:clip;}
+    .cfg-src-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .cfg-src-bar-bg{flex:1;background:#f3f4f6;border-radius:4px;height:8px;overflow:hidden;}
+    .cfg-src-bar-fill{height:100%;border-radius:4px;background:#2271b1;}
+    .cfg-src-label{font-size:13px;color:#374151;width:140px;flex-shrink:0;}
+    .cfg-src-count{font-size:12px;color:#6b7280;width:32px;text-align:right;flex-shrink:0;}
+    .cfg-stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6;}
+    .cfg-stat-row:last-child{border-bottom:none;}
+    .cfg-an-full{grid-column:span 2;}
+    </style>
+
+    <p style="font-size:12px;color:#6b7280;margin:14px 0 16px;">All stats are for the last 30 days.</p>
+
+    <div class="cfg-an-grid">
+
+        <!-- Submissions chart -->
+        <div class="cfg-an-card cfg-an-full">
+            <h3>Daily Submissions — Last 30 Days</h3>
+            <div class="cfg-bar-chart">
+            <?php foreach ( $daily_filled as $d ): ?>
+                <div class="cfg-bar-col" title="<?= esc_attr( $d['day'] ) ?>: <?= $d['cnt'] ?> submission<?= $d['cnt'] !== 1 ? 's' : '' ?>">
+                    <div class="cfg-bar" style="height:<?= $d['cnt'] > 0 ? round( $d['cnt'] / $max_daily * 100 ) : 2 ?>%;background:<?= $d['cnt'] > 0 ? '#2271b1' : '#e5e7eb' ?>;"></div>
+                </div>
+            <?php endforeach; ?>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:4px;">
+                <span><?= esc_html( $daily_filled[0]['day'] ) ?></span>
+                <span><?= esc_html( $daily_filled[14]['day'] ) ?></span>
+                <span><?= esc_html( $daily_filled[29]['day'] ) ?></span>
+            </div>
+        </div>
+
+        <!-- Traffic source breakdown -->
+        <div class="cfg-an-card">
+            <h3>Traffic Source</h3>
+            <?php foreach ( $src as $label => $count ):
+                $colors = [ 'Google Ads' => '#4285f4', 'UTM Campaign' => '#f59e0b', 'Direct / Organic' => '#10b981' ];
+                $pct = round( $count / $src_total * 100 );
+            ?>
+            <div class="cfg-src-row">
+                <span class="cfg-src-label"><?= esc_html( $label ) ?></span>
+                <div class="cfg-src-bar-bg">
+                    <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $colors[$label] ?>;"></div>
+                </div>
+                <span class="cfg-src-count"><?= $count ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Form type breakdown -->
+        <div class="cfg-an-card">
+            <h3>By Form</h3>
+            <?php foreach ( $form_labels_all as $key => $label ):
+                $cnt = $form_map[ $key ] ?? 0;
+                $pct = $total_30 > 0 ? round( $cnt / $total_30 * 100 ) : 0;
+                $fc  = [ 'contact' => '#2271b1', 'aligner' => '#7c3aed', 'implant' => '#0891b2' ];
+            ?>
+            <div class="cfg-src-row">
+                <span class="cfg-src-label"><?= esc_html( $label ) ?></span>
+                <div class="cfg-src-bar-bg">
+                    <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $fc[$key] ?>;"></div>
+                </div>
+                <span class="cfg-src-count"><?= $cnt ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- GHL status -->
+        <div class="cfg-an-card">
+            <h3>GHL Send Rate (30 days)</h3>
+            <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px;">
+                <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+                    <svg viewBox="0 0 36 36" style="width:80px;height:80px;transform:rotate(-90deg)">
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="3.5"/>
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="<?= $success_pct >= 90 ? '#16a34a' : ($success_pct >= 70 ? '#f59e0b' : '#dc2626') ?>" stroke-width="3.5"
+                            stroke-dasharray="<?= round( $success_pct * 100 / 100 ) ?> 100" stroke-linecap="round"/>
+                    </svg>
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1d2327;"><?= $success_pct ?>%</div>
+                </div>
+                <div>
+                    <div style="font-size:13px;color:#374151;margin-bottom:4px;">✓ <strong><?= $success_30 ?></strong> sent successfully</div>
+                    <div style="font-size:13px;color:#b91c1c;">✗ <strong><?= $errors_30 ?></strong> failed</div>
+                </div>
+            </div>
+            <?php if ( $errors_30 > 0 ): ?>
+            <a href="<?= esc_url( admin_url( 'admin.php?page=' . CFG_SLUG . '&cfg_tab=entries&filter_status=error' ) ) ?>" style="font-size:12px;color:#b91c1c;">View failed entries →</a>
+            <?php else: ?>
+            <p style="font-size:12px;color:#16a34a;margin:0;">All submissions reached GHL successfully.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="cfg-an-card">
+            <h3>Quick Stats</h3>
+            <?php
+            $today_cnt = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()" );
+            $week_cnt  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+            $all_time  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table}" );
+            ?>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Today</span><strong><?= $today_cnt ?></strong></div>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">This week</span><strong><?= $week_cnt ?></strong></div>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Last 30 days</span><strong><?= $total_30 ?></strong></div>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
+        </div>
+
+    </div><!-- /cfg-an-grid -->
+    </div><!-- /cfg-analytics-wrap -->
+
     <script>
     function cfgToggleDetail(id) {
         var row = document.getElementById('cfg-detail-' + id);
@@ -2724,10 +3034,10 @@ function cfg_settings_page() {
         if (detail) detail.style.display = detail.style.display === 'block' ? 'none' : 'block';
     }
     (function() {
-        // Restore entries tab if coming back from filter/delete
         var params = new URLSearchParams(window.location.search);
-        if (params.get('cfg_tab') === 'entries') {
-            var tab = document.querySelector('.cfg-tab:last-child');
+        var activeTab = params.get('cfg_tab');
+        if (activeTab) {
+            var tab = document.querySelector('.cfg-tab[onclick*="cfgTab(this,\'' + activeTab + '\')"]');
             if (tab) tab.click();
         }
     })();
@@ -2739,12 +3049,14 @@ function cfg_settings_page() {
         document.querySelectorAll('.cfg-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
-        var isEntries = (id === 'entries');
+        var isOuter = (id === 'entries' || id === 'analytics');
         var saveBar = document.getElementById('cfg-save-bar');
         var entriesWrap = document.getElementById('cfg-entries-wrap');
-        if (saveBar)    saveBar.style.display    = isEntries ? 'none' : '';
-        if (entriesWrap) entriesWrap.style.display = isEntries ? 'block' : 'none';
-        if (!isEntries) document.getElementById('cfg-' + id).classList.add('active');
+        var analyticsWrap = document.getElementById('cfg-analytics-wrap');
+        if (saveBar)       saveBar.style.display       = isOuter ? 'none' : '';
+        if (entriesWrap)   entriesWrap.style.display   = id === 'entries'   ? 'block' : 'none';
+        if (analyticsWrap) analyticsWrap.style.display = id === 'analytics' ? 'block' : 'none';
+        if (!isOuter) document.getElementById('cfg-' + id).classList.add('active');
         // Push tab state to URL without reload
         try {
             var u = new URL(window.location.href);
@@ -4305,10 +4617,17 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
             <?= esc_html( $s['imp_intro_subtitle'] ) ?>
           </p>
           <div>
+            <?php if ( ! empty( $s['imp_intro_btn_url'] ) ): ?>
+            <a href="<?= esc_url( $s['imp_intro_btn_url'] ) ?>" class="imp-cta-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;">
+              <?= esc_html( $s['imp_intro_btn'] ) ?>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+            <?php else: ?>
             <button onclick="<?= $uid ?>Nav('router')" class="imp-cta-btn">
               <?= esc_html( $s['imp_intro_btn'] ) ?>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
+            <?php endif; ?>
             <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;margin-top:.75rem;opacity:.5;">Personalized based on your answers &nbsp;&middot;&nbsp; Free &nbsp;&middot;&nbsp; No obligation</p>
           </div>
         </div>
@@ -4495,6 +4814,14 @@ if ( $show_insurance && $ins_q ) {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
             </form>
+            <?php if ( $s['imp_contact_btn2_enabled'] === '1' && ! empty( $s['imp_contact_btn2_url'] ) ): ?>
+            <div style="text-align:center;margin-top:1rem;">
+              <a href="<?= esc_url( $s['imp_contact_btn2_url'] ) ?>"
+                 style="display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.75rem;background:transparent;color:hsl(var(--foreground));border:1.5px solid hsl(var(--border));border-radius:.5rem;font-family:Inter,sans-serif;font-size:.9rem;font-weight:500;text-decoration:none;transition:border-color .2s,background .2s;">
+                <?= esc_html( $s['imp_contact_btn2_label'] ) ?>
+              </a>
+            </div>
+            <?php endif; ?>
             <p style="margin-top:1rem;font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.5);font-size:.75rem;text-align:center;">Your information is kept private and never sold.</p>
           </div>
         </div>
@@ -4710,7 +5037,7 @@ $_badge = function($txt) use ($uid) {
     result_suffix_single:   '<?= esc_js( $s['imp_result_single_suffix'] ) ?>',
     result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
     result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>',
-    successUrl:   '<?= esc_js( $s['imp_success_url'] ) ?>',
+    successUrl:        '<?= esc_js( ! empty( $s['imp_contact_btn_url'] ) ? $s['imp_contact_btn_url'] : $s['imp_success_url'] ) ?>',
     graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>'
   };
 
