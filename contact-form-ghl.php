@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.3
+ * Version:     1.7.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -187,7 +187,7 @@ function cfg_defaults() {
 
         'imp_multi_qs' => json_encode([
             ['id'=>'m1','title'=>'How many teeth are you looking to replace?','subtitle'=>"We'll use this to calculate your personalized range.",'type'=>'radio','field'=>'teethCount',
-             'opts'=>[['val'=>'2','label'=>'2 teeth','sub'=>''],['val'=>'3','label'=>'3 teeth','sub'=>''],['val'=>'4','label'=>'4 teeth','sub'=>''],['val'=>'5plus','label'=>'5+ teeth','sub'=>'']]],
+             'opts'=>[['val'=>'2','label'=>'2 teeth','sub'=>''],['val'=>'3','label'=>'3 teeth','sub'=>''],['val'=>'4','label'=>'4 teeth','sub'=>''],['val'=>'5','label'=>'5 teeth','sub'=>''],['val'=>'6','label'=>'6 teeth','sub'=>''],['val'=>'7','label'=>'7 teeth','sub'=>'']]],
             ['id'=>'m2','title'=>'Where are the teeth located?','subtitle'=>'Location affects restoration complexity and materials.','type'=>'radio','field'=>'teethLocation',
              'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing teeth'],['val'=>'both','label'=>'Both front and back','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'m3','title'=>'How long have the teeth been missing?','subtitle'=>'This helps us assess potential bone changes at the sites.','type'=>'radio','field'=>'timeMissingMult',
@@ -3368,8 +3368,10 @@ function cfg_imp_sidebar( $uid ) {
      .'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>'
      .'<p style="font-family:Inter,sans-serif;font-size:.7rem;font-weight:500;color:hsl(var(--muted-foreground));text-transform:uppercase;letter-spacing:.05em;">Likely Treatment Range</p>'
      .'</div>'
-     .'<div id="'.esc_attr($uid).'-range-blur" class="imp-range-blurred" style="user-select:none;-webkit-user-select:none;">'
-     .'<p id="'.esc_attr($uid).'-sidebar-range" class="imp-sr-'.esc_attr($uid).'" style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.5rem;line-height:1;color:hsl(var(--muted-foreground)/.3);">$5,000 – $7,500</p>'
+     .'<div id="'.esc_attr($uid).'-range-wrap">'
+     .'<p id="'.esc_attr($uid).'-sidebar-range" class="imp-sr-'.esc_attr($uid).'" style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.5rem;line-height:1;color:hsl(var(--foreground));display:none;">—</p>'
+     .'<p id="'.esc_attr($uid).'-sidebar-range-suffix" class="imp-sr-sfx-'.esc_attr($uid).'" style="font-family:Inter,sans-serif;font-size:.72rem;color:hsl(var(--muted-foreground));margin-top:.25rem;display:none;"></p>'
+     .'<p id="'.esc_attr($uid).'-sidebar-range-placeholder" style="font-family:Inter,sans-serif;font-size:.8rem;color:hsl(var(--muted-foreground)/.5);">Answer the questions to see your range</p>'
      .'</div>'
      .'<div style="margin-top:.75rem;">'
      .'<div style="background:hsl(var(--secondary));border-radius:9999px;height:.25rem;overflow:hidden;">'
@@ -3824,7 +3826,10 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
       <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
         <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
         <p id="<?= $uid ?>-result-multiple-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
-        <p id="<?= $uid ?>-result-multiple-count" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"><?= esc_html( $s['imp_result_multiple_suffix'] ) ?></p>
+        <p id="<?= $uid ?>-result-multiple-count" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:1rem;"><?= esc_html( $s['imp_result_multiple_suffix'] ) ?></p>
+        <div id="<?= $uid ?>-multi-tier-note" style="display:none;background:hsl(var(--accent)/.4);border:1px solid hsl(var(--border));border-radius:.75rem;padding:.875rem 1rem;text-align:left;margin-bottom:1.25rem;">
+          <p id="<?= $uid ?>-multi-tier-text" style="font-family:Inter,sans-serif;font-size:.825rem;color:hsl(var(--foreground)/.75);line-height:1.6;margin:0;"></p>
+        </div>
         <div style="display:flex;flex-direction:column;gap:.625rem;max-width:18rem;margin:0 auto 1.5rem;text-align:left;">
           <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Included (per implant):</p>
           <?php foreach($single_items as $item): echo $rci($item); endforeach; ?>
@@ -3858,7 +3863,7 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
       <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">
         <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
         <p id="<?= $uid ?>-result-fullarch-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.25rem;">Calculating&hellip;</p>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"><?= esc_html( $s['imp_result_fullarch_suffix'] ) ?></p>
+        <p id="<?= $uid ?>-result-fullarch-suffix" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.6);font-size:.875rem;margin-bottom:2rem;"><?= esc_html( $s['imp_result_fullarch_suffix'] ) ?></p>
         <div style="display:flex;flex-direction:column;gap:.625rem;max-width:18rem;margin:0 auto 1.5rem;text-align:left;">
           <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Included:</p>
           <?php foreach($arch_items as $item): echo $rci($item); endforeach; ?>
@@ -3891,7 +3896,8 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
     showIns:  <?= $show_insurance ? 'true' : 'false' ?>,
     result_suffix_single:   '<?= esc_js( $s['imp_result_single_suffix'] ) ?>',
     result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
-    result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>'
+    result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>',
+    successUrl: '<?= esc_js( $s['imp_success_url'] ) ?>'
   };
 
   /* ── STATE ── */
@@ -3984,22 +3990,27 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
   function getRange() {
     var p = config.prices;
     if (s.flow === 'fullarch') {
-      return {label: fmt(p.arch_min)+' \u2013 '+fmt(p.arch_max), suffix: ' '+config.result_suffix_fullarch};
+      var arch = s.answers['archSelection'] || '';
+      var multi = arch === 'both' ? 2 : 1;
+      var archSuffix = arch === 'both' ? 'for both arches' : arch === 'upper' ? 'upper arch' : arch === 'lower' ? 'lower arch' : config.result_suffix_fullarch;
+      return {label: fmt(p.arch_min * multi)+' \u2013 '+fmt(p.arch_max * multi), suffix: ' \u2014 '+archSuffix};
     }
-    var bMin, bMax;
     var graftVal = getGraftVal(s.flow);
+    var bMin, bMax;
     if (s.flow === 'multiple') {
-      bMin = p.multi_min; bMax = p.multi_max;
-    } else {
-      bMin = p.single_min; bMax = p.single_max;
+      var count = s.teethCountN || 2;
+      bMin = p.single_min * count;
+      bMax = p.single_max * count;
+      if (graftVal === 'yes' || graftVal === 'not-sure') {
+        bMin += p.graft_min; bMax += p.graft_max;
+      }
+      return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 '+count+' implants'};
     }
+    bMin = p.single_min; bMax = p.single_max;
     if (graftVal === 'yes' || graftVal === 'not-sure') {
       bMin += p.graft_min; bMax += p.graft_max;
     }
-    var suffix = s.flow === 'multiple'
-      ? ' '+config.result_suffix_multiple
-      : ' '+config.result_suffix_single;
-    return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: suffix};
+    return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 '+config.result_suffix_single};
   }
 
   /* ── SHOW PANEL ── */
@@ -4057,7 +4068,17 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
       var pqs = getPathQs(s.flow) || [];
       var maxA = pqs.length + 1 + (s.flow !== 'fullarch' && impPaths.ins ? 1 : 0);
       var pct = Math.max(5, Math.min(90, (tags.length / maxA) * 90));
-      document.querySelectorAll('.imp-sr-' + uid).forEach(function(el){ el.textContent = r.label + r.suffix; });
+      // Show live price range — hide placeholder, reveal range
+      var placeholder = document.getElementById(uid + '-sidebar-range-placeholder');
+      if (placeholder) placeholder.style.display = 'none';
+      document.querySelectorAll('.imp-sr-' + uid).forEach(function(el){
+        el.style.display = 'block';
+        el.textContent = r.label;
+      });
+      document.querySelectorAll('.imp-sr-sfx-' + uid).forEach(function(el){
+        el.style.display = 'block';
+        el.textContent = r.suffix.replace(/^\s*—\s*/, '');
+      });
       document.querySelectorAll('.imp-rb-' + uid).forEach(function(el){ el.style.width = pct + '%'; });
     }
   }
@@ -4118,7 +4139,7 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
     }
     // special: teethCount numeric for pricing
     if (key === 'teethCount') {
-      s.teethCountN = {'2':2,'3':3,'4':4,'5plus':5}[val] || 2;
+      s.teethCountN = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7}[val] || 2;
     }
     var par = btn.closest ? btn.closest('.die-options') : btn.parentNode;
     if (par) {
@@ -4188,13 +4209,30 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
       if (gns) gns.style.display = (gv === 'yes' || gv === 'not-sure') ? 'block' : 'none';
     } else if (panelId === 'result-multiple') {
       animateRange(uid + '-result-multiple-range', r.label);
-      var gnm = document.getElementById(uid + '-graft-note-multiple');
       var gvm = getGraftVal('multiple');
+      var gnm = document.getElementById(uid + '-graft-note-multiple');
       if (gnm) gnm.style.display = (gvm === 'yes' || gvm === 'not-sure') ? 'block' : 'none';
+      var count = s.teethCountN || 2;
       var cnt = document.getElementById(uid + '-result-multiple-count');
-      if (cnt) cnt.textContent = 'Based on ' + (s.answersL['teethCount'] || 'multiple teeth') + ' at the per-implant rate';
+      if (cnt) cnt.textContent = count + ' implants \u00d7 single-implant rate';
+      // Tier note for 5+ teeth
+      var tierNote = document.getElementById(uid + '-multi-tier-note');
+      var tierText = document.getElementById(uid + '-multi-tier-text');
+      if (tierNote && tierText) {
+        if (count >= 5) {
+          tierText.textContent = 'This estimate is based on ' + count + ' individual implants at the single-implant rate. For larger cases, a full-arch solution (All-on-4 / All-on-6) may offer better value — ask us about it at your consultation.';
+          tierNote.style.display = 'block';
+        } else {
+          tierNote.style.display = 'none';
+        }
+      }
     } else if (panelId === 'result-fullarch') {
       animateRange(uid + '-result-fullarch-range', r.label);
+      // Update fullarch suffix dynamically
+      var archSufEl = document.querySelector('#' + uid + '-panel-result-fullarch p[id$="-result-fullarch-suffix-dyn"]');
+      // Find the static suffix paragraph and update it
+      var archPanelSfx = document.getElementById(uid + '-result-fullarch-suffix');
+      if (archPanelSfx) archPanelSfx.textContent = r.suffix.replace(/^\s*\u2014\s*/, '');
     }
   }
 
@@ -4255,8 +4293,9 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
     fd.append('rangeType',       panel);
     var _up = new URLSearchParams(window.location.search);
     ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
-    fetch(config.ajaxUrl, { method:'POST', body:fd }).catch(function(){});
-    navigate(panel);
+    fetch(config.ajaxUrl, { method:'POST', body:fd })
+      .then(function(){ if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); } })
+      .catch(function(){ navigate(panel); });
   }
 
   /* ── INIT ── */
