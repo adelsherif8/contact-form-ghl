@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.2
+ * Version:     1.7.3
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -168,69 +168,49 @@ function cfg_defaults() {
         'imp_intro_btn'        => 'Get My Estimate',
         'imp_router_title'     => 'What are you looking to replace?',
         'imp_router_sub'       => 'Select the option that best describes your situation.',
-        'imp_router_opt1'      => 'One missing tooth',       'imp_router_opt1_sub' => 'Replace a single tooth with an implant',
-        'imp_router_opt2'      => 'Several missing teeth',   'imp_router_opt2_sub' => 'Replace 2 to 5 individual teeth',
-        'imp_router_opt3'      => 'A denture or most/all teeth in an arch', 'imp_router_opt3_sub' => 'Full-arch or All-on-4 / All-on-6',
-        'imp_a1_title'         => 'Where is the tooth located?',
-        'imp_a1_opt1'          => 'Front',         'imp_a1_opt1_sub' => 'Visible when smiling',
-        'imp_a1_opt2'          => 'Back',           'imp_a1_opt2_sub' => 'Chewing tooth (molar or premolar)',
-        'imp_a1_opt3'          => 'Not sure',       'imp_a1_opt3_sub' => '',
-        'imp_a2_title'         => 'How long has the tooth been missing?',
-        'imp_a2_opt1'          => 'Less than 6 months',
-        'imp_a2_opt2'          => '6–12 months',
-        'imp_a2_opt3'          => '1–3 years',
-        'imp_a2_opt4'          => '3+ years',
-        'imp_a2_opt5'          => 'Not sure',
-        'imp_a3_title'         => 'Has a dentist mentioned bone loss or the need for bone grafting?',
-        'imp_a3_opt1'          => 'Yes',
-        'imp_a3_opt2'          => 'No',
-        'imp_a3_opt3'          => 'Not sure',
-        'imp_a4_title'         => 'What best describes your situation?',
-        'imp_a4_opt1'          => 'Tooth already missing',
-        'imp_a4_opt2'          => 'Tooth needs to be removed',
-        'imp_a4_opt3'          => 'Replacing a bridge or crown',
-        'imp_a4_opt4'          => 'Not sure',
-        'imp_m1_title'         => 'How many teeth are you looking to replace?',
-        'imp_m1_opt1'          => '2 teeth',
-        'imp_m1_opt2'          => '3 teeth',
-        'imp_m1_opt3'          => '4 teeth',
-        'imp_m1_opt4'          => '5+ teeth',
-        'imp_m2_title'         => 'Where are the teeth located?',
-        'imp_m2_opt1'          => 'Front',          'imp_m2_opt1_sub' => 'Visible when smiling',
-        'imp_m2_opt2'          => 'Back',            'imp_m2_opt2_sub' => 'Chewing teeth',
-        'imp_m2_opt3'          => 'Both front and back', 'imp_m2_opt3_sub' => '',
-        'imp_m2_opt4'          => 'Not sure',        'imp_m2_opt4_sub' => '',
-        'imp_m3_title'         => 'How long have the teeth been missing?',
-        'imp_m3_opt1'          => 'Less than 6 months',
-        'imp_m3_opt2'          => '6–12 months',
-        'imp_m3_opt3'          => '1–3 years',
-        'imp_m3_opt4'          => '3+ years',
-        'imp_m3_opt5'          => 'Not sure',
-        'imp_m4_title'         => 'Has a dentist mentioned bone loss or the need for bone grafting?',
-        'imp_m4_opt1'          => 'Yes',
-        'imp_m4_opt2'          => 'No',
-        'imp_m4_opt3'          => 'Not sure',
-        'imp_m5_title'         => 'What best describes your situation?',
-        'imp_m5_opt1'          => 'Teeth already missing',
-        'imp_m5_opt2'          => 'Some teeth need to be removed',
-        'imp_m5_opt3'          => 'Replacing bridges or crowns',
-        'imp_m5_opt4'          => 'Not sure',
-        'imp_b1_title'         => 'Which arch are you looking to replace?',
-        'imp_b1_opt1'          => 'Upper',  'imp_b1_opt1_sub' => 'Top teeth',
-        'imp_b1_opt2'          => 'Lower',  'imp_b1_opt2_sub' => 'Bottom teeth',
-        'imp_b1_opt3'          => 'Both',   'imp_b1_opt3_sub' => 'Full mouth restoration',
-        'imp_b2_title'         => 'What best describes your current situation?',
-        'imp_b2_opt1'          => 'Wearing a denture',
-        'imp_b2_opt2'          => 'Multiple failing teeth',
-        'imp_b2_opt3'          => 'Teeth beyond repair',
-        'imp_b2_opt4'          => 'Not sure',
-        'imp_b3_title'         => 'How long have you had missing or failing teeth?',
-        'imp_b3_opt1'          => 'Less than 1 year',
-        'imp_b3_opt2'          => '1–5 years',
-        'imp_b3_opt3'          => '5+ years',
-        'imp_ins_title'        => 'Do you have dental insurance?',
-        'imp_ins_opt1'         => 'Yes (I have coverage)',
-        'imp_ins_opt2'         => 'No',
+        'imp_router_opts'  => json_encode([
+            ['val'=>'single',   'label'=>'One missing tooth',                    'sub'=>'Replace a single tooth with an implant'],
+            ['val'=>'multiple', 'label'=>'Several missing teeth',                'sub'=>'Replace 2 to 5 individual teeth'],
+            ['val'=>'fullarch', 'label'=>'A denture or most/all teeth in an arch','sub'=>'Full-arch or All-on-4 / All-on-6'],
+        ], JSON_UNESCAPED_UNICODE),
+
+        'imp_single_qs' => json_encode([
+            ['id'=>'a1','title'=>'Where is the tooth located?','subtitle'=>'Location affects restoration complexity and the materials used.','type'=>'radio','field'=>'toothLocation',
+             'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing tooth (molar or premolar)'],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'a2','title'=>'How long has the tooth been missing?','subtitle'=>'This helps us assess potential bone changes at the site.','type'=>'radio','field'=>'timeMissing',
+             'opts'=>[['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'a3','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraft','pricing_role'=>'bone_graft',
+             'opts'=>[['val'=>'yes','label'=>'Yes','sub'=>''],['val'=>'no','label'=>'No','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'a4','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationSingle',
+             'opts'=>[['val'=>'already-missing','label'=>'Tooth already missing','sub'=>''],['val'=>'needs-removal','label'=>'Tooth needs to be removed','sub'=>''],['val'=>'bridge-crown','label'=>'Replacing a bridge or crown','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+        ], JSON_UNESCAPED_UNICODE),
+
+        'imp_multi_qs' => json_encode([
+            ['id'=>'m1','title'=>'How many teeth are you looking to replace?','subtitle'=>"We'll use this to calculate your personalized range.",'type'=>'radio','field'=>'teethCount',
+             'opts'=>[['val'=>'2','label'=>'2 teeth','sub'=>''],['val'=>'3','label'=>'3 teeth','sub'=>''],['val'=>'4','label'=>'4 teeth','sub'=>''],['val'=>'5plus','label'=>'5+ teeth','sub'=>'']]],
+            ['id'=>'m2','title'=>'Where are the teeth located?','subtitle'=>'Location affects restoration complexity and materials.','type'=>'radio','field'=>'teethLocation',
+             'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing teeth'],['val'=>'both','label'=>'Both front and back','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'m3','title'=>'How long have the teeth been missing?','subtitle'=>'This helps us assess potential bone changes at the sites.','type'=>'radio','field'=>'timeMissingMult',
+             'opts'=>[['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'m4','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraftMult','pricing_role'=>'bone_graft',
+             'opts'=>[['val'=>'yes','label'=>'Yes','sub'=>''],['val'=>'no','label'=>'No','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'m5','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationMult',
+             'opts'=>[['val'=>'already-missing','label'=>'Teeth already missing','sub'=>''],['val'=>'needs-removal','label'=>'Some teeth need to be removed','sub'=>''],['val'=>'bridge-crown','label'=>'Replacing bridges or crowns','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+        ], JSON_UNESCAPED_UNICODE),
+
+        'imp_arch_qs' => json_encode([
+            ['id'=>'b1','title'=>'Which arch are you looking to replace?','subtitle'=>'Upper, lower, or both — this shapes your treatment overview.','type'=>'radio','field'=>'archSelection',
+             'opts'=>[['val'=>'upper','label'=>'Upper','sub'=>'Top teeth'],['val'=>'lower','label'=>'Lower','sub'=>'Bottom teeth'],['val'=>'both','label'=>'Both','sub'=>'Full mouth restoration']]],
+            ['id'=>'b2','title'=>'What best describes your current situation?','subtitle'=>'This helps us understand your starting point.','type'=>'radio','field'=>'situationArch',
+             'opts'=>[['val'=>'wearing-denture','label'=>'Wearing a denture','sub'=>''],['val'=>'failing-teeth','label'=>'Multiple failing teeth','sub'=>''],['val'=>'beyond-repair','label'=>'Teeth beyond repair','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+            ['id'=>'b3','title'=>'How long have you had missing or failing teeth?','subtitle'=>'Duration helps determine bone volume and treatment complexity.','type'=>'radio','field'=>'archDuration',
+             'opts'=>[['val'=>'under-1yr','label'=>'Less than 1 year','sub'=>''],['val'=>'1-5yr','label'=>'1–5 years','sub'=>''],['val'=>'5yr+','label'=>'5+ years','sub'=>'']]],
+        ], JSON_UNESCAPED_UNICODE),
+
+        'imp_ins_q' => json_encode(
+            ['id'=>'ins','title'=>'Do you have dental insurance?','subtitle'=>'Insurance can reduce your out-of-pocket cost.','type'=>'radio','field'=>'insurance',
+             'opts'=>[['val'=>'yes','label'=>'Yes (I have coverage)','sub'=>''],['val'=>'no','label'=>'No','sub'=>'']]],
+        JSON_UNESCAPED_UNICODE),
         'imp_result_single_suffix'   => 'for a single dental implant',
         'imp_result_multiple_suffix' => 'Based on number of teeth at the per-implant rate',
         'imp_result_fullarch_suffix' => 'per arch',
@@ -291,6 +271,7 @@ function cfg_sanitize( $input ) {
         'ty_social_show','ty_show_image',
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
     ];
+    $json_fields = ['imp_router_opts','imp_single_qs','imp_multi_qs','imp_arch_qs','imp_ins_q'];
 
     // ── General loop ──
     foreach ( $defaults as $key => $default ) {
@@ -302,6 +283,9 @@ function cfg_sanitize( $input ) {
             $clean[ $key ] = sanitize_textarea_field( $input[ $key ] ?? '' );
         } elseif ( in_array( $key, $url_fields ) ) {
             $clean[ $key ] = esc_url_raw( $input[ $key ] ?? '' );
+        } elseif ( in_array( $key, $json_fields ) ) {
+            $decoded = json_decode( $input[ $key ] ?? '', true );
+            $clean[ $key ] = $decoded !== null ? json_encode( $decoded, JSON_UNESCAPED_UNICODE ) : $default;
         } else {
             $clean[ $key ] = sanitize_text_field( $input[ $key ] ?? $default );
         }
@@ -1405,235 +1389,332 @@ function cfg_settings_page() {
         </div>
 
         <!-- ════════════════════════════════════════════════════ -->
-        <!--  3 · QUESTION TITLES (collapsible path groups)       -->
+        <!--  3 · QUESTION EDITOR                                 -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
             <div class="imp-section-icon" style="background:#fdf4ff;">📝</div>
             <div>
-                <h3>Question Titles</h3>
-                <p>Customise the heading shown on each question panel — answer options are fixed</p>
+                <h3>Question Editor</h3>
+                <p>Add, remove or reorder questions and options for each path. The current values are the defaults.</p>
             </div>
         </div>
 
-        <!-- Router -->
-        <div class="imp-path-accordion">
-            <div class="imp-path-header" onclick="impTogglePath(this)">
-                <span class="imp-path-dot" style="background:#6b7280;"></span>
-                <span class="imp-path-title">Router Question</span>
-                <span class="imp-path-count">1 question · 3 options</span>
-                <span class="imp-path-chevron">▼</span>
+        <style>
+        .imp-q-editor-path{border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:10px;}
+        .imp-q-editor-path-hdr{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:#fafafa;user-select:none;}
+        .imp-q-editor-path-hdr:hover{background:#f3f4f6;}
+        .imp-q-editor-path-hdr .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+        .imp-q-editor-path-hdr .ttl{flex:1;font-size:13px;font-weight:700;color:#1d2327;}
+        .imp-q-editor-path-hdr .chev{font-size:11px;color:#9ca3af;transition:transform .2s;}
+        .imp-q-editor-path-hdr.open .chev{transform:rotate(180deg);}
+        .imp-q-editor-body{display:none;padding:16px;background:#fff;border-top:1px solid #e5e7eb;}
+        .imp-q-editor-body.open{display:block;}
+        .imp-q-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin-bottom:10px;position:relative;}
+        .imp-q-card-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+        .imp-q-card-num{width:22px;height:22px;border-radius:50%;background:#e5e7eb;font-size:11px;font-weight:700;color:#6b7280;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .imp-q-card-del{margin-left:auto;background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:3px 9px;font-size:11px;cursor:pointer;font-weight:600;}
+        .imp-q-card-del:hover{background:#fef2f2;}
+        .imp-q-card-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+        .imp-q-card-field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#9ca3af;display:block;margin-bottom:3px;}
+        .imp-q-card-field input,.imp-q-card-field select,.imp-q-card-field textarea{width:100%;padding:6px 9px;border:1px solid #d1d5db;border-radius:4px;font-size:12.5px;box-sizing:border-box;}
+        .imp-q-card-field.full{grid-column:span 2;}
+        .imp-q-opts-section{border-top:1px solid #e5e7eb;padding-top:10px;margin-top:4px;}
+        .imp-q-opts-section label{font-size:11px;font-weight:700;text-transform:uppercase;color:#9ca3af;display:block;margin-bottom:6px;}
+        .imp-opt-item{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+        .imp-opt-item input{flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;min-width:0;}
+        .imp-opt-item input.sub{color:#9ca3af;}
+        .imp-opt-del{flex-shrink:0;background:none;border:none;color:#ef4444;font-size:16px;line-height:1;cursor:pointer;padding:2px 4px;}
+        .imp-add-opt-btn{background:none;border:1px dashed #d1d5db;color:#6b7280;border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer;margin-top:4px;}
+        .imp-add-opt-btn:hover{border-color:#2271b1;color:#2271b1;}
+        .imp-add-q-btn{width:100%;background:none;border:2px dashed #d1d5db;color:#6b7280;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;margin-top:6px;}
+        .imp-add-q-btn:hover{border-color:#2271b1;color:#2271b1;background:#f0f6fc;}
+        .imp-router-opt-item{display:flex;align-items:center;gap:6px;margin-bottom:8px;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;}
+        .imp-router-opt-item input{flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;min-width:0;}
+        </style>
+
+        <!-- Hidden JSON textareas (submitted with the form) -->
+        <textarea name="<?= CFG_OPTION ?>[imp_router_opts]" id="imp-qs-router-json" style="display:none;"><?= esc_textarea( $s['imp_router_opts'] ) ?></textarea>
+        <textarea name="<?= CFG_OPTION ?>[imp_single_qs]"   id="imp-qs-single-json"   style="display:none;"><?= esc_textarea( $s['imp_single_qs'] ) ?></textarea>
+        <textarea name="<?= CFG_OPTION ?>[imp_multi_qs]"    id="imp-qs-multi-json"    style="display:none;"><?= esc_textarea( $s['imp_multi_qs'] ) ?></textarea>
+        <textarea name="<?= CFG_OPTION ?>[imp_arch_qs]"     id="imp-qs-arch-json"     style="display:none;"><?= esc_textarea( $s['imp_arch_qs'] ) ?></textarea>
+        <textarea name="<?= CFG_OPTION ?>[imp_ins_q]"       id="imp-qs-ins-json"      style="display:none;"><?= esc_textarea( $s['imp_ins_q'] ) ?></textarea>
+
+        <!-- Router options editor -->
+        <div class="imp-q-editor-path">
+            <div class="imp-q-editor-path-hdr" onclick="impEdOpen(this,'router')">
+                <span class="dot" style="background:#6b7280;"></span>
+                <span class="ttl">Router Question</span>
+                <span style="font-size:11px;color:#9ca3af;background:#f0f0f1;padding:2px 8px;border-radius:12px;">3 options</span>
+                <span class="chev">▼</span>
             </div>
-            <div class="imp-path-body">
-                <div class="cfg-grid" style="margin-bottom:14px;">
-                    <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">Question Title</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_router_title]" value="<?= esc_attr( $s['imp_router_title'] ) ?>"/>
-                    </div>
-                    <div class="cfg-field cfg-full">
-                        <div class="imp-q-label">Sub-label</div>
-                        <input type="text" name="<?= CFG_OPTION ?>[imp_router_sub]" value="<?= esc_attr( $s['imp_router_sub'] ) ?>"/>
-                    </div>
+            <div class="imp-q-editor-body" id="imp-ed-router">
+                <div class="imp-q-card-field full" style="margin-bottom:12px;">
+                    <label>Question Title</label>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_router_title]" value="<?= esc_attr( $s['imp_router_title'] ) ?>"/>
                 </div>
-                <div style="border-top:1px solid #e5e7eb;padding-top:12px;">
-                    <div class="imp-q-label" style="margin-bottom:10px;color:#6b7280;">Answer Options</div>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt1]" value="<?= esc_attr( $s['imp_router_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt1_sub]" value="<?= esc_attr( $s['imp_router_opt1_sub'] ) ?>" placeholder="Sub-label (optional)" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt2]" value="<?= esc_attr( $s['imp_router_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt2_sub]" value="<?= esc_attr( $s['imp_router_opt2_sub'] ) ?>" placeholder="Sub-label (optional)" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt3]" value="<?= esc_attr( $s['imp_router_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_router_opt3_sub]" value="<?= esc_attr( $s['imp_router_opt3_sub'] ) ?>" placeholder="Sub-label (optional)" class="imp-opt-sub"/></div>
-                    </div>
+                <div class="imp-q-card-field full" style="margin-bottom:14px;">
+                    <label>Sub-label</label>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_router_sub]" value="<?= esc_attr( $s['imp_router_sub'] ) ?>"/>
                 </div>
-            </div>
-        </div>
-
-        <!-- Single Tooth Path -->
-        <div class="imp-path-accordion">
-            <div class="imp-path-header" onclick="impTogglePath(this)">
-                <span class="imp-path-dot" style="background:#3b82f6;"></span>
-                <span class="imp-path-title">Single Tooth Path</span>
-                <span class="imp-path-count">4 questions &nbsp;·&nbsp; A1 – A4</span>
-                <span class="imp-path-chevron">▼</span>
-            </div>
-            <div class="imp-path-body">
-
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#3b82f6;">A1 — Tooth Location</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_a1_title]" value="<?= esc_attr( $s['imp_a1_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt1]" value="<?= esc_attr( $s['imp_a1_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt1_sub]" value="<?= esc_attr( $s['imp_a1_opt1_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt2]" value="<?= esc_attr( $s['imp_a1_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt2_sub]" value="<?= esc_attr( $s['imp_a1_opt2_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt3]" value="<?= esc_attr( $s['imp_a1_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_a1_opt3_sub]" value="<?= esc_attr( $s['imp_a1_opt3_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#3b82f6;">A2 — How Long Missing</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_a2_title]" value="<?= esc_attr( $s['imp_a2_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt1]" value="<?= esc_attr( $s['imp_a2_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt2]" value="<?= esc_attr( $s['imp_a2_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt3]" value="<?= esc_attr( $s['imp_a2_opt3'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt4]" value="<?= esc_attr( $s['imp_a2_opt4'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">5</span><input type="text" name="<?= CFG_OPTION ?>[imp_a2_opt5]" value="<?= esc_attr( $s['imp_a2_opt5'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#3b82f6;">A3 — Bone Graft</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_a3_title]" value="<?= esc_attr( $s['imp_a3_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a3_opt1]" value="<?= esc_attr( $s['imp_a3_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a3_opt2]" value="<?= esc_attr( $s['imp_a3_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a3_opt3]" value="<?= esc_attr( $s['imp_a3_opt3'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block" style="margin-bottom:0;">
-                    <div class="imp-q-label" style="color:#3b82f6;">A4 — Situation</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_a4_title]" value="<?= esc_attr( $s['imp_a4_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt1]" value="<?= esc_attr( $s['imp_a4_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt2]" value="<?= esc_attr( $s['imp_a4_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt3]" value="<?= esc_attr( $s['imp_a4_opt3'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_a4_opt4]" value="<?= esc_attr( $s['imp_a4_opt4'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#9ca3af;margin-bottom:8px;">Route Options</div>
+                <div id="imp-router-opts-list"></div>
+                <p class="cfg-desc" style="margin-top:6px;">Note: the internal values (single / multiple / fullarch) cannot be changed as they control which question path loads.</p>
             </div>
         </div>
 
-        <!-- Multiple Teeth Path -->
-        <div class="imp-path-accordion">
-            <div class="imp-path-header" onclick="impTogglePath(this)">
-                <span class="imp-path-dot" style="background:#8b5cf6;"></span>
-                <span class="imp-path-title">Multiple Teeth Path</span>
-                <span class="imp-path-count">5 questions &nbsp;·&nbsp; M1 – M5</span>
-                <span class="imp-path-chevron">▼</span>
+        <!-- Path editors -->
+        <?php foreach ([
+            'single'   => ['label'=>'Single Tooth Path',   'dot'=>'#3b82f6', 'count'=>'4 questions · A1–A4'],
+            'multiple' => ['label'=>'Multiple Teeth Path', 'dot'=>'#8b5cf6', 'count'=>'5 questions · M1–M5'],
+            'fullarch' => ['label'=>'Full Arch Path',      'dot'=>'#10b981', 'count'=>'3 questions · B1–B3'],
+        ] as $path_key => $path_meta): ?>
+        <div class="imp-q-editor-path">
+            <div class="imp-q-editor-path-hdr" onclick="impEdOpen(this,'<?= $path_key ?>')">
+                <span class="dot" style="background:<?= $path_meta['dot'] ?>;"></span>
+                <span class="ttl"><?= $path_meta['label'] ?></span>
+                <span style="font-size:11px;color:#9ca3af;background:#f0f0f1;padding:2px 8px;border-radius:12px;"><?= $path_meta['count'] ?></span>
+                <span class="chev">▼</span>
             </div>
-            <div class="imp-path-body">
+            <div class="imp-q-editor-body" id="imp-ed-<?= $path_key ?>"></div>
+        </div>
+        <?php endforeach; ?>
 
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#8b5cf6;">M1 — How Many Teeth</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_m1_title]" value="<?= esc_attr( $s['imp_m1_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt1]" value="<?= esc_attr( $s['imp_m1_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt2]" value="<?= esc_attr( $s['imp_m1_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt3]" value="<?= esc_attr( $s['imp_m1_opt3'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m1_opt4]" value="<?= esc_attr( $s['imp_m1_opt4'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#8b5cf6;">M2 — Teeth Location</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_m2_title]" value="<?= esc_attr( $s['imp_m2_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt1]" value="<?= esc_attr( $s['imp_m2_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt1_sub]" value="<?= esc_attr( $s['imp_m2_opt1_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt2]" value="<?= esc_attr( $s['imp_m2_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt2_sub]" value="<?= esc_attr( $s['imp_m2_opt2_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt3]" value="<?= esc_attr( $s['imp_m2_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt3_sub]" value="<?= esc_attr( $s['imp_m2_opt3_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt4]" value="<?= esc_attr( $s['imp_m2_opt4'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_m2_opt4_sub]" value="<?= esc_attr( $s['imp_m2_opt4_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#8b5cf6;">M3 — How Long Missing</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_m3_title]" value="<?= esc_attr( $s['imp_m3_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt1]" value="<?= esc_attr( $s['imp_m3_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt2]" value="<?= esc_attr( $s['imp_m3_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt3]" value="<?= esc_attr( $s['imp_m3_opt3'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt4]" value="<?= esc_attr( $s['imp_m3_opt4'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">5</span><input type="text" name="<?= CFG_OPTION ?>[imp_m3_opt5]" value="<?= esc_attr( $s['imp_m3_opt5'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#8b5cf6;">M4 — Bone Graft</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_m4_title]" value="<?= esc_attr( $s['imp_m4_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m4_opt1]" value="<?= esc_attr( $s['imp_m4_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m4_opt2]" value="<?= esc_attr( $s['imp_m4_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m4_opt3]" value="<?= esc_attr( $s['imp_m4_opt3'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
-                <div class="imp-q-block" style="margin-bottom:0;">
-                    <div class="imp-q-label" style="color:#8b5cf6;">M5 — Situation</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_m5_title]" value="<?= esc_attr( $s['imp_m5_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt1]" value="<?= esc_attr( $s['imp_m5_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt2]" value="<?= esc_attr( $s['imp_m5_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt3]" value="<?= esc_attr( $s['imp_m5_opt3'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_m5_opt4]" value="<?= esc_attr( $s['imp_m5_opt4'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
-
+        <!-- Insurance editor -->
+        <div class="imp-q-editor-path">
+            <div class="imp-q-editor-path-hdr" onclick="impEdOpen(this,'ins')">
+                <span class="dot" style="background:#f59e0b;"></span>
+                <span class="ttl">Insurance Question</span>
+                <span style="font-size:11px;color:#9ca3af;background:#f0f0f1;padding:2px 8px;border-radius:12px;">optional · toggle above</span>
+                <span class="chev">▼</span>
             </div>
+            <div class="imp-q-editor-body" id="imp-ed-ins"></div>
         </div>
 
-        <!-- Full Arch Path -->
-        <div class="imp-path-accordion">
-            <div class="imp-path-header" onclick="impTogglePath(this)">
-                <span class="imp-path-dot" style="background:#10b981;"></span>
-                <span class="imp-path-title">Full Arch Path</span>
-                <span class="imp-path-count">3 questions &nbsp;·&nbsp; B1 – B3</span>
-                <span class="imp-path-chevron">▼</span>
-            </div>
-            <div class="imp-path-body">
+        <script>
+        // ── IMP QUESTION EDITOR ──────────────────────────────────
+        var impEd = {
+            router:   JSON.parse(document.getElementById('imp-qs-router-json').value || '[]'),
+            single:   JSON.parse(document.getElementById('imp-qs-single-json').value || '[]'),
+            multiple: JSON.parse(document.getElementById('imp-qs-multi-json').value || '[]'),
+            fullarch: JSON.parse(document.getElementById('imp-qs-arch-json').value || '[]'),
+            ins:      JSON.parse(document.getElementById('imp-qs-ins-json').value || '{}'),
+        };
+        var impEdRendered = {};
 
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#10b981;">B1 — Which Arch</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_b1_title]" value="<?= esc_attr( $s['imp_b1_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt1]" value="<?= esc_attr( $s['imp_b1_opt1'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt1_sub]" value="<?= esc_attr( $s['imp_b1_opt1_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt2]" value="<?= esc_attr( $s['imp_b1_opt2'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt2_sub]" value="<?= esc_attr( $s['imp_b1_opt2_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt3]" value="<?= esc_attr( $s['imp_b1_opt3'] ) ?>" placeholder="Label"/><input type="text" name="<?= CFG_OPTION ?>[imp_b1_opt3_sub]" value="<?= esc_attr( $s['imp_b1_opt3_sub'] ) ?>" placeholder="Sub-label" class="imp-opt-sub"/></div>
-                    </div>
-                </div>
+        function impEdSave(path) {
+            var idMap = {router:'imp-qs-router-json',single:'imp-qs-single-json',multiple:'imp-qs-multi-json',fullarch:'imp-qs-arch-json',ins:'imp-qs-ins-json'};
+            var el = document.getElementById(idMap[path]);
+            if (el) el.value = JSON.stringify(impEd[path]);
+        }
 
-                <div class="imp-q-block">
-                    <div class="imp-q-label" style="color:#10b981;">B2 — Current Situation</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_b2_title]" value="<?= esc_attr( $s['imp_b2_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt1]" value="<?= esc_attr( $s['imp_b2_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt2]" value="<?= esc_attr( $s['imp_b2_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt3]" value="<?= esc_attr( $s['imp_b2_opt3'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">4</span><input type="text" name="<?= CFG_OPTION ?>[imp_b2_opt4]" value="<?= esc_attr( $s['imp_b2_opt4'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
+        function impEdOpen(hdr, path) {
+            hdr.classList.toggle('open');
+            var body = hdr.nextElementSibling;
+            body.classList.toggle('open');
+            if (!impEdRendered[path]) { impEdRendered[path] = true; impEdRender(path); }
+        }
 
-                <div class="imp-q-block" style="margin-bottom:0;">
-                    <div class="imp-q-label" style="color:#10b981;">B3 — Duration</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_b3_title]" value="<?= esc_attr( $s['imp_b3_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_b3_opt1]" value="<?= esc_attr( $s['imp_b3_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_b3_opt2]" value="<?= esc_attr( $s['imp_b3_opt2'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">3</span><input type="text" name="<?= CFG_OPTION ?>[imp_b3_opt3]" value="<?= esc_attr( $s['imp_b3_opt3'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
+        function impEdRender(path) {
+            if (path === 'router') { impEdRenderRouter(); return; }
+            if (path === 'ins')    { impEdRenderSingleQ('ins', impEd.ins); return; }
+            var qs = impEd[path];
+            var body = document.getElementById('imp-ed-' + path);
+            body.innerHTML = '';
+            for (var i = 0; i < qs.length; i++) impEdRenderQ(path, i, body);
+            var addBtn = document.createElement('button');
+            addBtn.type = 'button'; addBtn.className = 'imp-add-q-btn';
+            addBtn.textContent = '+ Add Question';
+            (function(p){ addBtn.onclick = function(){ impEdAddQ(p); }; })(path);
+            body.appendChild(addBtn);
+        }
 
-            </div>
-        </div>
+        function impEdRenderRouter() {
+            var list = document.getElementById('imp-router-opts-list');
+            list.innerHTML = '';
+            var opts = impEd.router;
+            for (var i = 0; i < opts.length; i++) {
+                (function(idx){
+                    var o = opts[idx];
+                    var row = document.createElement('div'); row.className = 'imp-router-opt-item';
+                    row.innerHTML = '<span style="font-size:11px;font-weight:700;color:#9ca3af;flex-shrink:0;width:56px;">' + o.val + '</span>'
+                        + '<input type="text" placeholder="Label" value="' + escHtml(o.label) + '"/>'
+                        + '<input type="text" placeholder="Sub-label" value="' + escHtml(o.sub||'') + '" class="sub"/>';
+                    var inputs = row.querySelectorAll('input');
+                    inputs[0].oninput = function(){ impEd.router[idx].label = this.value; impEdSave('router'); };
+                    inputs[1].oninput = function(){ impEd.router[idx].sub   = this.value; impEdSave('router'); };
+                    list.appendChild(row);
+                })(i);
+            }
+        }
 
-        <!-- Insurance Question -->
-        <div class="imp-path-accordion">
-            <div class="imp-path-header" onclick="impTogglePath(this)">
-                <span class="imp-path-dot" style="background:#f59e0b;"></span>
-                <span class="imp-path-title">Insurance Question</span>
-                <span class="imp-path-count">optional &nbsp;·&nbsp; toggle above</span>
-                <span class="imp-path-chevron">▼</span>
-            </div>
-            <div class="imp-path-body">
+        function impEdRenderSingleQ(path, q) {
+            var body = document.getElementById('imp-ed-' + path);
+            body.innerHTML = '';
+            var card = impEdMakeQCard(path, 0, q, false);
+            body.appendChild(card);
+        }
 
-                <div class="imp-q-block" style="margin-bottom:0;">
-                    <div class="imp-q-label" style="color:#f59e0b;">Question Title</div>
-                    <input type="text" name="<?= CFG_OPTION ?>[imp_ins_title]" value="<?= esc_attr( $s['imp_ins_title'] ) ?>" class="imp-q-title-input"/>
-                    <div class="imp-opts-grid">
-                        <div class="imp-opt-row"><span class="imp-opt-num">1</span><input type="text" name="<?= CFG_OPTION ?>[imp_ins_opt1]" value="<?= esc_attr( $s['imp_ins_opt1'] ) ?>" placeholder="Label"/></div>
-                        <div class="imp-opt-row"><span class="imp-opt-num">2</span><input type="text" name="<?= CFG_OPTION ?>[imp_ins_opt2]" value="<?= esc_attr( $s['imp_ins_opt2'] ) ?>" placeholder="Label"/></div>
-                    </div>
-                </div>
+        function impEdRenderQ(path, qi, container) {
+            var q = impEd[path][qi];
+            var card = impEdMakeQCard(path, qi, q, true);
+            container.insertBefore(card, container.lastElementChild); // before add-btn
+        }
 
-            </div>
-        </div>
+        function impEdMakeQCard(path, qi, q, canDelete) {
+            var isSingleQ = (path === 'ins');
+            var card = document.createElement('div'); card.className = 'imp-q-card';
+            card.id = 'imp-qcard-' + path + '-' + qi;
+
+            var hdr = document.createElement('div'); hdr.className = 'imp-q-card-hdr';
+            var num = document.createElement('span'); num.className = 'imp-q-card-num'; num.textContent = qi+1;
+            hdr.appendChild(num);
+            var titleSpan = document.createElement('span');
+            titleSpan.style = 'flex:1;font-size:12.5px;color:#374151;font-weight:600;';
+            titleSpan.textContent = q.title || 'New Question';
+            hdr.appendChild(titleSpan);
+            if (canDelete) {
+                var delBtn = document.createElement('button'); delBtn.type='button'; delBtn.className='imp-q-card-del'; delBtn.textContent='x Remove';
+                (function(p,i){ delBtn.onclick = function(){ impEdDelQ(p, i); }; })(path, qi);
+                hdr.appendChild(delBtn);
+            }
+            card.appendChild(hdr);
+
+            var fields = document.createElement('div'); fields.className = 'imp-q-card-fields';
+
+            // Title
+            var titleF = impEdField('Question Title', 'full');
+            var titleIn = document.createElement('input'); titleIn.type='text'; titleIn.value = q.title||'';
+            titleIn.oninput = (function(p,i,ts){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.title = this.value; impEdSave(p); ts.textContent = this.value||'New Question';
+            }; })(path, qi, titleSpan);
+            titleF.appendChild(titleIn); fields.appendChild(titleF);
+
+            // Subtitle
+            var subF = impEdField('Sub-text (optional)', 'full');
+            var subIn = document.createElement('input'); subIn.type='text'; subIn.value = q.subtitle||'';
+            subIn.oninput = (function(p,i){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.subtitle = this.value; impEdSave(p);
+            }; })(path, qi);
+            subF.appendChild(subIn); fields.appendChild(subF);
+
+            // Field key
+            var fkF = impEdField('Field Key (GHL)');
+            var fkIn = document.createElement('input'); fkIn.type='text'; fkIn.value = q.field||'';
+            fkIn.style.fontFamily='monospace';
+            fkIn.oninput = (function(p,i){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.field = this.value; impEdSave(p);
+            }; })(path, qi);
+            fkF.appendChild(fkIn); fields.appendChild(fkF);
+
+            // Type
+            var typeF = impEdField('Type');
+            var typeSel = document.createElement('select');
+            typeSel.innerHTML = '<option value="radio">Button Cards (radio)</option><option value="dropdown">Dropdown</option><option value="text">Short Text</option><option value="textarea">Long Text</option>';
+            typeSel.value = q.type || 'radio';
+            var optsSection; // reference set below
+            typeSel.onchange = (function(p,i,os){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.type = this.value; impEdSave(p);
+                if (os) os.style.display = (this.value==='radio'||this.value==='dropdown') ? 'block' : 'none';
+            }; });
+            typeF.appendChild(typeSel); fields.appendChild(typeF);
+
+            card.appendChild(fields);
+
+            // Options section (radio/dropdown only)
+            var showOpts = (q.type === 'radio' || q.type === 'dropdown' || !q.type);
+            optsSection = document.createElement('div'); optsSection.className = 'imp-q-opts-section';
+            optsSection.style.display = showOpts ? 'block' : 'none';
+            // wire up typeSel now we have optsSection
+            typeSel.onchange = (function(p,i,os){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.type = this.value; impEdSave(p);
+                os.style.display = (this.value==='radio'||this.value==='dropdown') ? 'block' : 'none';
+            }; })(path, qi, optsSection);
+
+            var optsLabel = document.createElement('label'); optsLabel.textContent='Answer Options';
+            optsSection.appendChild(optsLabel);
+            var optsList = document.createElement('div'); optsList.id = 'imp-opts-' + path + '-' + qi;
+            optsSection.appendChild(optsList);
+            var addOptBtn = document.createElement('button'); addOptBtn.type='button'; addOptBtn.className='imp-add-opt-btn'; addOptBtn.textContent='+ Add Option';
+            (function(p,i,ol){ addOptBtn.onclick = function(){ impEdAddOpt(p,i,ol); }; })(path, qi, optsList);
+            optsSection.appendChild(addOptBtn);
+            card.appendChild(optsSection);
+
+            // Render existing opts
+            var opts = q.opts || [];
+            for (var oi=0; oi<opts.length; oi++) impEdRenderOpt(path, qi, oi, optsList, isSingleQ);
+
+            return card;
+        }
+
+        function impEdRenderOpt(path, qi, oi, container, isSingleQ) {
+            var q = isSingleQ ? impEd[path] : impEd[path][qi];
+            var o = (q.opts || [])[oi]; if (!o) return;
+            var row = document.createElement('div'); row.className='imp-opt-item'; row.id='imp-opt-'+path+'-'+qi+'-'+oi;
+            var numSpan = document.createElement('span');
+            numSpan.style='flex-shrink:0;width:20px;height:20px;border-radius:50%;background:#e5e7eb;font-size:11px;font-weight:700;color:#6b7280;display:flex;align-items:center;justify-content:center;';
+            numSpan.textContent = oi+1;
+            row.appendChild(numSpan);
+            var valIn = document.createElement('input'); valIn.type='text'; valIn.placeholder='value (internal)'; valIn.value=o.val||'';
+            valIn.style.fontFamily='monospace';
+            var lblIn = document.createElement('input'); lblIn.type='text'; lblIn.placeholder='Label'; lblIn.value=o.label||'';
+            var subIn = document.createElement('input'); subIn.type='text'; subIn.placeholder='Sub-label (opt)'; subIn.value=o.sub||''; subIn.className='sub';
+            valIn.oninput = (function(p,qi,oi,isSQ){ return function(){ var q2=isSQ?impEd[p]:impEd[p][qi]; if(q2.opts&&q2.opts[oi])q2.opts[oi].val=this.value; impEdSave(p); }; })(path,qi,oi,isSingleQ);
+            lblIn.oninput = (function(p,qi,oi,isSQ){ return function(){ var q2=isSQ?impEd[p]:impEd[p][qi]; if(q2.opts&&q2.opts[oi])q2.opts[oi].label=this.value; impEdSave(p); }; })(path,qi,oi,isSingleQ);
+            subIn.oninput = (function(p,qi,oi,isSQ){ return function(){ var q2=isSQ?impEd[p]:impEd[p][qi]; if(q2.opts&&q2.opts[oi])q2.opts[oi].sub=this.value; impEdSave(p); }; })(path,qi,oi,isSingleQ);
+            var delBtn = document.createElement('button'); delBtn.type='button'; delBtn.className='imp-opt-del'; delBtn.innerHTML='&times;';
+            (function(p,qi,oi,isSQ,c){ delBtn.onclick = function(){
+                var q2=isSQ?impEd[p]:impEd[p][qi]; if(q2.opts) q2.opts.splice(oi,1); impEdSave(p);
+                // re-render whole card opts
+                var container2=document.getElementById('imp-opts-'+p+'-'+qi); if(!container2)return;
+                container2.innerHTML='';
+                var newOpts=(isSQ?impEd[p]:impEd[p][qi]).opts||[];
+                for(var k=0;k<newOpts.length;k++) impEdRenderOpt(p,qi,k,container2,isSQ);
+            }; })(path,qi,oi,isSingleQ,container);
+            row.appendChild(valIn); row.appendChild(lblIn); row.appendChild(subIn); row.appendChild(delBtn);
+            container.appendChild(row);
+        }
+
+        function impEdAddOpt(path, qi, container) {
+            var isSQ = (path==='ins');
+            var q = isSQ ? impEd[path] : impEd[path][qi];
+            if (!q.opts) q.opts = [];
+            q.opts.push({val:'',label:'',sub:''});
+            impEdSave(path);
+            impEdRenderOpt(path, qi, q.opts.length-1, container, isSQ);
+        }
+
+        function impEdAddQ(path) {
+            var newQ = {id:path+'_q'+(impEd[path].length+1),title:'New Question',subtitle:'',type:'radio',field:'customField'+(impEd[path].length+1),opts:[{val:'yes',label:'Yes',sub:''},{val:'no',label:'No',sub:''}]};
+            impEd[path].push(newQ);
+            impEdSave(path);
+            // re-render
+            impEdRendered[path] = false;
+            impEdRender(path);
+        }
+
+        function impEdDelQ(path, qi) {
+            if (!confirm('Remove this question?')) return;
+            impEd[path].splice(qi, 1);
+            impEdSave(path);
+            impEdRendered[path] = false;
+            impEdRender(path);
+        }
+
+        function impEdField(labelText, cls) {
+            var f = document.createElement('div'); f.className='imp-q-card-field'+(cls?' '+cls:'');
+            var lbl = document.createElement('label'); lbl.textContent=labelText;
+            f.appendChild(lbl); return f;
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+        </script>
 
         <!-- ════════════════════════════════════════════════════ -->
         <!--  4 · INTRO SCREEN                                    -->
@@ -3403,6 +3484,11 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 /* Inputs */
 #<?= $uid ?>-app .imp-input{width:100%;padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;font-size:.875rem;outline:none;transition:border-color .2s,box-shadow .2s;background:hsl(var(--card));color:hsl(var(--foreground));}
 #<?= $uid ?>-app .imp-input:focus{border-color:hsl(var(--primary));box-shadow:0 0 0 3px hsl(var(--primary)/.12);}
+/* Text question type */
+#<?= $uid ?>-app .die-text-q-wrap{display:flex;flex-direction:column;gap:12px;padding:4px 0;}
+#<?= $uid ?>-app .die-text-input{width:100%;padding:12px 16px;border:1px solid hsl(var(--border));border-radius:8px;font-size:1rem;font-family:inherit;box-sizing:border-box;}
+#<?= $uid ?>-app .die-next-btn{align-self:flex-start;padding:12px 28px;background:hsl(var(--primary));color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;}
+#<?= $uid ?>-app .die-next-btn:hover{opacity:.9;}
 /* Reveal button */
 #<?= $uid ?>-reveal-btn:not(:disabled){cursor:pointer;opacity:1!important;}
 #<?= $uid ?>-reveal-btn:not(:disabled):hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'background:hsl(var(--primary)/.85)!important;box-shadow:0 6px 20px hsl(var(--primary)/.3)!important;' ?>}
@@ -3508,107 +3594,73 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 $ins_next = $show_insurance ? 'ins' : 'summary';
 ?>
 
-<!-- ROUTER -->
 <?php
-$router_opts = $opt( 'router', 'single',   $s['imp_router_opt1'], 'a1', $s['imp_router_opt1_sub'] )
-             . $opt( 'router', 'multiple',  $s['imp_router_opt2'], 'm1', $s['imp_router_opt2_sub'] );
-if ( $show_arch ) {
-    $router_opts .= $opt( 'router', 'fullarch', $s['imp_router_opt3'], 'b1', $s['imp_router_opt3_sub'] );
+// ── Decode path configs ──
+$single_qs        = json_decode( $s['imp_single_qs'],   true ) ?: [];
+$multi_qs         = json_decode( $s['imp_multi_qs'],    true ) ?: [];
+$arch_qs          = json_decode( $s['imp_arch_qs'],     true ) ?: [];
+$ins_q            = json_decode( $s['imp_ins_q'],       true ) ?: null;
+$router_opts_data = json_decode( $s['imp_router_opts'], true ) ?: [];
+
+// ── Router ──
+$router_html = '';
+foreach ( $router_opts_data as $ro ) {
+    $route_path = $ro['val']; // 'single','multiple','fullarch'
+    if ( $route_path === 'fullarch' && ! $show_arch ) continue;
+    // find the first question id of that path
+    $path_qs   = $route_path === 'multiple' ? $multi_qs : ( $route_path === 'fullarch' ? $arch_qs : $single_qs );
+    $first_id  = ! empty( $path_qs ) ? $path_qs[0]['id'] : 'summary';
+    $router_html .= $opt( 'router', $ro['val'], $ro['label'], $first_id, $ro['sub'] ?? '' );
 }
-echo $qpanel( 'router', $s['imp_router_title'], $s['imp_router_sub'], $router_opts );
+echo $qpanel( 'router', $s['imp_router_title'], $s['imp_router_sub'], $router_html );
+
+// ── Render a path ──
+$render_path = function( $qs, $path_end_next ) use ( $opt, $qpanel ) {
+    foreach ( $qs as $i => $q ) {
+        $next    = isset( $qs[ $i + 1 ] ) ? $qs[ $i + 1 ]['id'] : $path_end_next;
+        $type    = $q['type'] ?? 'radio';
+        $sub     = $q['subtitle'] ?? '';
+        if ( $type === 'radio' || $type === 'dropdown' ) {
+            $opts_html = '';
+            foreach ( $q['opts'] ?? [] as $o ) {
+                $opts_html .= $opt( $q['field'], $o['val'], $o['label'], $next, $o['sub'] ?? '' );
+            }
+            echo $qpanel( $q['id'], $q['title'], $sub, $opts_html );
+        } elseif ( $type === 'text' || $type === 'textarea' ) {
+            echo $qpanel( $q['id'], $q['title'], $sub,
+                '<div class="die-text-q-wrap">'
+                . ( $type === 'textarea'
+                    ? '<textarea id="' . esc_attr($q['id']) . '-txt" rows="3" class="die-text-input" onchange="window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',this.value,this.value,\'' . esc_js($next) . '\')"></textarea>'
+                    : '<input type="text" id="' . esc_attr($q['id']) . '-txt" class="die-text-input" placeholder="Type your answer..." />'
+                  )
+                . ( $type === 'text'
+                    ? '<button class="die-next-btn" onclick="var el=document.getElementById(\'' . esc_attr($q['id']) . '-txt\');window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',el.value,el.value,\'' . esc_js($next) . '\')">Continue &#x2192;</button>'
+                    : '<button class="die-next-btn" onclick="var el=document.getElementById(\'' . esc_attr($q['id']) . '-txt\');window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',el.value,el.value,\'' . esc_js($next) . '\')">Continue &#x2192;</button>'
+                  )
+                . '</div>'
+            );
+        }
+    }
+};
+
+// ── Single-tooth path ──
+$render_path( $single_qs, $ins_next );
+
+// ── Multiple-teeth path ──
+$render_path( $multi_qs, $ins_next );
+
+// ── Full-arch path ──
+$render_path( $arch_qs, 'summary' );
+
+// ── Insurance ──
+if ( $show_insurance && $ins_q ) {
+    $ins_opts_html = '';
+    foreach ( $ins_q['opts'] ?? [] as $o ) {
+        $ins_opts_html .= $opt( $ins_q['field'], $o['val'], $o['label'], 'summary', $o['sub'] ?? '' );
+    }
+    echo $qpanel( $ins_q['id'], $ins_q['title'], $ins_q['subtitle'] ?? '', $ins_opts_html );
+}
 ?>
-
-<!-- SINGLE-TOOTH FLOW -->
-<?php echo $qpanel( 'a1', $s['imp_a1_title'], 'Location affects restoration complexity and the materials used.',
-    $opt('toothLocation','front',    $s['imp_a1_opt1'], 'a2', $s['imp_a1_opt1_sub'])
-  . $opt('toothLocation','back',     $s['imp_a1_opt2'], 'a2', $s['imp_a1_opt2_sub'])
-  . $opt('toothLocation','not-sure', $s['imp_a1_opt3'], 'a2', $s['imp_a1_opt3_sub'])
-); ?>
-
-<?php echo $qpanel( 'a2', $s['imp_a2_title'], 'This helps us assess potential bone changes at the site.',
-    $opt('timeMissing','under-6mo', $s['imp_a2_opt1'], 'a3')
-  . $opt('timeMissing','6-12mo',   $s['imp_a2_opt2'], 'a3')
-  . $opt('timeMissing','1-3yr',    $s['imp_a2_opt3'], 'a3')
-  . $opt('timeMissing','3yr+',     $s['imp_a2_opt4'], 'a3')
-  . $opt('timeMissing','not-sure', $s['imp_a2_opt5'], 'a3')
-); ?>
-
-<?php echo $qpanel( 'a3', $s['imp_a3_title'], 'This can affect your treatment plan and overall timeline.',
-    $opt('boneGraft','yes',      $s['imp_a3_opt1'], 'a4')
-  . $opt('boneGraft','no',       $s['imp_a3_opt2'], 'a4')
-  . $opt('boneGraft','not-sure', $s['imp_a3_opt3'], 'a4')
-); ?>
-
-<?php echo $qpanel( 'a4', $s['imp_a4_title'], 'This helps us tailor your estimate to your current needs.',
-    $opt('situationSingle','already-missing', $s['imp_a4_opt1'], $ins_next)
-  . $opt('situationSingle','needs-removal',   $s['imp_a4_opt2'], $ins_next)
-  . $opt('situationSingle','bridge-crown',    $s['imp_a4_opt3'], $ins_next)
-  . $opt('situationSingle','not-sure',        $s['imp_a4_opt4'], $ins_next)
-); ?>
-
-<!-- MULTIPLE-TEETH FLOW -->
-<?php echo $qpanel( 'm1', $s['imp_m1_title'], "We'll use this to calculate your personalized range.",
-    $opt('teethCount','2',     $s['imp_m1_opt1'], 'm2')
-  . $opt('teethCount','3',     $s['imp_m1_opt2'], 'm2')
-  . $opt('teethCount','4',     $s['imp_m1_opt3'], 'm2')
-  . $opt('teethCount','5plus', $s['imp_m1_opt4'], 'm2')
-); ?>
-
-<?php echo $qpanel( 'm2', $s['imp_m2_title'], 'Location affects restoration complexity and materials.',
-    $opt('teethLocation','front',    $s['imp_m2_opt1'], 'm3', $s['imp_m2_opt1_sub'])
-  . $opt('teethLocation','back',     $s['imp_m2_opt2'], 'm3', $s['imp_m2_opt2_sub'])
-  . $opt('teethLocation','both',     $s['imp_m2_opt3'], 'm3', $s['imp_m2_opt3_sub'])
-  . $opt('teethLocation','not-sure', $s['imp_m2_opt4'], 'm3', $s['imp_m2_opt4_sub'])
-); ?>
-
-<?php echo $qpanel( 'm3', $s['imp_m3_title'], 'This helps us assess potential bone changes at the sites.',
-    $opt('timeMissingMult','under-6mo', $s['imp_m3_opt1'], 'm4')
-  . $opt('timeMissingMult','6-12mo',   $s['imp_m3_opt2'], 'm4')
-  . $opt('timeMissingMult','1-3yr',    $s['imp_m3_opt3'], 'm4')
-  . $opt('timeMissingMult','3yr+',     $s['imp_m3_opt4'], 'm4')
-  . $opt('timeMissingMult','not-sure', $s['imp_m3_opt5'], 'm4')
-); ?>
-
-<?php echo $qpanel( 'm4', $s['imp_m4_title'], 'This can affect your treatment plan and overall timeline.',
-    $opt('boneGraftMult','yes',      $s['imp_m4_opt1'], 'm5')
-  . $opt('boneGraftMult','no',       $s['imp_m4_opt2'], 'm5')
-  . $opt('boneGraftMult','not-sure', $s['imp_m4_opt3'], 'm5')
-); ?>
-
-<?php echo $qpanel( 'm5', $s['imp_m5_title'], 'This helps us tailor your estimate to your current needs.',
-    $opt('situationMult','already-missing', $s['imp_m5_opt1'], $ins_next)
-  . $opt('situationMult','needs-removal',   $s['imp_m5_opt2'], $ins_next)
-  . $opt('situationMult','bridge-crown',    $s['imp_m5_opt3'], $ins_next)
-  . $opt('situationMult','not-sure',        $s['imp_m5_opt4'], $ins_next)
-); ?>
-
-<!-- FULL-ARCH FLOW -->
-<?php echo $qpanel( 'b1', $s['imp_b1_title'], 'Upper, lower, or both — this shapes your treatment overview.',
-    $opt('archSelection','upper', $s['imp_b1_opt1'], 'b2', $s['imp_b1_opt1_sub'])
-  . $opt('archSelection','lower', $s['imp_b1_opt2'], 'b2', $s['imp_b1_opt2_sub'])
-  . $opt('archSelection','both',  $s['imp_b1_opt3'], 'b2', $s['imp_b1_opt3_sub'])
-); ?>
-
-<?php echo $qpanel( 'b2', $s['imp_b2_title'], 'This helps us understand your starting point.',
-    $opt('situationArch','wearing-denture', $s['imp_b2_opt1'], 'b3')
-  . $opt('situationArch','failing-teeth',   $s['imp_b2_opt2'], 'b3')
-  . $opt('situationArch','beyond-repair',   $s['imp_b2_opt3'], 'b3')
-  . $opt('situationArch','not-sure',        $s['imp_b2_opt4'], 'b3')
-); ?>
-
-<?php echo $qpanel( 'b3', $s['imp_b3_title'], 'Duration helps determine bone volume and treatment complexity.',
-    $opt('archDuration','under-1yr', $s['imp_b3_opt1'], 'summary')
-  . $opt('archDuration','1-5yr',     $s['imp_b3_opt2'], 'summary')
-  . $opt('archDuration','5yr+',      $s['imp_b3_opt3'], 'summary')
-); ?>
-
-<!-- INSURANCE -->
-<?php if ( $show_insurance ) :
-echo $qpanel( 'ins', $s['imp_ins_title'], 'Insurance can reduce your out-of-pocket cost.',
-    $opt('insurance','yes', $s['imp_ins_opt1'], 'summary')
-  . $opt('insurance','no',  $s['imp_ins_opt2'], 'summary')
-);
-endif; ?>
 
 <!-- SUMMARY -->
 <div class="die-panel" id="<?= $uid ?>-panel-summary">
@@ -3836,62 +3888,72 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
     currency: '<?= esc_js($currency) ?>',
     prices:   <?= $prices_json ?>,
     honeypot: <?= $honeypot ? 'true' : 'false' ?>,
-    showIns:  <?= $show_insurance ? 'true' : 'false' ?>
+    showIns:  <?= $show_insurance ? 'true' : 'false' ?>,
+    result_suffix_single:   '<?= esc_js( $s['imp_result_single_suffix'] ) ?>',
+    result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
+    result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>'
   };
 
   /* ── STATE ── */
   var s = {
     flow: null,
-    // single
-    toothLocation: null, toothLocationL: null,
-    timeMissing: null, timeMissingL: null,
-    boneGraft: null, boneGraftL: null,
-    situationSingle: null, situationSingleL: null,
-    // multiple
-    teethCount: null, teethCountN: 2, teethCountL: null,
-    teethLocation: null, teethLocationL: null,
-    timeMissingMult: null, timeMissingMultL: null,
-    boneGraftMult: null, boneGraftMultL: null,
-    situationMult: null, situationMultL: null,
-    // full-arch
-    archSelection: null, archSelectionL: null,
-    situationArch: null, situationArchL: null,
-    archDuration: null, archDurationL: null,
-    // insurance
-    insurance: null, insuranceL: null
+    answers:  {},   // {fieldKey: val}
+    answersL: {}    // {fieldKey: label}
   };
+
+  // ── Path configs injected by PHP ──
+  var impPaths = <?php echo json_encode([
+    'router'   => $router_opts_data,
+    'single'   => $single_qs,
+    'multiple' => $multi_qs,
+    'fullarch' => $arch_qs,
+    'ins'      => $ins_q,
+  ], JSON_UNESCAPED_UNICODE); ?>;
+
+  function getPathQs(flow) {
+    return flow === 'multiple' ? impPaths.multiple : (flow === 'fullarch' ? impPaths.fullarch : impPaths.single);
+  }
+  function getGraftVal(flow) {
+    var qs = getPathQs(flow);
+    if (!qs) return '';
+    for (var i=0; i<qs.length; i++) {
+      if (qs[i].pricing_role === 'bone_graft') return s.answers[qs[i].field] || '';
+    }
+    return '';
+  }
 
   var currentPanel = 'intro';
   var navHistory   = [];
 
   /* ── STEP MAP ── */
-  // single=9 steps total (router+a1-a4+ins+summary+lead+result)
-  // multiple=10, fullarch=7 (no insurance for fullarch)
-  var stepMap = {
-    intro:  { label: 'Get Started',       pct: 5   },
-    router: { label: 'Step 1',            pct: 11  },
-    a1:     { label: 'Step 2 of 9',       pct: 22  },
-    a2:     { label: 'Step 3 of 9',       pct: 33  },
-    a3:     { label: 'Step 4 of 9',       pct: 44  },
-    a4:     { label: 'Step 5 of 9',       pct: 55  },
-    ins:    { label: 'Step 6 of 9',       pct: 65  },
-    m1:     { label: 'Step 2 of 10',      pct: 20  },
-    m2:     { label: 'Step 3 of 10',      pct: 30  },
-    m3:     { label: 'Step 4 of 10',      pct: 40  },
-    m4:     { label: 'Step 5 of 10',      pct: 50  },
-    m5:     { label: 'Step 6 of 10',      pct: 60  },
-    b1:     { label: 'Step 2 of 7',       pct: 28  },
-    b2:     { label: 'Step 3 of 7',       pct: 42  },
-    b3:     { label: 'Step 4 of 7',       pct: 57  }
-  };
+  function buildStepMap() {
+    var map = { intro: {label:'Get Started', pct:5}, router: {label:'Step 1', pct:11} };
+    ['single','multiple','fullarch'].forEach(function(flow) {
+      var qs = getPathQs(flow);
+      var hasIns = (flow !== 'fullarch') && <?php echo $show_insurance ? 'true' : 'false'; ?>;
+      // total steps = 1 (router) + qs.length + (hasIns?1:0) + 1 (summary) + 1 (lead) + 1 (result)
+      var total = qs.length + 4 + (hasIns ? 1 : 0);
+      qs.forEach(function(q, i) {
+        map[q.id] = {label:'Step '+(i+2)+' of '+total, pct: Math.round((i+2)/total*100)};
+      });
+      if (hasIns && impPaths.ins) {
+        map['ins'] = {label:'Step '+(qs.length+2)+' of '+total, pct: Math.round((qs.length+2)/total*100)};
+      }
+    });
+    return map;
+  }
+  var stepMap = buildStepMap();
 
   function getStepInfo(id) {
     if (stepMap[id]) return stepMap[id];
-    var total = s.flow === 'multiple' ? 10 : (s.flow === 'fullarch' ? 7 : 9);
-    if (id === 'summary') return { label: 'Step ' + (total - 2) + ' of ' + total, pct: 76 };
-    if (id === 'lead')    return { label: 'Step ' + (total - 1) + ' of ' + total, pct: 88 };
-    if (id.indexOf('result') === 0) return { label: 'Step ' + total + ' of ' + total, pct: 100 };
-    return { label: '', pct: 0 };
+    var flow = s.flow || 'single';
+    var qs = getPathQs(flow);
+    var hasIns = (flow !== 'fullarch') && <?php echo $show_insurance ? 'true' : 'false'; ?>;
+    var total = qs.length + 4 + (hasIns ? 1 : 0);
+    if (id === 'summary') return {label:'Step '+(total-2)+' of '+total, pct:76};
+    if (id === 'lead')    return {label:'Step '+(total-1)+' of '+total, pct:88};
+    if (id.indexOf('result') === 0) return {label:'Step '+total+' of '+total, pct:100};
+    return {label:'', pct:0};
   }
 
   var msgs = {
@@ -3922,20 +3984,22 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
   function getRange() {
     var p = config.prices;
     if (s.flow === 'fullarch') {
-      return { label: fmt(p.arch_min) + ' \u2013 ' + fmt(p.arch_max), suffix: ' <?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>' };
+      return {label: fmt(p.arch_min)+' \u2013 '+fmt(p.arch_max), suffix: ' '+config.result_suffix_fullarch};
     }
     var bMin, bMax;
+    var graftVal = getGraftVal(s.flow);
     if (s.flow === 'multiple') {
       bMin = p.multi_min; bMax = p.multi_max;
-      var gv = s.boneGraftMult || '';
-      if (gv === 'yes' || gv === 'not-sure') { bMin += p.graft_min; bMax += p.graft_max; }
-      return { label: fmt(bMin) + ' \u2013 ' + fmt(bMax), suffix: ' <?= esc_js( $s['imp_result_multiple_suffix'] ) ?>' };
+    } else {
+      bMin = p.single_min; bMax = p.single_max;
     }
-    // single
-    bMin = p.single_min; bMax = p.single_max;
-    var gvs = s.boneGraft || '';
-    if (gvs === 'yes' || gvs === 'not-sure') { bMin += p.graft_min; bMax += p.graft_max; }
-    return { label: fmt(bMin) + ' \u2013 ' + fmt(bMax), suffix: ' <?= esc_js( $s['imp_result_single_suffix'] ) ?>' };
+    if (graftVal === 'yes' || graftVal === 'not-sure') {
+      bMin += p.graft_min; bMax += p.graft_max;
+    }
+    var suffix = s.flow === 'multiple'
+      ? ' '+config.result_suffix_multiple
+      : ' '+config.result_suffix_single;
+    return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: suffix};
   }
 
   /* ── SHOW PANEL ── */
@@ -3960,25 +4024,22 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
   function updateSidebar() {
     var tags = [];
     if (s.flow === 'single') {
-      tags.push({l:'Replacing:',   v:'One missing tooth'});
-      if (s.toothLocation)   tags.push({l:'Location:',   v:s.toothLocationL});
-      if (s.timeMissing)     tags.push({l:'Missing for:',v:s.timeMissingL});
-      if (s.boneGraft)       tags.push({l:'Bone graft:', v:s.boneGraftL});
-      if (s.situationSingle) tags.push({l:'Situation:',  v:s.situationSingleL});
+      tags.push({l:'Replacing:', v:'One missing tooth'});
     } else if (s.flow === 'multiple') {
-      tags.push({l:'Replacing:',  v:'Several missing teeth'});
-      if (s.teethCount)      tags.push({l:'Teeth:',      v:s.teethCountL});
-      if (s.teethLocation)   tags.push({l:'Location:',   v:s.teethLocationL});
-      if (s.timeMissingMult) tags.push({l:'Missing for:',v:s.timeMissingMultL});
-      if (s.boneGraftMult)   tags.push({l:'Bone graft:', v:s.boneGraftMultL});
-      if (s.situationMult)   tags.push({l:'Situation:',  v:s.situationMultL});
+      tags.push({l:'Replacing:', v:'Several missing teeth'});
     } else if (s.flow === 'fullarch') {
-      tags.push({l:'Replacing:',  v:'Full arch / denture'});
-      if (s.archSelection)   tags.push({l:'Arch:',       v:s.archSelectionL});
-      if (s.situationArch)   tags.push({l:'Situation:',  v:s.situationArchL});
-      if (s.archDuration)    tags.push({l:'Duration:',   v:s.archDurationL});
+      tags.push({l:'Replacing:', v:'Full arch / denture'});
     }
-    if (s.insurance) tags.push({l:'Insurance:', v:s.insuranceL});
+    var pathQs = getPathQs(s.flow) || [];
+    for (var si = 0; si < pathQs.length; si++) {
+      var sq = pathQs[si];
+      var sv = s.answersL[sq.field];
+      if (sv) tags.push({l: (sq.sidebar_label || sq.title.split(' ').slice(0,2).join(' ') + ':'), v: sv});
+    }
+    if (impPaths.ins) {
+      var insV = s.answersL[impPaths.ins.field];
+      if (insV) tags.push({l:'Insurance:', v:insV});
+    }
 
     var html = tags.length
       ? tags.map(function(t){
@@ -3993,7 +4054,8 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
 
     if (s.flow !== null) {
       var r   = getRange();
-      var maxA = s.flow === 'multiple' ? 6 : (s.flow === 'fullarch' ? 4 : 5);
+      var pqs = getPathQs(s.flow) || [];
+      var maxA = pqs.length + 1 + (s.flow !== 'fullarch' && impPaths.ins ? 1 : 0);
       var pct = Math.max(5, Math.min(90, (tags.length / maxA) * 90));
       document.querySelectorAll('.imp-sr-' + uid).forEach(function(el){ el.textContent = r.label + r.suffix; });
       document.querySelectorAll('.imp-rb-' + uid).forEach(function(el){ el.style.width = pct + '%'; });
@@ -4049,15 +4111,16 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
 
   /* ── SELECT OPTION ── */
   function selectOpt(btn, key, val, label, next) {
-    s[key] = val;
-    s[key + 'L'] = label;
+    s.answers[key]  = val;
+    s.answersL[key] = label;
     if (key === 'router') {
-      s.flow = val === 'single' ? 'single' : (val === 'multiple' ? 'multiple' : 'fullarch');
+      s.flow = val; // 'single','multiple','fullarch'
     }
+    // special: teethCount numeric for pricing
     if (key === 'teethCount') {
       s.teethCountN = {'2':2,'3':3,'4':4,'5plus':5}[val] || 2;
     }
-    var par = btn.parentNode;
+    var par = btn.closest ? btn.closest('.die-options') : btn.parentNode;
     if (par) {
       var btns = par.querySelectorAll('.option-btn');
       for (var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
@@ -4075,32 +4138,29 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
            + '<span style="font-family:Inter,sans-serif;color:hsl(var(--foreground));font-size:.875rem;">' + text + '</span>'
            + '</div>';
     };
-    var desc = '';
-    if (s.flow === 'single') {
-      items.push(ck('Replacing: <strong>one missing tooth</strong>'));
-      if (s.toothLocation)   items.push(ck('Location: <strong>' + s.toothLocationL + '</strong>'));
-      if (s.timeMissing)     items.push(ck('Missing for: <strong>' + s.timeMissingL + '</strong>'));
-      if (s.boneGraft)       items.push(ck('Bone graft indicated: <strong>' + s.boneGraftL + '</strong>'));
-      if (s.situationSingle) items.push(ck('Situation: <strong>' + s.situationSingleL + '</strong>'));
-      if (s.insurance)       items.push(ck('Insurance: <strong>' + s.insuranceL + '</strong>'));
-      desc = 'We\u2019ve prepared your likely treatment range based on a single missing tooth. Enter your details to unlock the full estimate.';
-    } else if (s.flow === 'multiple') {
-      items.push(ck('Replacing: <strong>multiple missing teeth</strong>'));
-      if (s.teethCount)      items.push(ck('Number of teeth: <strong>' + s.teethCountL + '</strong>'));
-      if (s.teethLocation)   items.push(ck('Location: <strong>' + s.teethLocationL + '</strong>'));
-      if (s.timeMissingMult) items.push(ck('Missing for: <strong>' + s.timeMissingMultL + '</strong>'));
-      if (s.boneGraftMult)   items.push(ck('Bone graft indicated: <strong>' + s.boneGraftMultL + '</strong>'));
-      if (s.situationMult)   items.push(ck('Situation: <strong>' + s.situationMultL + '</strong>'));
-      if (s.insurance)       items.push(ck('Insurance: <strong>' + s.insuranceL + '</strong>'));
-      var n = s.teethCountL ? s.teethCountL.toLowerCase() : 'multiple';
-      desc = 'We\u2019ve prepared your likely treatment range based on ' + n + ' missing teeth. Enter your details to unlock the full estimate.';
-    } else if (s.flow === 'fullarch') {
-      items.push(ck('Replacing: <strong>full arch / denture</strong>'));
-      if (s.archSelection) items.push(ck('Arch: <strong>' + s.archSelectionL + '</strong>'));
-      if (s.situationArch) items.push(ck('Situation: <strong>' + s.situationArchL + '</strong>'));
-      if (s.archDuration)  items.push(ck('Duration: <strong>' + s.archDurationL + '</strong>'));
-      desc = 'We\u2019ve prepared your likely treatment range based on full-arch restoration. Enter your details to unlock the full estimate.';
+    var flowLabel = s.flow === 'multiple' ? 'multiple missing teeth'
+                  : s.flow === 'fullarch' ? 'full arch / denture'
+                  : 'one missing tooth';
+    items.push(ck('Replacing: <strong>' + flowLabel + '</strong>'));
+
+    var pathQs = getPathQs(s.flow) || [];
+    for (var i = 0; i < pathQs.length; i++) {
+      var q = pathQs[i];
+      var ans = s.answersL[q.field];
+      if (ans) {
+        var qLabel = q.summary_label || q.title;
+        items.push(ck(qLabel + ': <strong>' + ans + '</strong>'));
+      }
     }
+    if (impPaths.ins) {
+      var insAns = s.answersL[impPaths.ins.field];
+      if (insAns) items.push(ck('Insurance: <strong>' + insAns + '</strong>'));
+    }
+    var desc = s.flow === 'single'
+      ? 'We\u2019ve prepared your likely treatment range based on a single missing tooth. Enter your details to unlock the full estimate.'
+      : s.flow === 'multiple'
+      ? 'We\u2019ve prepared your likely treatment range based on ' + (s.answersL['teethCount'] || 'multiple') + ' missing teeth. Enter your details to unlock the full estimate.'
+      : 'We\u2019ve prepared your likely treatment range based on full-arch restoration. Enter your details to unlock the full estimate.';
     var listEl = document.getElementById(uid + '-summary-list');
     var descEl = document.getElementById(uid + '-summary-desc');
     if (listEl) listEl.innerHTML = items.join('');
@@ -4124,13 +4184,15 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
     if (panelId === 'result-single') {
       animateRange(uid + '-result-single-range', r.label);
       var gns = document.getElementById(uid + '-graft-note-single');
-      if (gns) gns.style.display = (s.boneGraft === 'yes' || s.boneGraft === 'not-sure') ? 'block' : 'none';
+      var gv = getGraftVal('single');
+      if (gns) gns.style.display = (gv === 'yes' || gv === 'not-sure') ? 'block' : 'none';
     } else if (panelId === 'result-multiple') {
       animateRange(uid + '-result-multiple-range', r.label);
       var gnm = document.getElementById(uid + '-graft-note-multiple');
-      if (gnm) gnm.style.display = (s.boneGraftMult === 'yes' || s.boneGraftMult === 'not-sure') ? 'block' : 'none';
+      var gvm = getGraftVal('multiple');
+      if (gnm) gnm.style.display = (gvm === 'yes' || gvm === 'not-sure') ? 'block' : 'none';
       var cnt = document.getElementById(uid + '-result-multiple-count');
-      if (cnt) cnt.textContent = 'Based on ' + (s.teethCountL || 'multiple teeth') + ' at the per-implant rate';
+      if (cnt) cnt.textContent = 'Based on ' + (s.answersL['teethCount'] || 'multiple teeth') + ' at the per-implant rate';
     } else if (panelId === 'result-fullarch') {
       animateRange(uid + '-result-fullarch-range', r.label);
     }
@@ -4181,20 +4243,14 @@ $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(v
     fd.append('email',           em);
     fd.append('phone',           ph);
     <?php if($honeypot): ?>fd.append('imp_hp', '');<?php endif; ?>
-    fd.append('flow',            s.flow             || '');
-    fd.append('toothLocation',   s.toothLocation    || '');
-    fd.append('timeMissing',     s.timeMissing      || '');
-    fd.append('boneGraft',       s.boneGraft        || '');
-    fd.append('situationSingle', s.situationSingle  || '');
-    fd.append('teethCount',      s.teethCount       || '');
-    fd.append('teethLocation',   s.teethLocation    || '');
-    fd.append('timeMissingMult', s.timeMissingMult  || '');
-    fd.append('boneGraftMult',   s.boneGraftMult    || '');
-    fd.append('situationMult',   s.situationMult    || '');
-    fd.append('archSelection',   s.archSelection    || '');
-    fd.append('archDuration',    s.archDuration     || '');
-    fd.append('situationArch',   s.situationArch    || '');
-    fd.append('insurance',       s.insurance        || '');
+    fd.append('flow', s.flow || '');
+    // Append all path answers
+    var allQs = (getPathQs(s.flow) || []).concat(impPaths.ins ? [impPaths.ins] : []);
+    for (var qi = 0; qi < allQs.length; qi++) {
+      var qf = allQs[qi].field;
+      fd.append('answer[' + qf + ']',  s.answers[qf]  || '');
+      fd.append('answerL[' + qf + ']', s.answersL[qf] || '');
+    }
     fd.append('range',           r.label + r.suffix);
     fd.append('rangeType',       panel);
     var _up = new URLSearchParams(window.location.search);
@@ -4265,48 +4321,37 @@ function cfg_implant_ajax_submit() {
         wp_send_json_error( 'Form is not fully configured. Please contact us directly.' );
     }
 
-    // Quiz answers — individual fields from 3-path flow
-    $flow              = sanitize_text_field( $_POST['flow']            ?? '' );
-    $tooth_location    = sanitize_text_field( $_POST['toothLocation']   ?? '' );
-    $time_missing      = sanitize_text_field( $_POST['timeMissing']     ?? '' );
-    $bone_graft        = sanitize_text_field( $_POST['boneGraft']       ?? '' );
-    $situation_single  = sanitize_text_field( $_POST['situationSingle'] ?? '' );
-    $teeth_count       = sanitize_text_field( $_POST['teethCount']      ?? '' );
-    $teeth_location    = sanitize_text_field( $_POST['teethLocation']   ?? '' );
-    $time_missing_mult = sanitize_text_field( $_POST['timeMissingMult'] ?? '' );
-    $bone_graft_mult   = sanitize_text_field( $_POST['boneGraftMult']   ?? '' );
-    $situation_mult    = sanitize_text_field( $_POST['situationMult']   ?? '' );
-    $arch_selection    = sanitize_text_field( $_POST['archSelection']   ?? '' );
-    $situation_arch    = sanitize_text_field( $_POST['situationArch']   ?? '' );
-    $arch_duration     = sanitize_text_field( $_POST['archDuration']    ?? '' );
-    $insurance         = sanitize_text_field( $_POST['insurance']       ?? '' );
-    $range             = sanitize_text_field( $_POST['range']           ?? '' );
-    $range_type        = sanitize_text_field( $_POST['rangeType']       ?? '' );
+    // Decode path configs
+    $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
+    $multi_qs  = json_decode( $s['imp_multi_qs'],  true ) ?: [];
+    $arch_qs   = json_decode( $s['imp_arch_qs'],   true ) ?: [];
+    $ins_q     = json_decode( $s['imp_ins_q'],     true ) ?: null;
+
+    $flow = sanitize_text_field( $_POST['flow'] ?? '' );
+    $range = sanitize_text_field( $_POST['range'] ?? '' );
+    $range_type = sanitize_text_field( $_POST['rangeType'] ?? '' );
+
+    $path_qs = $flow === 'multiple' ? $multi_qs : ( $flow === 'fullarch' ? $arch_qs : $single_qs );
+    $all_qs  = $path_qs;
+    if ( $ins_q ) $all_qs[] = $ins_q;
 
     // Tags
     $tags = [ 'implant-estimator', 'website-lead' ];
-    if ( $flow === 'single' )   $tags[] = 'implant-single';
-    elseif ( $flow === 'multiple' ) $tags[] = 'implant-multiple';
-    elseif ( $flow === 'fullarch' ) $tags[] = 'implant-fullarch';
+    if ( $flow === 'single' )        $tags[] = 'implant-single';
+    elseif ( $flow === 'multiple' )  $tags[] = 'implant-multiple';
+    elseif ( $flow === 'fullarch' )  $tags[] = 'implant-fullarch';
 
-    // Custom fields
-    $custom = [];
-    $custom_map = [
-        'implant_flow'           => $flow,
-        'implant_tooth_location' => $tooth_location,
-        'implant_time_missing'   => $flow === 'multiple' ? $time_missing_mult : $time_missing,
-        'implant_bone_graft'     => $flow === 'multiple' ? $bone_graft_mult   : $bone_graft,
-        'implant_situation'      => $flow === 'single' ? $situation_single : ( $flow === 'multiple' ? $situation_mult : $situation_arch ),
-        'implant_teeth_count'    => $teeth_count,
-        'implant_teeth_location' => $teeth_location,
-        'implant_arch_selection' => $arch_selection,
-        'implant_arch_duration'  => $arch_duration,
-        'implant_insurance'      => $insurance,
-        'implant_range'          => $range,
-        'implant_range_type'     => $range_type,
-    ];
-    foreach ( $custom_map as $key => $val ) {
-        if ( $val !== '' ) $custom[] = [ 'key' => $key, 'field_value' => $val ];
+    // Custom fields — dynamic
+    $answers  = $_POST['answer']  ?? [];
+    $custom   = [];
+    $custom[] = [ 'key' => 'implant_flow',  'field_value' => $flow ];
+    $custom[] = [ 'key' => 'implant_range', 'field_value' => $range ];
+    foreach ( $all_qs as $q ) {
+        $field = sanitize_key( $q['field'] ?? '' );
+        $val   = sanitize_text_field( $answers[ $field ] ?? '' );
+        if ( $field !== '' && $val !== '' ) {
+            $custom[] = [ 'key' => 'implant_' . $field, 'field_value' => $val ];
+        }
     }
     foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
         $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
