@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.8.7
+ * Version:     1.8.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -557,98 +557,182 @@ function cfg_settings_page() {
     <?php endif; ?>
 
     <style>
-    /* ── Layout ── */
-    #cfg-root{display:flex;align-items:flex-start;gap:0;margin:16px 0 0 -20px;min-height:80vh;}
+    /* ════════════════════════════════
+       LAYOUT
+    ════════════════════════════════ */
+    #cfg-root{display:flex;align-items:flex-start;gap:0;margin:16px 0 0 -20px;min-height:85vh;}
+
+    /* ════════════════════════════════
+       SIDEBAR
+    ════════════════════════════════ */
     .cfg-sidebar{
-        width:210px;flex-shrink:0;
-        background:#1a1d21;
-        border-radius:8px 0 0 8px;
-        padding:0 0 24px;
+        width:220px;flex-shrink:0;
+        background:#16181d;
+        border-radius:10px 0 0 10px;
+        padding:0 0 28px;
         position:sticky;top:32px;
         align-self:flex-start;
+        overflow:hidden;
     }
     .cfg-sidebar-brand{
-        display:flex;align-items:center;gap:10px;
-        padding:18px 16px 16px;
-        border-bottom:1px solid rgba(255,255,255,.07);
-        margin-bottom:12px;
+        display:flex;align-items:center;gap:11px;
+        padding:20px 18px 17px;
+        background:linear-gradient(180deg,#1e2128 0%,#16181d 100%);
+        border-bottom:1px solid rgba(255,255,255,.06);
+        margin-bottom:8px;
     }
     .cfg-brand-icon{
-        width:32px;height:32px;border-radius:7px;
-        background:linear-gradient(135deg,#2271b1,#1a5a94);
+        width:34px;height:34px;border-radius:8px;
+        background:linear-gradient(135deg,#3b82f6,#1d4ed8);
         display:flex;align-items:center;justify-content:center;
         font-size:10px;font-weight:800;color:#fff;letter-spacing:.03em;flex-shrink:0;
+        box-shadow:0 2px 8px rgba(59,130,246,.35);
     }
-    .cfg-brand-name{font-size:12.5px;font-weight:700;color:#fff;line-height:1.2;}
-    .cfg-brand-sub{font-size:10.5px;color:rgba(255,255,255,.38);margin-top:1px;}
-    .cfg-nav-section{
-        padding:14px 12px 4px;
-        font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
-        color:rgba(255,255,255,.3);
-    }
-    .cfg-nav-item{
-        display:flex;align-items:center;gap:8px;
-        padding:7px 16px;margin:1px 8px;border-radius:6px;
-        font-size:12.5px;color:rgba(255,255,255,.6);
+    .cfg-brand-name{font-size:13px;font-weight:700;color:#fff;line-height:1.25;}
+    .cfg-brand-sub{font-size:10px;color:rgba(255,255,255,.32);margin-top:2px;letter-spacing:.02em;}
+    /* ── Group ── */
+    .cfg-nav-group{margin:0 8px 2px;}
+    .cfg-nav-group-hdr{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:8px 10px;border-radius:6px;
+        font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
+        color:rgba(255,255,255,.35);
         cursor:pointer;transition:background .15s,color .15s;
         user-select:none;
     }
-    .cfg-nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9);}
-    .cfg-nav-item.active{background:rgba(34,113,177,.25);color:#fff;font-weight:600;}
-    .cfg-nav-item.active .cfg-nav-dot{background:#2271b1;}
-    .cfg-nav-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);flex-shrink:0;transition:background .15s;}
-    .cfg-nav-sep{border:none;border-top:1px solid rgba(255,255,255,.07);margin:10px 16px;}
-    /* ── Main content ── */
-    .cfg-main{flex:1;min-width:0;padding:0 0 0 0;}
-    /* ── Panels ── */
+    .cfg-nav-group-hdr:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);}
+    .cfg-nav-group-hdr.open{color:rgba(255,255,255,.55);}
+    .cfg-nav-arr{transition:transform .2s;flex-shrink:0;opacity:.5;}
+    .cfg-nav-group-hdr.open .cfg-nav-arr{transform:rotate(90deg);opacity:.8;}
+    .cfg-nav-group-body{overflow:hidden;transition:max-height .25s ease;}
+    /* ── Item ── */
+    .cfg-nav-item{
+        display:flex;align-items:center;gap:9px;
+        padding:7px 10px 7px 14px;
+        border-radius:6px;
+        font-size:12.5px;color:rgba(255,255,255,.55);
+        cursor:pointer;transition:background .15s,color .15s;
+        user-select:none;position:relative;
+    }
+    .cfg-nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.88);}
+    .cfg-nav-item.active{
+        background:rgba(59,130,246,.18);
+        color:#fff;font-weight:600;
+    }
+    .cfg-nav-item.active::before{
+        content:'';position:absolute;left:0;top:20%;bottom:20%;
+        width:2px;background:#3b82f6;border-radius:2px;
+    }
+    .cfg-nav-item-icon{width:15px;height:15px;opacity:.6;flex-shrink:0;}
+    .cfg-nav-item.active .cfg-nav-item-icon{opacity:1;}
+    /* ── Standalone items (outside groups) ── */
+    .cfg-nav-standalone{margin:2px 8px;}
+    /* ── Separator ── */
+    .cfg-nav-sep{border:none;border-top:1px solid rgba(255,255,255,.06);margin:10px 14px;}
+    /* ── Data section ── */
+    .cfg-nav-section-label{
+        padding:12px 18px 5px;
+        font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+        color:rgba(255,255,255,.28);
+    }
+
+    /* ════════════════════════════════
+       MAIN CONTENT
+    ════════════════════════════════ */
+    .cfg-main{flex:1;min-width:0;}
+
+    /* ════════════════════════════════
+       PANELS
+    ════════════════════════════════ */
     .cfg-panel{
         display:none;
         background:#fff;
-        border:1px solid #dcdde1;
-        border-radius:0 8px 8px 0;
-        padding:28px 32px;
-        min-height:500px;
+        border:1px solid #e2e4e9;
+        border-left:none;
+        border-radius:0 10px 10px 0;
+        min-height:580px;
+        overflow:hidden;
     }
     .cfg-panel.active{display:block;}
+    .cfg-panel-hdr{
+        padding:22px 32px 18px;
+        border-bottom:1px solid #f1f3f6;
+        background:linear-gradient(180deg,#fafbfc 0%,#fff 100%);
+    }
+    .cfg-panel-hdr h2{margin:0 0 3px;font-size:17px;font-weight:700;color:#0f172a;}
+    .cfg-panel-hdr p{margin:0;font-size:12.5px;color:#6b7280;}
+    .cfg-panel-body{padding:26px 32px 32px;}
     /* ── Save bar ── */
     #cfg-save-bar{
-        background:#fff;
-        border:1px solid #dcdde1;border-top:none;
-        border-radius:0 0 8px 0;
-        padding:16px 32px;
-        margin-top:-1px;
+        background:#fafbfc;
+        border:1px solid #e2e4e9;border-left:none;border-top:1px solid #e2e4e9;
+        border-radius:0 0 10px 0;
+        padding:14px 32px;
     }
-    /* ── Form elements ── */
-    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px;}
+
+    /* ════════════════════════════════
+       FORM ELEMENTS
+    ════════════════════════════════ */
+    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 28px;}
     .cfg-full{grid-column:span 2;}
-    .cfg-field{display:flex;flex-direction:column;gap:5px;}
-    .cfg-field label{font-weight:600;font-size:12.5px;color:#1d2327;}
+    .cfg-field{display:flex;flex-direction:column;gap:6px;}
+    .cfg-field label{font-weight:600;font-size:12.5px;color:#374151;letter-spacing:.01em;}
     .cfg-field input[type=text],.cfg-field input[type=url],.cfg-field input[type=password],.cfg-field select,.cfg-field textarea{
-        width:100%;padding:8px 11px;
-        border:1px solid #dcdde1;border-radius:5px;
+        width:100%;padding:8px 12px;
+        border:1px solid #d1d5db;border-radius:6px;
         font-size:13px;background:#fff;
-        transition:border-color .15s,box-shadow .15s;color:#1d2327;
+        transition:border-color .15s,box-shadow .15s;color:#111827;
+        box-shadow:0 1px 2px rgba(0,0,0,.04);
     }
     .cfg-field input:focus,.cfg-field select:focus,.cfg-field textarea:focus{
-        border-color:#2271b1;outline:none;box-shadow:0 0 0 2px rgba(34,113,177,.15);
+        border-color:#3b82f6;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.12);
     }
-    .cfg-field textarea{min-height:80px;font-family:monospace;resize:vertical;line-height:1.5;}
-    .cfg-desc{color:#787c82;font-size:11.5px;line-height:1.5;}
-    .cfg-toggle-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f6f7f7;}
+    .cfg-field textarea{min-height:80px;font-family:monospace;resize:vertical;line-height:1.55;}
+    .cfg-desc{color:#6b7280;font-size:11.5px;line-height:1.55;margin-top:1px;}
+    /* ── Toggle rows ── */
+    .cfg-toggle-row{
+        display:flex;align-items:center;gap:12px;
+        padding:11px 0;border-bottom:1px solid #f3f4f6;
+    }
     .cfg-toggle-row:last-child{border-bottom:none;}
     .cfg-toggle-row label{flex:1;font-size:13px;cursor:pointer;color:#1d2327;}
-    .cfg-toggle-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#2271b1;}
+    .cfg-toggle-row input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#3b82f6;}
+    /* ── Section titles ── */
     .cfg-section-title{
-        font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
-        color:#9ca3af;margin:28px 0 14px;padding-bottom:10px;border-bottom:1px solid #f3f4f6;
+        display:flex;align-items:center;gap:9px;
+        font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+        color:#374151;margin:28px 0 16px;
+    }
+    .cfg-section-title::before{
+        content:'';display:inline-block;
+        width:3px;height:14px;border-radius:2px;
+        background:linear-gradient(180deg,#3b82f6,#1d4ed8);
+        flex-shrink:0;
     }
     .cfg-section-title:first-child{margin-top:0;}
+    /* ── Card sections ── */
+    .cfg-card-section{
+        background:#fafafa;
+        border:1px solid #e5e7eb;
+        border-radius:8px;
+        padding:18px 22px;
+        margin-bottom:16px;
+        box-shadow:0 1px 3px rgba(0,0,0,.03);
+    }
+    .cfg-card-section h4{
+        margin:0 0 14px;font-size:13px;font-weight:700;color:#111827;
+        display:flex;align-items:center;gap:7px;
+    }
+    /* ── Colors ── */
     .cfg-color-row{display:flex;align-items:center;gap:8px;}
-    .cfg-color-row input[type=color]{width:42px;height:36px;padding:2px;border:1px solid #dcdde1;border-radius:5px;cursor:pointer;flex-shrink:0;}
+    .cfg-color-row input[type=color]{width:42px;height:36px;padding:2px;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;flex-shrink:0;}
     .cfg-color-row input[type=text]{flex:1;}
-    .cfg-badge{display:inline-block;background:#eff6ff;color:#2271b1;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:600;margin-left:5px;vertical-align:middle;}
-    .cfg-card-section{background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:18px 22px;margin-bottom:14px;}
-    .cfg-card-section h4{margin:0 0 12px;font-size:13px;font-weight:600;color:#1d2327;}
+    /* ── Badges ── */
+    .cfg-badge{
+        display:inline-block;background:#eff6ff;color:#2563eb;
+        padding:1px 8px;border-radius:10px;font-size:10.5px;font-weight:600;
+        margin-left:5px;vertical-align:middle;
+    }
     </style>
 
     <div id="cfg-root">
@@ -663,21 +747,61 @@ function cfg_settings_page() {
             </div>
         </div>
 
-        <div class="cfg-nav-section">Settings</div>
-        <div class="cfg-nav-item active" onclick="cfgTab(this,'ghl')"><span class="cfg-nav-dot"></span>GHL + Security</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'design')"><span class="cfg-nav-dot"></span>Design</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'form')"><span class="cfg-nav-dot"></span>Contact Form</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'bm')"><span class="cfg-nav-dot"></span>Booking Method</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'ty')"><span class="cfg-nav-dot"></span>Thank You Page</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'alg')"><span class="cfg-nav-dot"></span>Aligner Form</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'imp')"><span class="cfg-nav-dot"></span>Implant Estimator</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'guide')"><span class="cfg-nav-dot"></span>Setup Guide</div>
+        <!-- ── Group: General ── -->
+        <div class="cfg-nav-group" id="cfg-grp-general">
+            <div class="cfg-nav-group-hdr open" onclick="cfgToggleGroup('general')">
+                <span>General</span>
+                <svg class="cfg-nav-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 2l4 3-4 3z"/></svg>
+            </div>
+            <div class="cfg-nav-group-body" id="cfg-grpb-general" style="max-height:200px;">
+                <div class="cfg-nav-item active" onclick="cfgTab(this,'ghl')" data-group="general">GHL + Security</div>
+                <div class="cfg-nav-item"        onclick="cfgTab(this,'design')" data-group="general">Design</div>
+            </div>
+        </div>
+
+        <!-- ── Group: Forms ── -->
+        <div class="cfg-nav-group" id="cfg-grp-forms">
+            <div class="cfg-nav-group-hdr" onclick="cfgToggleGroup('forms')">
+                <span>Forms</span>
+                <svg class="cfg-nav-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 2l4 3-4 3z"/></svg>
+            </div>
+            <div class="cfg-nav-group-body" id="cfg-grpb-forms" style="max-height:0;">
+                <div class="cfg-nav-item" onclick="cfgTab(this,'form')" data-group="forms">Contact Form</div>
+                <div class="cfg-nav-item" onclick="cfgTab(this,'bm')" data-group="forms">Booking Method</div>
+                <div class="cfg-nav-item" onclick="cfgTab(this,'ty')" data-group="forms">Thank You Page</div>
+            </div>
+        </div>
+
+        <!-- ── Group: Estimators ── -->
+        <div class="cfg-nav-group" id="cfg-grp-est">
+            <div class="cfg-nav-group-hdr" onclick="cfgToggleGroup('est')">
+                <span>Estimators</span>
+                <svg class="cfg-nav-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 2l4 3-4 3z"/></svg>
+            </div>
+            <div class="cfg-nav-group-body" id="cfg-grpb-est" style="max-height:0;">
+                <div class="cfg-nav-item" onclick="cfgTab(this,'alg')" data-group="est">Aligner Form</div>
+                <div class="cfg-nav-item" onclick="cfgTab(this,'imp')" data-group="est">Implant Estimator</div>
+            </div>
+        </div>
+
+        <!-- ── Group: Reference ── -->
+        <div class="cfg-nav-group" id="cfg-grp-ref">
+            <div class="cfg-nav-group-hdr" onclick="cfgToggleGroup('ref')">
+                <span>Reference</span>
+                <svg class="cfg-nav-arr" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M3 2l4 3-4 3z"/></svg>
+            </div>
+            <div class="cfg-nav-group-body" id="cfg-grpb-ref" style="max-height:0;">
+                <div class="cfg-nav-item" onclick="cfgTab(this,'guide')" data-group="ref">Setup Guide</div>
+            </div>
+        </div>
 
         <hr class="cfg-nav-sep"/>
 
-        <div class="cfg-nav-section">Data</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'entries')"><span class="cfg-nav-dot"></span>Entries</div>
-        <div class="cfg-nav-item"        onclick="cfgTab(this,'analytics')"><span class="cfg-nav-dot"></span>Analytics</div>
+        <div class="cfg-nav-section-label">Data</div>
+        <div class="cfg-nav-standalone">
+            <div class="cfg-nav-item" onclick="cfgTab(this,'entries')">Entries</div>
+            <div class="cfg-nav-item" onclick="cfgTab(this,'analytics')">Analytics</div>
+        </div>
     </div>
 
     <!-- ── Main ── -->
@@ -687,6 +811,11 @@ function cfg_settings_page() {
 
     <!-- ═══ GHL + SECURITY TAB ═══ -->
     <div id="cfg-ghl" class="cfg-panel active">
+        <div class="cfg-panel-hdr">
+            <h2>GHL + Security</h2>
+            <p>Connect your GoHighLevel account and configure spam protection.</p>
+        </div>
+        <div class="cfg-panel-body">
         <div class="cfg-section-title">GoHighLevel API</div>
         <p class="cfg-desc">API credentials are stored server-side only and are never sent to the browser.</p>
         <div class="cfg-grid" style="margin-top:14px;">
@@ -734,10 +863,16 @@ function cfg_settings_page() {
             <tr style="background:#f9f9f9;"><td style="padding:8px 12px;font-family:monospace;font-size:13px;border:1px solid #e5e5e5;">[aligner_form_ghl]</td><td style="padding:8px 12px;font-size:13px;border:1px solid #e5e5e5;">Multi-step animated clear aligner estimate quiz</td></tr>
             <tr><td style="padding:8px 12px;font-family:monospace;font-size:13px;border:1px solid #e5e5e5;">[implant_estimator_ghl]</td><td style="padding:8px 12px;font-size:13px;border:1px solid #e5e5e5;">Multi-step dental implant cost estimator with dynamic price calculation</td></tr>
         </table>
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ DESIGN TAB ═══ -->
     <div id="cfg-design" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>Design</h2>
+            <p>Customize colors, typography, and visual style across all forms.</p>
+        </div>
+        <div class="cfg-panel-body">
         <p class="cfg-desc">These design settings apply to all three shortcode pages.</p>
         <div class="cfg-section-title">Colors</div>
         <div class="cfg-grid">
@@ -840,10 +975,16 @@ function cfg_settings_page() {
                 <label for="card_shadow">Show drop shadow on cards</label>
             </div>
         </div>
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ CONTACT FORM TAB ═══ -->
     <div id="cfg-form" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>Contact Form</h2>
+            <p>Configure the hero section, form fields, and back link.</p>
+        </div>
+        <div class="cfg-panel-body">
         <div class="cfg-section-title">Hero Section</div>
         <div class="cfg-toggle-row">
             <input type="checkbox" id="show_hero" name="<?= CFG_OPTION ?>[show_hero]" value="1" <?= checked( $s['show_hero'], '1', false ) ?>/>
@@ -936,10 +1077,16 @@ function cfg_settings_page() {
                 <input type="text" name="<?= CFG_OPTION ?>[back_link_url]" value="<?= esc_attr( $s['back_link_url'] ) ?>"/>
             </div>
         </div>
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ BOOKING METHOD TAB ═══ -->
     <div id="cfg-bm" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>Booking Method</h2>
+            <p>Customize the Call vs. Text booking choice page.</p>
+        </div>
+        <div class="cfg-panel-body">
         <div class="cfg-section-title">Hero Section</div>
         <div class="cfg-toggle-row">
             <input type="checkbox" id="bm_show_hero" name="<?= CFG_OPTION ?>[bm_show_hero]" value="1" <?= checked( $s['bm_show_hero'], '1', false ) ?>/>
@@ -1154,10 +1301,16 @@ function cfg_settings_page() {
                 <input type="text" name="<?= CFG_OPTION ?>[bm_cta_btn2_url]" value="<?= esc_attr( $s['bm_cta_btn2_url'] ) ?>"/>
             </div>
         </div>
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ THANK YOU TAB ═══ -->
     <div id="cfg-ty" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>Thank You Page</h2>
+            <p>Configure the post-submission confirmation page.</p>
+        </div>
+        <div class="cfg-panel-body">
         <div class="cfg-section-title">Page Background</div>
         <div class="cfg-field" style="max-width:260px;">
             <label>Background Color</label>
@@ -1234,11 +1387,17 @@ function cfg_settings_page() {
                 <input type="text" name="<?= CFG_OPTION ?>[ty_image_alt]" value="<?= esc_attr( $s['ty_image_alt'] ) ?>"/>
             </div>
         </div>
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ ALIGNER FORM TAB ═══ -->
     <div id="cfg-alg" class="cfg-panel">
-        <p class="cfg-desc">Configure the multi-step clear aligner estimate quiz. Use shortcode <code>[aligner_form_ghl]</code> on any page. Uses the GHL API key from the ⚡ tab.</p>
+        <div class="cfg-panel-hdr">
+            <h2>Aligner Form</h2>
+            <p>Configure the multi-step clear aligner estimate quiz.</p>
+        </div>
+        <div class="cfg-panel-body">
+        <p class="cfg-desc">Use shortcode <code>[aligner_form_ghl]</code> on any page. Uses the GHL API key from the GHL + Security tab.</p>
 
         <div class="cfg-section-title">Global Settings</div>
         <div class="cfg-grid">
@@ -1527,10 +1686,15 @@ function cfg_settings_page() {
             init(savedData);
         })();
         </script>
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ IMPLANT ESTIMATOR TAB ═══ -->
     <div id="cfg-imp" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>Implant Estimator</h2>
+            <p>Configure the dental implant cost estimator sidebar and quiz.</p>
+        </div>
     <style>
     /* ── IMP REDESIGN ─────────────────────────────────── */
     .imp-sw-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:8px;background:#fff;border:1px solid #e5e7eb;margin-bottom:8px;transition:box-shadow .15s;}
@@ -1578,7 +1742,7 @@ function cfg_settings_page() {
     .imp-opt-row input[type=text]:focus{border-color:#2271b1;outline:none;box-shadow:0 0 0 1px #2271b1;}
     .imp-opt-sub{color:#6b7280!important;font-style:italic;}
     </style>
-
+        <div class="cfg-panel-body">
         <!-- ════════════════════════════════════════════════════ -->
         <!--  1 · DISPLAY & TOGGLES                               -->
         <!-- ════════════════════════════════════════════════════ -->
@@ -2446,12 +2610,15 @@ function cfg_settings_page() {
             if (el) el.addEventListener('input', function(){ el._userEdited = true; });
         });
         </script>
-
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <!-- ═══ SETUP GUIDE TAB ═══ -->
     <div id="cfg-guide" class="cfg-panel">
-
+        <div class="cfg-panel-hdr">
+            <h2>Setup Guide</h2>
+            <p>Step-by-step instructions to connect and configure the plugin.</p>
+        </div>
         <style>
         .og-wrap{max-width:860px;}
         .og-phase{display:flex;align-items:center;gap:12px;margin:32px 0 16px;padding-bottom:10px;border-bottom:2px solid #2271b1;}
@@ -2482,7 +2649,7 @@ function cfg_settings_page() {
         .og-checklist li::before{content:"☐";font-size:15px;line-height:1.2;color:#9ca3af;flex-shrink:0;}
         .og-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin:16px 0 6px;}
         </style>
-
+        <div class="cfg-panel-body">
         <div class="og-wrap">
 
         <p style="font-size:13px;color:#3c434a;line-height:1.65;margin:0 0 24px;padding:14px 16px;background:#f0f6fc;border-radius:6px;border-left:4px solid #2271b1;">
@@ -2724,7 +2891,7 @@ function cfg_settings_page() {
         </div>
 
         </div><!-- /og-wrap -->
-
+        </div><!-- /cfg-panel-body -->
     </div>
 
     <div id="cfg-save-bar">
@@ -2808,7 +2975,9 @@ function cfg_settings_page() {
     $nonce_url   = wp_nonce_url( $base_url, 'cfg_entries_action' );
     ?>
 
-    <div id="cfg-entries-wrap" style="display:none;background:#fff;border:1px solid #dcdde1;border-radius:0 8px 8px 0;padding:26px 30px;min-height:500px;">
+    <div id="cfg-entries-wrap" style="display:none;background:#fff;border:1px solid #e2e4e9;border-left:none;border-radius:0 10px 10px 0;min-height:580px;overflow:hidden;">
+        <div class="cfg-panel-hdr"><h2>Entries</h2><p>All form submissions logged by the plugin.</p></div>
+        <div class="cfg-panel-body" style="padding-top:8px;">
 
     <style>
     .cfg-entries-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0 12px;}
@@ -3020,6 +3189,7 @@ function cfg_settings_page() {
     </div>
     <?php endif; ?>
 
+        </div><!-- /cfg-panel-body -->
     </div><!-- /cfg-entries-wrap -->
 
     <?php
@@ -3072,7 +3242,9 @@ function cfg_settings_page() {
     $success_pct = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 100;
     ?>
 
-    <div id="cfg-analytics-wrap" style="display:none;background:#fff;border:1px solid #dcdde1;border-radius:0 8px 8px 0;padding:26px 30px;min-height:500px;">
+    <div id="cfg-analytics-wrap" style="display:none;background:#fff;border:1px solid #e2e4e9;border-left:none;border-radius:0 10px 10px 0;min-height:580px;overflow:hidden;">
+        <div class="cfg-panel-hdr"><h2>Analytics</h2><p>Conversion stats and source breakdown for all forms.</p></div>
+        <div class="cfg-panel-body">
     <style>
     .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
     .cfg-an-card{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:20px 24px;}
@@ -3187,6 +3359,7 @@ function cfg_settings_page() {
         </div>
 
     </div><!-- /cfg-an-grid -->
+        </div><!-- /cfg-panel-body -->
     </div><!-- /cfg-analytics-wrap -->
     </div><!-- /cfg-main -->
     </div><!-- /cfg-root -->
@@ -3209,11 +3382,36 @@ function cfg_settings_page() {
     </script>
 
     <script>
+    /* ── Sidebar group toggle ── */
+    function cfgToggleGroup(grp) {
+        var hdr  = document.querySelector('#cfg-grp-' + grp + ' .cfg-nav-group-hdr');
+        var body = document.getElementById('cfg-grpb-' + grp);
+        if (!hdr || !body) return;
+        var isOpen = hdr.classList.contains('open');
+        if (isOpen) {
+            hdr.classList.remove('open');
+            body.style.maxHeight = '0';
+        } else {
+            hdr.classList.add('open');
+            body.style.maxHeight = body.scrollHeight + 'px';
+        }
+    }
+    function cfgOpenGroup(grp) {
+        var hdr  = document.querySelector('#cfg-grp-' + grp + ' .cfg-nav-group-hdr');
+        var body = document.getElementById('cfg-grpb-' + grp);
+        if (!hdr || !body || hdr.classList.contains('open')) return;
+        hdr.classList.add('open');
+        body.style.maxHeight = body.scrollHeight + 'px';
+    }
+
     /* ── Tab navigation ── */
     function cfgTab(el, id) {
         document.querySelectorAll('.cfg-nav-item').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.cfg-panel').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
+        // Auto-expand parent group if item is inside one
+        var grp = el.getAttribute('data-group');
+        if (grp) cfgOpenGroup(grp);
         var isOuter = (id === 'entries' || id === 'analytics');
         var saveBar      = document.getElementById('cfg-save-bar');
         var entriesWrap  = document.getElementById('cfg-entries-wrap');
