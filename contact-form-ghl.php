@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.7.6
+ * Version:     1.7.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -242,6 +242,7 @@ function cfg_defaults() {
         'imp_cta_call_enabled' => '0',
         'imp_cta_call_label'   => 'Call the Office',
         'imp_cta_phone'        => '',
+        'imp_consult_type'     => 'free',
         'imp_contact_title'    => 'Book Your Free Consultation',
         'imp_contact_subtitle' => "Enter your details and we'll reach out to confirm your free implant consultation.",
         'imp_contact_btn'      => 'Book My Free Consultation',
@@ -1830,7 +1831,7 @@ function cfg_settings_page() {
                 <div class="cfg-grid">
                     <div class="cfg-field"><label>Title <span style="font-weight:400;color:#9ca3af;">— small label above price</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_result_title]" value="<?= esc_attr( $s['imp_result_title'] ) ?>"/></div>
                     <div class="cfg-field cfg-full"><label>Subtitle <span style="font-weight:400;color:#9ca3af;">— shown below title, above price</span></label><textarea name="<?= CFG_OPTION ?>[imp_result_subtitle]"><?= esc_textarea( $s['imp_result_subtitle'] ) ?></textarea></div>
-                    <div class="cfg-field cfg-full"><label>Financing Note <span class="cfg-badge">shown only when financing toggle is on</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_financing_text]" value="<?= esc_attr( $s['imp_financing_text'] ) ?>"/></div>
+                    <div class="cfg-field cfg-full" style="color:#6b7280;font-size:12px;padding:8px 10px;background:#f9fafb;border-radius:6px;">Financing note text is configured in the <strong>Consultation Offer Step</strong> section below.</div>
                 </div>
             </div>
             <div class="cfg-card-section">
@@ -1992,7 +1993,7 @@ function cfg_settings_page() {
         </div>
 
         <!-- ════════════════════════════════════════════════════ -->
-        <!--  6 · CONTACT FORM STEP                               -->
+        <!--  6 · CONSULTATION OFFER STEP                         -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
             <div class="imp-section-icon" style="background:#fef3c7;">📬</div>
@@ -2002,11 +2003,49 @@ function cfg_settings_page() {
             </div>
         </div>
 
+        <!-- Consultation positioning -->
         <div class="cfg-card-section">
+            <h4>Consultation Positioning</h4>
+            <p class="cfg-desc" style="margin:0 0 14px;">How should the consultation be presented to the patient? This sets the tone for the title and subtitle below.</p>
+            <?php $ct = $s['imp_consult_type'] ?? 'free'; ?>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border:2px solid <?= $ct==='free' ? '#2271b1' : '#e5e7eb' ?>;border-radius:8px;background:<?= $ct==='free' ? '#eff6ff' : '#fff' ?>;">
+                    <input type="radio" name="<?= CFG_OPTION ?>[imp_consult_type]" value="free" <?= checked('free',$ct,false) ?> style="margin-top:2px;accent-color:#2271b1;" onchange="impConsultTypeChange(this)"/>
+                    <div><strong style="font-size:13px;">Complimentary implant consultation</strong><br><span style="font-size:12px;color:#6b7280;">Free consultation — no cost to the patient.</span></div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border:2px solid <?= $ct==='paid_cbct' ? '#2271b1' : '#e5e7eb' ?>;border-radius:8px;background:<?= $ct==='paid_cbct' ? '#eff6ff' : '#fff' ?>;">
+                    <input type="radio" name="<?= CFG_OPTION ?>[imp_consult_type]" value="paid_cbct" <?= checked('paid_cbct',$ct,false) ?> style="margin-top:2px;accent-color:#2271b1;" onchange="impConsultTypeChange(this)"/>
+                    <div><strong style="font-size:13px;">Complimentary consultation + paid CBCT</strong><br><span style="font-size:12px;color:#6b7280;">Consult is free; 3D imaging (CBCT) is a separate paid item.</span></div>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:10px 12px;border:2px solid <?= $ct==='paid_credited' ? '#2271b1' : '#e5e7eb' ?>;border-radius:8px;background:<?= $ct==='paid_credited' ? '#eff6ff' : '#fff' ?>;">
+                    <input type="radio" name="<?= CFG_OPTION ?>[imp_consult_type]" value="paid_credited" <?= checked('paid_credited',$ct,false) ?> style="margin-top:2px;accent-color:#2271b1;" onchange="impConsultTypeChange(this)"/>
+                    <div><strong style="font-size:13px;">Paid consultation (credited if proceeding)</strong><br><span style="font-size:12px;color:#6b7280;">There is a consultation fee, but it is applied as a credit toward treatment.</span></div>
+                </label>
+            </div>
             <div class="cfg-grid">
-                <div class="cfg-field"><label>Title</label><input type="text" name="<?= CFG_OPTION ?>[imp_contact_title]" value="<?= esc_attr( $s['imp_contact_title'] ) ?>"/></div>
-                <div class="cfg-field cfg-full"><label>Subtitle</label><textarea name="<?= CFG_OPTION ?>[imp_contact_subtitle]"><?= esc_textarea( $s['imp_contact_subtitle'] ) ?></textarea></div>
+                <div class="cfg-field"><label>Title</label><input type="text" id="imp_contact_title" name="<?= CFG_OPTION ?>[imp_contact_title]" value="<?= esc_attr( $s['imp_contact_title'] ) ?>"/></div>
+                <div class="cfg-field cfg-full"><label>Subtitle</label><textarea id="imp_contact_subtitle" name="<?= CFG_OPTION ?>[imp_contact_subtitle]"><?= esc_textarea( $s['imp_contact_subtitle'] ) ?></textarea></div>
                 <div class="cfg-field"><label>Submit Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_contact_btn]" value="<?= esc_attr( $s['imp_contact_btn'] ) ?>"/></div>
+            </div>
+        </div>
+
+        <!-- Financing -->
+        <div class="cfg-card-section">
+            <h4>Financing / Payment Options</h4>
+            <p class="cfg-desc" style="margin:0 0 14px;">Should the estimator mention that monthly payment options may be available?</p>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:12px;">
+                <div>
+                    <div style="font-size:13px;font-weight:600;color:#1d2327;">Show financing note on result screen</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:2px;">Appears as a banner below the price card when enabled</div>
+                </div>
+                <label class="imp-sw" style="flex-shrink:0;">
+                    <input type="checkbox" name="<?= CFG_OPTION ?>[imp_show_financing]" value="1" <?= checked( $s['imp_show_financing'], '1', false ) ?>/>
+                    <span class="imp-sw-slider"></span>
+                </label>
+            </div>
+            <div class="cfg-field cfg-full">
+                <label>Financing Note Text</label>
+                <input type="text" name="<?= CFG_OPTION ?>[imp_financing_text]" value="<?= esc_attr( $s['imp_financing_text'] ) ?>" placeholder="Flexible financing available — ask us about monthly payment plans."/>
             </div>
         </div>
 
@@ -2092,6 +2131,34 @@ function cfg_settings_page() {
                 lbl.style.background  = sel ? '#eff6ff' : '#fff';
             });
         }
+
+        /* ── Consultation type radio highlight + prefill ── */
+        var _consultCopy = {
+            free:         {title: 'Book Your Free Consultation',         sub: "Enter your details and we'll reach out to confirm your complimentary implant consultation."},
+            paid_cbct:    {title: 'Book Your Consultation',              sub: "Enter your details and we'll be in touch to schedule your consultation. Note: 3D imaging (CBCT) is a separate paid item at your appointment."},
+            paid_credited:{title: 'Book Your Consultation',              sub: "Enter your details and we'll reach out to confirm your appointment. Your consultation fee is applied as a credit toward your treatment if you proceed."}
+        };
+        function impConsultTypeChange(radio) {
+            radio.closest('.cfg-card-section').querySelectorAll('label').forEach(function(lbl) {
+                var inp = lbl.querySelector('input[type=radio]');
+                if (!inp) return;
+                var sel = inp.checked;
+                lbl.style.borderColor = sel ? '#2271b1' : '#e5e7eb';
+                lbl.style.background  = sel ? '#eff6ff' : '#fff';
+            });
+            var copy = _consultCopy[radio.value];
+            if (copy) {
+                var t = document.getElementById('imp_contact_title');
+                var s = document.getElementById('imp_contact_subtitle');
+                if (t && !t._userEdited) t.value = copy.title;
+                if (s && !s._userEdited) s.value = copy.sub;
+            }
+        }
+        // Mark fields as user-edited once they type manually
+        ['imp_contact_title','imp_contact_subtitle'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('input', function(){ el._userEdited = true; });
+        });
         </script>
 
     </div>
