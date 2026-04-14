@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.8.5
+ * Version:     1.8.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2823,10 +2823,14 @@ function cfg_settings_page() {
     .cfg-badge-ok{display:inline-block;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
     .cfg-badge-error{display:inline-block;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
     .cfg-badge-form{display:inline-block;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;}
-    .cfg-entry-details{display:none;background:#f9fafb;border-top:1px solid #e5e7eb;padding:12px 14px;font-size:12px;}
-    .cfg-entry-details table{border-collapse:collapse;width:100%;}
-    .cfg-entry-details td{padding:4px 8px;vertical-align:top;font-size:12px;}
-    .cfg-entry-details td:first-child{font-weight:600;color:#374151;white-space:nowrap;width:150px;}
+    .cfg-entry-details{display:none;background:#f8fafc;border-top:1px solid #e5e7eb;padding:20px 16px;}
+    .cfg-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+    .cfg-detail-group{background:#fff;border:1px solid #e5e7eb;border-radius:7px;padding:14px 16px;}
+    .cfg-detail-group-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin-bottom:10px;}
+    .cfg-detail-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f3f4f6;align-items:flex-start;}
+    .cfg-detail-row:last-child{border-bottom:none;padding-bottom:0;}
+    .cfg-detail-key{font-size:12px;font-weight:600;color:#6b7280;min-width:110px;flex-shrink:0;}
+    .cfg-detail-val{font-size:12px;color:#111827;word-break:break-word;}
     .cfg-pagination{display:flex;align-items:center;gap:6px;margin-top:14px;font-size:13px;}
     .cfg-pagination a,.cfg-pagination span{padding:5px 10px;border:1px solid #c3c4c7;border-radius:4px;text-decoration:none;color:#2271b1;background:#fff;}
     .cfg-pagination span.current{background:#2271b1;color:#fff;border-color:#2271b1;}
@@ -2909,14 +2913,90 @@ function cfg_settings_page() {
         </tr>
         <tr id="cfg-detail-<?= $row['id'] ?>"><td colspan="8" style="padding:0;">
             <div class="cfg-entry-details">
-                <?php if ( ! empty( $meta ) ): ?>
-                <table><?php foreach ( $meta as $k => $v ): if ( $v === '' || $v === null ) continue; ?>
-                    <tr>
-                        <td><?= esc_html( ucwords( str_replace( '_', ' ', $k ) ) ) ?></td>
-                        <td><?= esc_html( is_array( $v ) ? implode( ', ', $v ) : $v ) ?></td>
-                    </tr>
-                <?php endforeach; ?></table>
-                <?php else: ?><em>No additional data.</em><?php endif; ?>
+            <?php
+            // ── Label map ──
+            $label_map = [
+                // Estimate
+                'flow'              => 'Treatment Path',
+                'range'             => 'Estimated Range',
+                'range_type'        => 'Range Type',
+                // Implant single
+                'toothLocation'     => 'Tooth Location',
+                'timeMissing'       => 'Time Missing',
+                'boneGraft'         => 'Bone Graft',
+                'situationSingle'   => 'Situation',
+                // Implant multiple
+                'teethCount'        => 'Tooth Count',
+                'teethLocation'     => 'Teeth Location',
+                'timeMissingMult'   => 'Time Missing',
+                'boneGraftMult'     => 'Bone Graft',
+                'situationMult'     => 'Situation',
+                // Implant full arch
+                'archSelection'     => 'Arch Selection',
+                'situationArch'     => 'Situation',
+                'archDuration'      => 'Duration',
+                // Insurance
+                'insurance'         => 'Insurance',
+                // Contact form
+                'treatment'         => 'Treatment Interest',
+                // Aligner answers (dynamic keys)
+                // UTM
+                'utm_campaign'      => 'UTM Campaign',
+                'utm_medium'        => 'UTM Medium',
+                'utm_content'       => 'UTM Content',
+                'utm_keyword'       => 'UTM Keyword',
+                'gclid'             => 'Google Click ID',
+            ];
+            $utm_keys  = [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ];
+            $est_keys  = [ 'flow', 'range', 'range_type' ];
+            $quiz_keys = array_diff( array_keys( $meta ), array_merge( $est_keys, $utm_keys ) );
+
+            $det_row = function( $k, $v ) use ( $label_map ) {
+                $label = $label_map[ $k ] ?? ucwords( str_replace( '_', ' ', $k ) );
+                $val   = is_array( $v ) ? implode( ', ', $v ) : $v;
+                if ( $val === '' ) return '';
+                return '<div class="cfg-detail-row"><span class="cfg-detail-key">' . esc_html( $label ) . '</span><span class="cfg-detail-val">' . esc_html( $val ) . '</span></div>';
+            };
+            ?>
+            <div class="cfg-detail-grid">
+
+                <!-- Contact Info -->
+                <div class="cfg-detail-group">
+                    <div class="cfg-detail-group-title">Contact</div>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">Name</span><span class="cfg-detail-val"><?= esc_html( trim( $row['first_name'] . ' ' . $row['last_name'] ) ) ?></span></div>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">Email</span><span class="cfg-detail-val"><a href="mailto:<?= esc_attr( $row['email'] ) ?>" style="color:#2271b1;"><?= esc_html( $row['email'] ) ?></a></span></div>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">Phone</span><span class="cfg-detail-val"><a href="tel:<?= esc_attr( $row['phone'] ) ?>" style="color:#2271b1;"><?= esc_html( $row['phone'] ) ?></a></span></div>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">Submitted</span><span class="cfg-detail-val"><?= esc_html( date( 'M j, Y g:ia', strtotime( $row['created_at'] ) ) ) ?></span></div>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">GHL Status</span><span class="cfg-detail-val"><?= $row['ghl_status'] === 'ok' ? '<span style="color:#16a34a;font-weight:600;">✓ Sent</span>' : '<span style="color:#b91c1c;font-weight:600;">✗ Failed</span>' ?></span></div>
+                </div>
+
+                <?php if ( ! empty( array_intersect_key( $meta, array_flip( $est_keys ) ) ) ): ?>
+                <!-- Estimate -->
+                <div class="cfg-detail-group">
+                    <div class="cfg-detail-group-title">Estimate</div>
+                    <?php foreach ( $est_keys as $k ): if ( empty( $meta[$k] ) ) continue; echo $det_row( $k, $meta[$k] ); endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <?php if ( ! empty( $quiz_keys ) && array_filter( array_intersect_key( $meta, array_flip( $quiz_keys ) ) ) ): ?>
+                <!-- Answers -->
+                <div class="cfg-detail-group">
+                    <div class="cfg-detail-group-title">Quiz Answers</div>
+                    <?php foreach ( $quiz_keys as $k ): if ( empty( $meta[$k] ) ) continue; echo $det_row( $k, $meta[$k] ); endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <?php
+                $utm_present = array_filter( array_intersect_key( $meta, array_flip( $utm_keys ) ) );
+                if ( ! empty( $utm_present ) ): ?>
+                <!-- Traffic Source -->
+                <div class="cfg-detail-group">
+                    <div class="cfg-detail-group-title">Traffic Source</div>
+                    <?php foreach ( $utm_keys as $k ): if ( empty( $meta[$k] ) ) continue; echo $det_row( $k, $meta[$k] ); endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+            </div>
             </div>
         </td></tr>
     <?php endforeach; endif; ?>
@@ -4518,7 +4598,7 @@ function cfg_imp_sidebar( $uid ) {
      .'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>'
      .'<p style="font-family:Inter,sans-serif;font-size:.7rem;font-weight:500;color:hsl(var(--muted-foreground));text-transform:uppercase;letter-spacing:.05em;">Likely Treatment Range</p>'
      .'</div>'
-     .'<div id="'.esc_attr($uid).'-range-wrap">'
+     .'<div id="'.esc_attr($uid).'-range-wrap" style="filter:blur(8px);transition:filter 0.5s ease;user-select:none;">'
      .'<p id="'.esc_attr($uid).'-sidebar-range" class="imp-sr-'.esc_attr($uid).'" style="font-family:\'Cormorant Garamond\',serif;font-weight:700;font-size:1.5rem;line-height:1;color:hsl(var(--foreground));display:none;">—</p>'
      .'<p id="'.esc_attr($uid).'-sidebar-range-suffix" class="imp-sr-sfx-'.esc_attr($uid).'" style="font-family:Inter,sans-serif;font-size:.72rem;color:hsl(var(--muted-foreground));margin-top:.25rem;display:none;"></p>'
      .'<p id="'.esc_attr($uid).'-sidebar-range-placeholder" style="font-family:Inter,sans-serif;font-size:.8rem;color:hsl(var(--muted-foreground)/.5);">Answer the questions to see your range</p>'
@@ -5290,6 +5370,10 @@ $_badge = function($txt) use ($uid) {
       var pqs = getPathQs(s.flow) || [];
       var maxA = pqs.length + 1 + (s.flow !== 'fullarch' && impPaths.ins ? 1 : 0);
       var pct = Math.max(5, Math.min(90, (tags.length / maxA) * 90));
+      // Progressive blur — starts at 8px, clears as answers accumulate
+      var blurPx = Math.max(0, Math.round(8 - (pct / 90) * 8));
+      var rw = document.getElementById(uid + '-range-wrap');
+      if (rw) { rw.style.filter = blurPx > 0 ? 'blur(' + blurPx + 'px)' : ''; rw.style.userSelect = blurPx > 0 ? 'none' : ''; }
       // Show live price range — hide placeholder, reveal range
       var placeholder = document.getElementById(uid + '-sidebar-range-placeholder');
       if (placeholder) placeholder.style.display = 'none';
@@ -5424,6 +5508,9 @@ $_badge = function($txt) use ($uid) {
 
   var _n2w = {1:'Single',2:'Two',3:'Three',4:'Four',5:'Five',6:'Six',7:'Seven'};
   function renderResult(panelId) {
+    // Fully unblur the sidebar price card on result screen
+    var rw = document.getElementById(uid + '-range-wrap');
+    if (rw) { rw.style.filter = ''; rw.style.userSelect = ''; }
     var r = getRange();
     var showGraft = config.graftDisplay !== 'included';
     if (panelId === 'result-single') {
