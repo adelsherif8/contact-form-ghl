@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.3
+ * Version:     2.1.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -473,6 +473,143 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 
     set_transient( $transient_key, '1', 6 * HOUR_IN_SECONDS );
     return $logs;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GHL FIELDS — ADMIN AJAX: CHECK + CREATE
+// ═══════════════════════════════════════════════════════════════
+add_action( 'wp_ajax_cfg_check_ghl_fields',  'cfg_ajax_check_ghl_fields' );
+add_action( 'wp_ajax_cfg_create_ghl_field',  'cfg_ajax_create_ghl_field' );
+
+function cfg_ghl_field_definitions( $s ) {
+    // Returns all expected custom fields grouped by section
+    $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
+    $multi_qs  = json_decode( $s['imp_multi_qs'],  true ) ?: [];
+    $arch_qs   = json_decode( $s['imp_arch_qs'],   true ) ?: [];
+    $ins_q     = json_decode( $s['imp_ins_q'],     true ) ?: null;
+    $all_qs    = array_merge( $single_qs, $multi_qs, $arch_qs );
+    if ( $ins_q ) $all_qs[] = $ins_q;
+
+    $imp_fields = [];
+    $imp_fields[] = [ 'name' => 'Flow Type',        'key' => 'implant_flow' ];
+    $imp_fields[] = [ 'name' => 'Estimated Range',   'key' => 'implant_range' ];
+    $seen = [];
+    foreach ( $all_qs as $q ) {
+        $k = sanitize_key( $q['field'] ?? '' );
+        if ( $k && ! isset( $seen[$k] ) ) {
+            $seen[$k]     = true;
+            $imp_fields[] = [ 'name' => $q['title'] ?? $k, 'key' => 'implant_' . $k ];
+        }
+    }
+
+    return [
+        'Contact Form' => [
+            [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
+            [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
+        ],
+        'Invisalign' => [
+            [ 'name' => 'Treatment Type', 'key' => 'treatment_type' ],
+        ],
+        'Implant Estimator' => $imp_fields,
+        'UTMs' => [
+            [ 'name' => 'UTMCampaign_custom', 'key' => 'UTMCampaign_custom' ],
+            [ 'name' => 'UTMMedium_custom',   'key' => 'UTMMedium_custom' ],
+            [ 'name' => 'UTMContent_custom',  'key' => 'UTMContent_custom' ],
+            [ 'name' => 'UTMKeyword_custom',  'key' => 'UTMKeyword_custom' ],
+            [ 'name' => 'UTMTerm_custom',     'key' => 'UTMTerm_custom' ],
+            [ 'name' => 'GCLID_custom',       'key' => 'GCLID_custom' ],
+        ],
+    ];
+}
+
+function cfg_ajax_check_ghl_fields() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+
+    if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
+
+    $r = wp_remote_get( 'https://services.leadconnectorhq.com/locations/' . $location_id . '/customFields', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_key,
+            'Content-Type'  => 'application/json',
+            'Version'       => '2021-07-28',
+        ],
+        'timeout' => 15,
+    ] );
+
+    if ( is_wp_error( $r ) ) wp_send_json_error( $r->get_error_message() );
+    $code = wp_remote_retrieve_response_code( $r );
+    if ( $code === 401 || $code === 403 ) wp_send_json_error( 'Token lacks custom-fields scope (HTTP ' . $code . ').' );
+
+    $body   = json_decode( wp_remote_retrieve_body( $r ), true );
+    $existing = [];
+    foreach ( $body['customFields'] ?? [] as $f ) {
+        if ( isset( $f['fieldKey'] ) ) {
+            $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ) );
+            $existing[ $bare ]             = $f['fieldKey'];
+            $existing[ $f['fieldKey'] ]    = $f['fieldKey'];
+            $existing[ strtolower($f['fieldKey']) ] = $f['fieldKey'];
+        }
+    }
+
+    $defs    = cfg_ghl_field_definitions( $s );
+    $result  = [];
+    foreach ( $defs as $group => $fields ) {
+        foreach ( $fields as $f ) {
+            $bare   = strtolower( $f['key'] );
+            $exists = isset( $existing[ $bare ] ) || isset( $existing[ $f['key'] ] );
+            $result[] = [
+                'group'  => $group,
+                'name'   => $f['name'],
+                'key'    => $f['key'],
+                'exists' => $exists,
+            ];
+        }
+    }
+
+    wp_send_json_success( $result );
+}
+
+function cfg_ajax_create_ghl_field() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+    $field_key   = sanitize_text_field( $_POST['field_key'] ?? '' );
+    $field_name  = sanitize_text_field( $_POST['field_name'] ?? $field_key );
+
+    if ( ! $api_key || ! $location_id || ! $field_key ) wp_send_json_error( 'Missing parameters.' );
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base = 'https://services.leadconnectorhq.com';
+
+    $r    = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+        'headers' => $headers,
+        'body'    => wp_json_encode( [ 'name' => $field_name, 'fieldKey' => $field_key, 'dataType' => 'TEXT', 'position' => 0 ] ),
+        'timeout' => 15,
+    ] );
+
+    if ( is_wp_error( $r ) ) wp_send_json_error( $r->get_error_message() );
+    $code = wp_remote_retrieve_response_code( $r );
+    $body = json_decode( wp_remote_retrieve_body( $r ), true );
+
+    if ( $code >= 200 && $code < 300 ) {
+        // Bust the UTM key map cache so it refreshes
+        delete_option( 'cfg_utm_key_map_' . md5( $location_id ) );
+        wp_send_json_success( 'Field created.' );
+    } else {
+        wp_send_json_error( $body['message'] ?? 'HTTP ' . $code );
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1007,6 +1144,7 @@ function cfg_settings_page() {
             </div>
             <div class="cfg-nav-group-body" id="cfg-grpb-ref" style="max-height:0;">
                 <div class="cfg-nav-item" onclick="cfgTab(this,'guide')" data-group="ref">Setup Guide</div>
+                <div class="cfg-nav-item" onclick="cfgTab(this,'ghl_fields')" data-group="ref">GHL Fields</div>
             </div>
         </div>
 
@@ -3149,6 +3287,150 @@ function cfg_settings_page() {
         </div><!-- /cfg-panel-body -->
     </div>
 
+    <!-- ══════════════════ GHL FIELDS PANEL ══════════════════ -->
+    <div id="cfg-ghl_fields" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>GHL Custom Fields</h2>
+            <p>Check whether all required custom fields exist in GoHighLevel, and create any that are missing.</p>
+        </div>
+        <div class="cfg-panel-body">
+
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:24px;">
+                <button type="button" id="cfg-fields-check-btn" class="button button-primary" style="font-size:13px;padding:6px 18px;">
+                    &#9654; Check Fields
+                </button>
+                <button type="button" id="cfg-fields-create-all-btn" class="button" style="font-size:13px;padding:6px 18px;display:none;">
+                    &#43; Create All Missing
+                </button>
+                <span id="cfg-fields-status" style="font-size:12px;color:#6b7280;"></span>
+            </div>
+
+            <table id="cfg-fields-table" style="width:100%;border-collapse:collapse;font-size:13px;display:none;">
+                <thead>
+                    <tr style="border-bottom:2px solid #e5e7eb;">
+                        <th style="text-align:left;padding:8px 12px;color:#374151;font-weight:600;">Status</th>
+                        <th style="text-align:left;padding:8px 12px;color:#374151;font-weight:600;">Field Name</th>
+                        <th style="text-align:left;padding:8px 12px;color:#374151;font-weight:600;">Field Key</th>
+                        <th style="text-align:left;padding:8px 12px;color:#374151;font-weight:600;">Form</th>
+                        <th style="text-align:left;padding:8px 12px;color:#374151;font-weight:600;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="cfg-fields-tbody"></tbody>
+            </table>
+
+            <script>
+            (function(){
+                var NONCE = '<?= wp_create_nonce('cfg_fields_nonce') ?>';
+                var AJAX  = '<?= admin_url('admin-ajax.php') ?>';
+
+                document.getElementById('cfg-fields-check-btn').addEventListener('click', function(){
+                    var btn = this;
+                    btn.disabled = true;
+                    document.getElementById('cfg-fields-status').textContent = 'Checking…';
+                    document.getElementById('cfg-fields-table').style.display = 'none';
+                    document.getElementById('cfg-fields-create-all-btn').style.display = 'none';
+
+                    fetch(AJAX, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_check_ghl_fields&nonce=' + NONCE
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false;
+                        if (!res.success) {
+                            document.getElementById('cfg-fields-status').textContent = '✗ ' + (res.data || 'Error');
+                            document.getElementById('cfg-fields-status').style.color = '#dc2626';
+                            return;
+                        }
+                        var fields  = res.data;
+                        var missing = fields.filter(function(f){ return !f.exists; }).length;
+                        document.getElementById('cfg-fields-status').textContent =
+                            (fields.length - missing) + ' / ' + fields.length + ' fields exist' +
+                            (missing ? ' — ' + missing + ' missing' : ' ✓');
+                        document.getElementById('cfg-fields-status').style.color = missing ? '#d97706' : '#16a34a';
+
+                        var tbody = document.getElementById('cfg-fields-tbody');
+                        tbody.innerHTML = '';
+                        var prevGroup = null;
+                        fields.forEach(function(f){
+                            if (f.group !== prevGroup) {
+                                var gr = document.createElement('tr');
+                                gr.innerHTML = '<td colspan="5" style="padding:12px 12px 4px;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;background:#f9fafb;">' + f.group + '</td>';
+                                tbody.appendChild(gr);
+                                prevGroup = f.group;
+                            }
+                            var tr = document.createElement('tr');
+                            tr.id = 'cfg-field-row-' + f.key;
+                            tr.style.borderBottom = '1px solid #f3f4f6';
+                            tr.innerHTML =
+                                '<td style="padding:8px 12px;">' +
+                                    (f.exists
+                                        ? '<span style="color:#16a34a;font-size:16px;">&#10003;</span>'
+                                        : '<span style="color:#dc2626;font-size:16px;">&#10007;</span>') +
+                                '</td>' +
+                                '<td style="padding:8px 12px;color:#111827;">' + f.name + '</td>' +
+                                '<td style="padding:8px 12px;font-family:monospace;color:#4b5563;font-size:12px;">' + f.key + '</td>' +
+                                '<td style="padding:8px 12px;color:#6b7280;">' + f.group + '</td>' +
+                                '<td style="padding:8px 12px;">' +
+                                    (!f.exists
+                                        ? '<button type="button" class="button" style="font-size:11px;padding:2px 10px;" onclick="cfgCreateField(\'' + f.key + '\',\'' + f.name.replace(/'/g,"\\'") + '\',this)">Create</button>'
+                                        : '') +
+                                '</td>';
+                            tbody.appendChild(tr);
+                        });
+
+                        document.getElementById('cfg-fields-table').style.display = 'table';
+                        if (missing) document.getElementById('cfg-fields-create-all-btn').style.display = '';
+                    })
+                    .catch(function(e){
+                        btn.disabled = false;
+                        document.getElementById('cfg-fields-status').textContent = '✗ Request failed';
+                        document.getElementById('cfg-fields-status').style.color = '#dc2626';
+                    });
+                });
+
+                document.getElementById('cfg-fields-create-all-btn').addEventListener('click', function(){
+                    var rows = document.querySelectorAll('#cfg-fields-tbody tr[id^="cfg-field-row-"]');
+                    rows.forEach(function(row){
+                        var btn = row.querySelector('button.button');
+                        if (btn) btn.click();
+                    });
+                });
+
+                window.cfgCreateField = function(key, name, btn) {
+                    btn.disabled = true;
+                    btn.textContent = '…';
+                    fetch(AJAX, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_create_ghl_field&nonce=' + NONCE +
+                              '&field_key=' + encodeURIComponent(key) +
+                              '&field_name=' + encodeURIComponent(name)
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        var row = document.getElementById('cfg-field-row-' + key);
+                        if (res.success) {
+                            row.querySelector('td:first-child').innerHTML = '<span style="color:#16a34a;font-size:16px;">&#10003;</span>';
+                            btn.remove();
+                        } else {
+                            btn.disabled = false;
+                            btn.textContent = 'Retry';
+                            btn.title = res.data || 'Error';
+                        }
+                    })
+                    .catch(function(){
+                        btn.disabled = false;
+                        btn.textContent = 'Retry';
+                    });
+                };
+            })();
+            </script>
+        </div><!-- /cfg-panel-body -->
+    </div>
+    <!-- ══════════════════ /GHL FIELDS PANEL ══════════════════ -->
+
     <div id="cfg-save-bar">
     <?php submit_button( 'Save All Settings', 'primary large' ); ?>
     </div>
@@ -3928,7 +4210,6 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
-                    if (d.data && d.data.ghl_debug) console.log('[CFG GHL field provisioning]', d.data.ghl_debug);
                     if (REDIRECT) { window.location.href = REDIRECT; }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
@@ -4110,7 +4391,6 @@ function cfg_embed_shortcode_OLD_UNUSED() {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
-                    if (d.data && d.data.ghl_debug) console.log('[CFG GHL field provisioning]', d.data.ghl_debug);
                     if (REDIRECT) { window.location.href = REDIRECT; }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
@@ -4432,9 +4712,6 @@ function cfg_ajax_submit() {
         wp_send_json_error( 'The form is not fully configured yet. Please contact us directly.' );
     }
 
-    // Auto-provision GHL custom fields + folders on first ever submission
-    $ghl_field_logs = cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
-
     // ── Build GHL payload ────────────────────────────────────
     $custom_fields = [];
     $custom_fields[] = [ 'key' => 'automation_tester', 'field_value' => 'contact_form_ok' ];
@@ -4495,7 +4772,7 @@ function cfg_ajax_submit() {
     cfg_log_entry( 'contact', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
-        wp_send_json_success( [ 'message' => 'Contact created.', 'ghl_debug' => $ghl_field_logs ] );
+        wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         error_log( '[CFG] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
@@ -4887,7 +5164,6 @@ function cfg_aligner_shortcode() {
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
-                    if(res.data && res.data.ghl_debug) console.log('[CFG GHL field provisioning]', res.data.ghl_debug);
                     if(surl){ window.location.href=surl; }
                     else{
                         form.innerHTML='<div style="text-align:center;padding:2.5rem 0;">'+
@@ -4960,9 +5236,6 @@ function cfg_aligner_ajax_submit() {
         wp_send_json_error( 'Form is not fully configured. Please contact us directly.' );
     }
 
-    // Auto-provision GHL custom fields + folders on first ever submission
-    $ghl_field_logs = cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
-
     // Quiz answers
     $ans_raw = sanitize_text_field( $_POST['alg_answers'] ?? '' );
     $answers = json_decode( wp_unslash( $ans_raw ), true ) ?: [];
@@ -5030,7 +5303,7 @@ function cfg_aligner_ajax_submit() {
     cfg_log_entry( 'aligner', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
-        wp_send_json_success( [ 'message' => 'Contact created.', 'ghl_debug' => $ghl_field_logs ] );
+        wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         error_log( '[CFG Aligner] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
@@ -6168,9 +6441,6 @@ function cfg_implant_ajax_submit() {
         wp_send_json_error( 'Form is not fully configured. Please contact us directly.' );
     }
 
-    // Auto-provision GHL custom fields + folders on first ever submission
-    $ghl_field_logs = cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
-
     // Decode path configs
     $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
     $multi_qs  = json_decode( $s['imp_multi_qs'],  true ) ?: [];
@@ -6262,7 +6532,7 @@ function cfg_implant_ajax_submit() {
     cfg_log_entry( 'implant', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
-        wp_send_json_success( [ 'message' => 'Contact created.', 'ghl_debug' => $ghl_field_logs ] );
+        wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         error_log( '[CFG Implant] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
