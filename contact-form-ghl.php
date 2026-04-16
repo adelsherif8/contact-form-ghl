@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.4
+ * Version:     2.0.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -431,10 +431,10 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         $make_field( $name, $key, $cf_folder );
     }
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
-    foreach ( [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium'  => 'UTMMedium_custom',
-                'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
-                'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ] as $key => $name ) {
-        $make_field( $name, $key, $utm_folder );
+    // key = GHL fieldKey = display name (both the same per client requirement)
+    foreach ( [ 'UTMCampaign_custom', 'UTMMedium_custom', 'UTMContent_custom',
+                'UTMKeyword_custom', 'UTMTerm_custom', 'GCLID_custom' ] as $utm_key ) {
+        $make_field( $utm_key, $utm_key, $utm_folder );
     }
 
     set_transient( $transient_key, '1', 6 * HOUR_IN_SECONDS );
@@ -4366,9 +4366,11 @@ function cfg_ajax_submit() {
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $utm_key ) {
-        $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
-        if ( $val !== '' ) $custom_fields[] = [ 'key' => $utm_key, 'field_value' => $val ];
+    foreach ( [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
+                'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ] as $post_key => $ghl_key ) {
+        $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
+        if ( $val !== '' ) $custom_fields[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -4898,9 +4900,11 @@ function cfg_aligner_ajax_submit() {
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $utm_key ) {
-        $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
-        if ( $val !== '' ) $custom[] = [ 'key' => $utm_key, 'field_value' => $val ];
+    foreach ( [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
+                'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ] as $post_key => $ghl_key ) {
+        $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -6116,9 +6120,11 @@ function cfg_implant_ajax_submit() {
             $custom[] = [ 'key' => 'implant_' . $field, 'field_value' => $val ];
         }
     }
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $utm_key ) {
-        $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
-        if ( $val !== '' ) $custom[] = [ 'key' => $utm_key, 'field_value' => $val ];
+    foreach ( [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
+                'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ] as $post_key => $ghl_key ) {
+        $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
