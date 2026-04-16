@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.7
+ * Version:     2.2.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -478,11 +478,107 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 // ═══════════════════════════════════════════════════════════════
 //  GHL FIELDS — ADMIN AJAX: CHECK + CREATE
 // ═══════════════════════════════════════════════════════════════
-add_action( 'wp_ajax_cfg_check_ghl_fields',   'cfg_ajax_check_ghl_fields' );
-add_action( 'wp_ajax_cfg_create_ghl_field',   'cfg_ajax_create_ghl_field' );
-add_action( 'wp_ajax_cfg_move_ghl_fields',    'cfg_ajax_move_ghl_fields' );
-add_action( 'wp_ajax_cfg_save_folder_ids',    'cfg_ajax_save_folder_ids' );
-add_action( 'wp_ajax_cfg_detect_folder_ids',  'cfg_ajax_detect_folder_ids' );
+add_action( 'wp_ajax_cfg_check_ghl_fields',      'cfg_ajax_check_ghl_fields' );
+add_action( 'wp_ajax_cfg_create_ghl_field',      'cfg_ajax_create_ghl_field' );
+add_action( 'wp_ajax_cfg_move_ghl_fields',       'cfg_ajax_move_ghl_fields' );
+add_action( 'wp_ajax_cfg_save_folder_ids',       'cfg_ajax_save_folder_ids' );
+add_action( 'wp_ajax_cfg_detect_folder_ids',     'cfg_ajax_detect_folder_ids' );
+add_action( 'wp_ajax_cfg_create_checker_fields', 'cfg_ajax_create_checker_fields' );
+add_action( 'wp_ajax_cfg_delete_checker_fields', 'cfg_ajax_delete_checker_fields' );
+
+// Checker field definitions: key → folder name
+function cfg_checker_fields() {
+    return [
+        'cfg_checker_contact_form'    => 'Contact Form',
+        'cfg_checker_invisalign_form' => 'Invisalign Form',
+        'cfg_checker_implants_form'   => 'Implants Form',
+        'cfg_checker_utm_forms'       => 'UTM Forms',
+    ];
+}
+
+function cfg_ajax_create_checker_fields() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+    if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base    = 'https://services.leadconnectorhq.com';
+    $created = [];
+    $errors  = [];
+
+    foreach ( cfg_checker_fields() as $key => $folder ) {
+        $label = ucwords( str_replace( [ 'cfg_checker_', '_' ], [ '', ' ' ], $key ) ) . ' Checker';
+        $r     = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( [ 'name' => $label, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ] ),
+            'timeout' => 15,
+        ] );
+        $code = is_wp_error( $r ) ? 0 : wp_remote_retrieve_response_code( $r );
+        if ( $code >= 200 && $code < 300 ) {
+            $created[] = $key;
+        } else {
+            $body = is_wp_error( $r ) ? $r->get_error_message() : ( json_decode( wp_remote_retrieve_body( $r ), true )['message'] ?? 'HTTP ' . $code );
+            // 400 usually means field already exists — treat as ok
+            if ( $code === 400 ) { $created[] = $key; } else { $errors[] = $key . ': ' . $body; }
+        }
+    }
+
+    wp_send_json_success( [ 'created' => $created, 'errors' => $errors ] );
+}
+
+function cfg_ajax_delete_checker_fields() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+    if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base = 'https://services.leadconnectorhq.com';
+
+    // Fetch all fields to find checker IDs
+    $fr = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [
+        'headers' => $headers, 'timeout' => 15,
+    ] );
+    if ( is_wp_error( $fr ) ) wp_send_json_error( $fr->get_error_message() );
+
+    $checker_keys = array_keys( cfg_checker_fields() );
+    $deleted = [];
+    $errors  = [];
+
+    foreach ( json_decode( wp_remote_retrieve_body( $fr ), true )['customFields'] ?? [] as $f ) {
+        $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ?? '' ) );
+        if ( ! in_array( $bare, $checker_keys, true ) ) continue;
+
+        $dr   = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$f['id']}", [
+            'method'  => 'DELETE',
+            'headers' => $headers,
+            'timeout' => 15,
+        ] );
+        $code = is_wp_error( $dr ) ? 0 : wp_remote_retrieve_response_code( $dr );
+        if ( $code >= 200 && $code < 300 ) {
+            $deleted[] = $bare;
+        } else {
+            $errors[] = $bare . ': HTTP ' . $code;
+        }
+    }
+
+    wp_send_json_success( [ 'deleted' => $deleted, 'errors' => $errors ] );
+}
 
 function cfg_ghl_field_definitions( $s ) {
     // ── Implant fields (dynamic from question editor) ──
@@ -3531,9 +3627,17 @@ function cfg_settings_page() {
                             <strong style="color:#374151;">Option B — From URL:</strong> In GHL → Settings → Custom Fields → click a folder → copy the <code style="background:#e2e8f0;padding:1px 4px;border-radius:3px;">folderId=</code> value from the URL → paste below
                         </div>
                     </div>
-                    <button type="button" id="cfg-detect-folders-btn" class="button" style="font-size:11px;padding:4px 14px;white-space:nowrap;">
-                        &#128269; Auto-detect
-                    </button>
+                    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                        <button type="button" id="cfg-create-checkers-btn" class="button button-primary" style="font-size:11px;padding:4px 14px;white-space:nowrap;" title="Creates 4 temporary marker fields in GHL — drag each to its folder, then Auto-detect">
+                            &#43; Create Checker Fields
+                        </button>
+                        <button type="button" id="cfg-detect-folders-btn" class="button" style="font-size:11px;padding:4px 14px;white-space:nowrap;">
+                            &#128269; Auto-detect
+                        </button>
+                        <button type="button" id="cfg-delete-checkers-btn" class="button" style="font-size:11px;padding:4px 14px;white-space:nowrap;color:#dc2626;border-color:#fca5a5;" title="Deletes the 4 temporary checker fields from GHL">
+                            &#128465; Delete Checkers
+                        </button>
+                    </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;" id="cfg-folder-id-grid">
                     <?php foreach ( $folder_names as $fn ): $sk = str_replace( ' ', '_', strtolower( $fn ) ); ?>
@@ -3634,6 +3738,40 @@ function cfg_settings_page() {
                     document.getElementById('cfg-folder-url-input').value = '';
                 });
 
+                // ── Create checker fields ──
+                document.getElementById('cfg-create-checkers-btn').addEventListener('click', function(){
+                    var btn = this, fst = document.getElementById('cfg-folder-ids-status');
+                    btn.disabled = true; fst.textContent = 'Creating checker fields…'; fst.style.color='#6b7280';
+                    fetch(AJAX, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_create_checker_fields&nonce=' + NONCE })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false;
+                        if (res.success) {
+                            var d = res.data;
+                            fst.textContent = '✓ Created ' + d.created.length + ' checker fields in GHL. Now drag each into its folder, then click Auto-detect.';
+                            fst.style.color = d.errors.length ? '#d97706' : '#16a34a';
+                        } else { fst.textContent = '✗ ' + (res.data||'Error'); fst.style.color='#dc2626'; }
+                    }).catch(function(){ btn.disabled=false; fst.textContent='✗ Request failed'; fst.style.color='#dc2626'; });
+                });
+
+                // ── Delete checker fields ──
+                document.getElementById('cfg-delete-checkers-btn').addEventListener('click', function(){
+                    var btn = this, fst = document.getElementById('cfg-folder-ids-status');
+                    btn.disabled = true; fst.textContent = 'Deleting checker fields…'; fst.style.color='#6b7280';
+                    fetch(AJAX, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_delete_checker_fields&nonce=' + NONCE })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false;
+                        if (res.success) {
+                            var d = res.data;
+                            fst.textContent = '✓ Deleted ' + d.deleted.length + ' checker field(s).' + (d.errors.length ? ' Errors: '+d.errors.join(', ') : '');
+                            fst.style.color = d.errors.length ? '#d97706' : '#16a34a';
+                        } else { fst.textContent = '✗ ' + (res.data||'Error'); fst.style.color='#dc2626'; }
+                    }).catch(function(){ btn.disabled=false; fst.textContent='✗ Request failed'; fst.style.color='#dc2626'; });
+                });
+
                 // ── Auto-detect folder IDs from existing GHL fields ──
                 document.getElementById('cfg-detect-folders-btn').addEventListener('click', function(){
                     var btn = this, fst = document.getElementById('cfg-folder-ids-status');
@@ -3672,15 +3810,20 @@ function cfg_settings_page() {
                         var ids = Object.keys(detected);
                         if (!ids.length) { fst.textContent = 'No folders detected — create folders in GHL UI, move one field into each, then retry.'; fst.style.color='#d97706'; return; }
 
-                        // Known key prefixes/members per group — more keys = better matching
+                        // Checker fields score 999 so they always win unambiguously
                         var groupKeys = {
-                            'contact_form':    ['treatment_type','automation_tester'],
-                            'invisalign_form': ['prev_orthodontic','dental_work','teeth_alignment','bite_issues','has_insurance','cdcp_covered'],
-                            'implants_form':   ['implant_flow','implant_range','implant_toothlocation','implant_timemissing','implant_bonegraft',
+                            'contact_form':    ['cfg_checker_contact_form','treatment_type','automation_tester'],
+                            'invisalign_form': ['cfg_checker_invisalign_form','prev_orthodontic','dental_work','teeth_alignment','bite_issues','has_insurance','cdcp_covered'],
+                            'implants_form':   ['cfg_checker_implants_form','implant_flow','implant_range','implant_toothlocation','implant_timemissing','implant_bonegraft',
                                                'implant_situationsingle','implant_teethcount','implant_teethlocation','implant_timemissingmult',
                                                'implant_bonegraftmult','implant_situationmult','implant_archselection','implant_situationarch',
                                                'implant_archduration','implant_insurance'],
-                            'utm_forms':       ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom']
+                            'utm_forms':       ['cfg_checker_utm_forms','utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom']
+                        };
+                        // Boost checker keys to guaranteed win
+                        var checkerKeys = {
+                            'contact_form':'cfg_checker_contact_form','invisalign_form':'cfg_checker_invisalign_form',
+                            'implants_form':'cfg_checker_implants_form','utm_forms':'cfg_checker_utm_forms'
                         };
 
                         // Score each folder ID against each group
@@ -3689,6 +3832,8 @@ function cfg_settings_page() {
                             var keys = (detected[id]||[]).map(function(k){ return k.toLowerCase(); });
                             scores[id] = {};
                             Object.keys(groupKeys).forEach(function(gk){
+                                // Checker key present → guaranteed win
+                                if (keys.indexOf(checkerKeys[gk]) >= 0) { scores[id][gk] = 999; return; }
                                 var s = groupKeys[gk].filter(function(k){ return keys.indexOf(k) >= 0; }).length;
                                 if (gk === 'implants_form') s += keys.filter(function(k){ return k.indexOf('implant_') === 0; }).length;
                                 if (gk === 'utm_forms')     s += keys.filter(function(k){ return k.indexOf('utmcampaign') === 0 || k.indexOf('utmmedium') === 0 || k.indexOf('utmcontent') === 0 || k === 'gclid_custom'; }).length;
