@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.4
+ * Version:     2.1.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -482,7 +482,7 @@ add_action( 'wp_ajax_cfg_check_ghl_fields',  'cfg_ajax_check_ghl_fields' );
 add_action( 'wp_ajax_cfg_create_ghl_field',  'cfg_ajax_create_ghl_field' );
 
 function cfg_ghl_field_definitions( $s ) {
-    // Returns all expected custom fields grouped by section
+    // ── Implant fields (dynamic from question editor) ──
     $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
     $multi_qs  = json_decode( $s['imp_multi_qs'],  true ) ?: [];
     $arch_qs   = json_decode( $s['imp_arch_qs'],   true ) ?: [];
@@ -490,9 +490,9 @@ function cfg_ghl_field_definitions( $s ) {
     $all_qs    = array_merge( $single_qs, $multi_qs, $arch_qs );
     if ( $ins_q ) $all_qs[] = $ins_q;
 
-    $imp_fields = [];
-    $imp_fields[] = [ 'name' => 'Flow Type',        'key' => 'implant_flow' ];
-    $imp_fields[] = [ 'name' => 'Estimated Range',   'key' => 'implant_range' ];
+    $imp_fields   = [];
+    $imp_fields[] = [ 'name' => 'Flow Type',      'key' => 'implant_flow' ];
+    $imp_fields[] = [ 'name' => 'Estimated Range', 'key' => 'implant_range' ];
     $seen = [];
     foreach ( $all_qs as $q ) {
         $k = sanitize_key( $q['field'] ?? '' );
@@ -502,14 +502,23 @@ function cfg_ghl_field_definitions( $s ) {
         }
     }
 
+    // ── Invisalign fields (dynamic from aligner quiz steps) ──
+    $alg_steps  = cfg_aligner_get();
+    $alg_fields = [];
+    foreach ( $alg_steps as $step ) {
+        if ( empty( $step['field_key'] ) ) continue;
+        $alg_fields[] = [
+            'name' => $step['question'] ?? $step['field_key'],
+            'key'  => sanitize_key( $step['field_key'] ),
+        ];
+    }
+
     return [
         'Contact Form' => [
             [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
             [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
         ],
-        'Invisalign' => [
-            [ 'name' => 'Treatment Type', 'key' => 'treatment_type' ],
-        ],
+        'Invisalign' => $alg_fields,
         'Implant Estimator' => $imp_fields,
         'UTMs' => [
             [ 'name' => 'UTMCampaign_custom', 'key' => 'UTMCampaign_custom' ],
