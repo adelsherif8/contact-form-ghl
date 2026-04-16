@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.5
+ * Version:     2.1.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -480,6 +480,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 // ═══════════════════════════════════════════════════════════════
 add_action( 'wp_ajax_cfg_check_ghl_fields',  'cfg_ajax_check_ghl_fields' );
 add_action( 'wp_ajax_cfg_create_ghl_field',  'cfg_ajax_create_ghl_field' );
+add_action( 'wp_ajax_cfg_move_ghl_fields',   'cfg_ajax_move_ghl_fields' );
 
 function cfg_ghl_field_definitions( $s ) {
     // ── Implant fields (dynamic from question editor) ──
@@ -513,21 +514,27 @@ function cfg_ghl_field_definitions( $s ) {
         ];
     }
 
+    // Each field has: name, key, folder (GHL folder name to put it in)
+    $cf = array_map( fn($f) => $f + ['folder' => 'Contact Form'],    [
+        [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
+        [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
+    ] );
+    $alg = array_map( fn($f) => $f + ['folder' => 'Invisalign'],      $alg_fields );
+    $imp = array_map( fn($f) => $f + ['folder' => 'Implant Estimator'], $imp_fields );
+    $utms = array_map( fn($f) => $f + ['folder' => 'UTMs'], [
+        [ 'name' => 'UTMCampaign_custom', 'key' => 'UTMCampaign_custom' ],
+        [ 'name' => 'UTMMedium_custom',   'key' => 'UTMMedium_custom' ],
+        [ 'name' => 'UTMContent_custom',  'key' => 'UTMContent_custom' ],
+        [ 'name' => 'UTMKeyword_custom',  'key' => 'UTMKeyword_custom' ],
+        [ 'name' => 'UTMTerm_custom',     'key' => 'UTMTerm_custom' ],
+        [ 'name' => 'GCLID_custom',       'key' => 'GCLID_custom' ],
+    ] );
+
     return [
-        'Contact Form' => [
-            [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
-            [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
-        ],
-        'Invisalign' => $alg_fields,
-        'Implant Estimator' => $imp_fields,
-        'UTMs' => [
-            [ 'name' => 'UTMCampaign_custom', 'key' => 'UTMCampaign_custom' ],
-            [ 'name' => 'UTMMedium_custom',   'key' => 'UTMMedium_custom' ],
-            [ 'name' => 'UTMContent_custom',  'key' => 'UTMContent_custom' ],
-            [ 'name' => 'UTMKeyword_custom',  'key' => 'UTMKeyword_custom' ],
-            [ 'name' => 'UTMTerm_custom',     'key' => 'UTMTerm_custom' ],
-            [ 'name' => 'GCLID_custom',       'key' => 'GCLID_custom' ],
-        ],
+        'Contact Form'      => $cf,
+        'Invisalign'        => $alg,
+        'Implant Estimator' => $imp,
+        'UTMs'              => $utms,
     ];
 }
 
@@ -592,6 +599,7 @@ function cfg_ajax_create_ghl_field() {
     $location_id = $s['ghl_location_id'] ?? '';
     $field_key   = sanitize_text_field( $_POST['field_key'] ?? '' );
     $field_name  = sanitize_text_field( $_POST['field_name'] ?? $field_key );
+    $folder_name = sanitize_text_field( $_POST['folder'] ?? '' );
 
     if ( ! $api_key || ! $location_id || ! $field_key ) wp_send_json_error( 'Missing parameters.' );
 
@@ -602,9 +610,48 @@ function cfg_ajax_create_ghl_field() {
     ];
     $base = 'https://services.leadconnectorhq.com';
 
+    // ── Resolve folder parentId if a folder name was provided ──
+    $parent_id = null;
+    if ( $folder_name ) {
+        $fr = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [
+            'headers' => $headers,
+            'timeout' => 15,
+        ] );
+        if ( ! is_wp_error( $fr ) && wp_remote_retrieve_response_code( $fr ) < 300 ) {
+            $fb = json_decode( wp_remote_retrieve_body( $fr ), true );
+            foreach ( $fb['folders'] ?? [] as $folder ) {
+                if ( strtolower( $folder['name'] ) === strtolower( $folder_name ) ) {
+                    $parent_id = $folder['id'];
+                    break;
+                }
+            }
+        }
+        // Create folder if it doesn't exist yet
+        if ( ! $parent_id ) {
+            $cr = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
+                'headers' => $headers,
+                'body'    => wp_json_encode( [ 'name' => $folder_name ] ),
+                'timeout' => 15,
+            ] );
+            if ( ! is_wp_error( $cr ) ) {
+                $cb = json_decode( wp_remote_retrieve_body( $cr ), true );
+                $parent_id = $cb['folder']['id'] ?? $cb['id'] ?? null;
+            }
+        }
+    }
+
+    // ── Create the custom field ──
+    $payload = [
+        'name'     => $field_name,
+        'fieldKey' => $field_key,
+        'dataType' => 'TEXT',
+        'position' => 0,
+    ];
+    if ( $parent_id ) $payload['parentId'] = $parent_id;
+
     $r    = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
         'headers' => $headers,
-        'body'    => wp_json_encode( [ 'name' => $field_name, 'fieldKey' => $field_key, 'dataType' => 'TEXT', 'position' => 0 ] ),
+        'body'    => wp_json_encode( $payload ),
         'timeout' => 15,
     ] );
 
@@ -619,6 +666,107 @@ function cfg_ajax_create_ghl_field() {
     } else {
         wp_send_json_error( $body['message'] ?? 'HTTP ' . $code );
     }
+}
+
+function cfg_ajax_move_ghl_fields() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+    if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base = 'https://services.leadconnectorhq.com';
+
+    // ── 1. Fetch all existing GHL custom fields (id + fieldKey + parentId) ──
+    $fr = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [
+        'headers' => $headers, 'timeout' => 15,
+    ] );
+    if ( is_wp_error( $fr ) ) wp_send_json_error( $fr->get_error_message() );
+    $fields_body = json_decode( wp_remote_retrieve_body( $fr ), true );
+
+    // Map: bare_lowercase_key => { id, fieldKey, parentId }
+    $ghl_fields = [];
+    foreach ( $fields_body['customFields'] ?? [] as $f ) {
+        if ( empty( $f['fieldKey'] ) ) continue;
+        $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ) );
+        $ghl_fields[ $bare ] = $f;
+    }
+
+    // ── 2. Fetch existing folders; build name → id map ──
+    $folder_ids = [];
+    $xr = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [
+        'headers' => $headers, 'timeout' => 15,
+    ] );
+    if ( ! is_wp_error( $xr ) && wp_remote_retrieve_response_code( $xr ) < 300 ) {
+        $xb = json_decode( wp_remote_retrieve_body( $xr ), true );
+        foreach ( $xb['folders'] ?? [] as $folder ) {
+            $folder_ids[ strtolower( $folder['name'] ) ] = $folder['id'];
+        }
+    }
+
+    // ── 3. Helper: get or create a folder ──
+    $get_folder_id = function( $name ) use ( &$folder_ids, $base, $location_id, $headers ) {
+        $key = strtolower( $name );
+        if ( isset( $folder_ids[ $key ] ) ) return $folder_ids[ $key ];
+        $cr = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( [ 'name' => $name ] ),
+            'timeout' => 15,
+        ] );
+        if ( is_wp_error( $cr ) ) return null;
+        $cb = json_decode( wp_remote_retrieve_body( $cr ), true );
+        $id = $cb['folder']['id'] ?? $cb['id'] ?? null;
+        if ( $id ) $folder_ids[ $key ] = $id;
+        return $id;
+    };
+
+    // ── 4. Loop definitions; move any field not already in the right folder ──
+    $defs    = cfg_ghl_field_definitions( $s );
+    $moved   = 0;
+    $skipped = 0;
+    $errors  = [];
+
+    foreach ( $defs as $group => $fields ) {
+        foreach ( $fields as $f ) {
+            $bare = strtolower( $f['key'] );
+            if ( ! isset( $ghl_fields[ $bare ] ) ) { $skipped++; continue; } // field doesn't exist in GHL yet
+
+            $ghl_f     = $ghl_fields[ $bare ];
+            $folder_id = $get_folder_id( $f['folder'] ?? $group );
+            if ( ! $folder_id ) { $errors[] = $f['key'] . ': could not get/create folder'; continue; }
+
+            // Already in the right folder? skip.
+            if ( isset( $ghl_f['parentId'] ) && $ghl_f['parentId'] === $folder_id ) { $skipped++; continue; }
+
+            // PUT to move the field
+            $pr = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$ghl_f['id']}", [
+                'method'  => 'PUT',
+                'headers' => $headers,
+                'body'    => wp_json_encode( [ 'parentId' => $folder_id ] ),
+                'timeout' => 15,
+            ] );
+            $pcode = is_wp_error( $pr ) ? 0 : wp_remote_retrieve_response_code( $pr );
+            if ( $pcode >= 200 && $pcode < 300 ) {
+                $moved++;
+            } else {
+                $pb = is_wp_error( $pr ) ? $pr->get_error_message() : ( json_decode( wp_remote_retrieve_body( $pr ), true )['message'] ?? 'HTTP ' . $pcode );
+                $errors[] = $f['key'] . ': ' . $pb;
+            }
+        }
+    }
+
+    wp_send_json_success( [
+        'moved'   => $moved,
+        'skipped' => $skipped,
+        'errors'  => $errors,
+    ] );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3304,12 +3452,15 @@ function cfg_settings_page() {
         </div>
         <div class="cfg-panel-body">
 
-            <div style="display:flex;gap:10px;align-items:center;margin-bottom:24px;">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:24px;">
                 <button type="button" id="cfg-fields-check-btn" class="button button-primary" style="font-size:13px;padding:6px 18px;">
                     &#9654; Check Fields
                 </button>
                 <button type="button" id="cfg-fields-create-all-btn" class="button" style="font-size:13px;padding:6px 18px;display:none;">
                     &#43; Create All Missing
+                </button>
+                <button type="button" id="cfg-fields-move-btn" class="button" style="font-size:13px;padding:6px 18px;" title="Move all existing fields into their correct GHL folders">
+                    &#8594; Move All to Folders
                 </button>
                 <span id="cfg-fields-status" style="font-size:12px;color:#6b7280;"></span>
             </div>
@@ -3383,7 +3534,7 @@ function cfg_settings_page() {
                                 '<td style="padding:8px 12px;color:#6b7280;">' + f.group + '</td>' +
                                 '<td style="padding:8px 12px;">' +
                                     (!f.exists
-                                        ? '<button type="button" class="button" style="font-size:11px;padding:2px 10px;" onclick="cfgCreateField(\'' + f.key + '\',\'' + f.name.replace(/'/g,"\\'") + '\',this)">Create</button>'
+                                        ? '<button type="button" class="button" style="font-size:11px;padding:2px 10px;" onclick="cfgCreateField(\'' + f.key + '\',\'' + f.name.replace(/'/g,"\\'") + '\',\'' + f.group.replace(/'/g,"\\'") + '\',this)">Create</button>'
                                         : '') +
                                 '</td>';
                             tbody.appendChild(tr);
@@ -3407,7 +3558,40 @@ function cfg_settings_page() {
                     });
                 });
 
-                window.cfgCreateField = function(key, name, btn) {
+                document.getElementById('cfg-fields-move-btn').addEventListener('click', function(){
+                    var btn = this;
+                    var status = document.getElementById('cfg-fields-status');
+                    btn.disabled = true;
+                    status.textContent = 'Moving fields to folders…';
+                    status.style.color = '#6b7280';
+                    fetch(AJAX, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_move_ghl_fields&nonce=' + NONCE
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false;
+                        if (res.success) {
+                            var d = res.data;
+                            var msg = '✓ Moved ' + d.moved + ' field(s) to folders';
+                            if (d.skipped) msg += ' (' + d.skipped + ' already correct/missing)';
+                            if (d.errors && d.errors.length) msg += ' — ' + d.errors.length + ' error(s): ' + d.errors.join('; ');
+                            status.textContent = msg;
+                            status.style.color = d.errors && d.errors.length ? '#d97706' : '#16a34a';
+                        } else {
+                            status.textContent = '✗ ' + (res.data || 'Error');
+                            status.style.color = '#dc2626';
+                        }
+                    })
+                    .catch(function(){
+                        btn.disabled = false;
+                        status.textContent = '✗ Request failed';
+                        status.style.color = '#dc2626';
+                    });
+                });
+
+                window.cfgCreateField = function(key, name, folder, btn) {
                     btn.disabled = true;
                     btn.textContent = '…';
                     fetch(AJAX, {
@@ -3415,7 +3599,8 @@ function cfg_settings_page() {
                         headers: {'Content-Type':'application/x-www-form-urlencoded'},
                         body: 'action=cfg_create_ghl_field&nonce=' + NONCE +
                               '&field_key=' + encodeURIComponent(key) +
-                              '&field_name=' + encodeURIComponent(name)
+                              '&field_name=' + encodeURIComponent(name) +
+                              '&folder=' + encodeURIComponent(folder)
                     })
                     .then(function(r){ return r.json(); })
                     .then(function(res){
