@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.9.4
+ * Version:     1.9.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -366,14 +366,22 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         'gclid'        => 'Google Click ID',
     ];
 
+    // ── Contact Form fields ──
+    $cf_fields = [
+        'treatment_type'    => 'Treatment Type',
+        'automation_tester' => 'Automation Tester',
+    ];
+
     // ── Create folders then fields ──
     $imp_folder = $make_folder( 'Implant Estimator' );
     $utm_folder = $make_folder( 'UTMs' );
+    $cf_folder  = $make_folder( 'Contact Form' );
 
+    foreach ( $cf_fields  as $key => $name ) $make_field( $name, $key, $cf_folder );
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
     foreach ( $utm_fields as $key => $name ) $make_field( $name, $key, $utm_folder );
 
-    update_option( $option_key, '1' );
+    update_option( $option_key, '2' ); // bump version to force re-run on existing installs
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4288,8 +4296,12 @@ function cfg_ajax_submit() {
         wp_send_json_error( 'The form is not fully configured yet. Please contact us directly.' );
     }
 
+    // Auto-provision GHL custom fields + folders on first ever submission
+    cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
+
     // ── Build GHL payload ────────────────────────────────────
     $custom_fields = [];
+    $custom_fields[] = [ 'key' => 'automation_tester', 'field_value' => 'contact_form_ok' ];
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
