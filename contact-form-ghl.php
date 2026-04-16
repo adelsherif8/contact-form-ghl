@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.9.1
+ * Version:     1.9.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -299,6 +299,81 @@ function cfg_get( $key = null ) {
     $opts = wp_parse_args( $opts, cfg_defaults() );
     if ( $key !== null ) return $opts[ $key ] ?? null;
     return $opts;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  GHL — AUTO-CREATE CUSTOM FIELDS + FOLDERS
+// ═══════════════════════════════════════════════════════════════
+function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
+    $option_key = 'cfg_ghl_fields_' . md5( $location_id );
+    if ( get_option( $option_key ) ) return; // already provisioned
+
+    $base    = 'https://services.leadconnectorhq.com';
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+
+    // ── Create a folder, return its id ──
+    $make_folder = function( $name ) use ( $base, $headers, $location_id ) {
+        $r = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( [ 'name' => $name ] ),
+            'timeout' => 10,
+        ] );
+        if ( is_wp_error( $r ) ) return null;
+        $b = json_decode( wp_remote_retrieve_body( $r ), true );
+        return $b['folder']['id'] ?? $b['id'] ?? null;
+    };
+
+    // ── Create a single custom field ──
+    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id ) {
+        $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ];
+        if ( $folder_id ) $payload['id'] = $folder_id;
+        wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( $payload ),
+            'timeout' => 10,
+        ] );
+    };
+
+    // ── Build implant field list dynamically from question editor ──
+    $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
+    $multi_qs  = json_decode( $s['imp_multi_qs'],  true ) ?: [];
+    $arch_qs   = json_decode( $s['imp_arch_qs'],   true ) ?: [];
+    $ins_q     = json_decode( $s['imp_ins_q'],     true ) ?: null;
+    $all_qs    = array_merge( $single_qs, $multi_qs, $arch_qs );
+    if ( $ins_q ) $all_qs[] = $ins_q;
+
+    // Deduplicate by field key
+    $seen = [];
+    $imp_fields = [ 'implant_flow' => 'Flow Type', 'implant_range' => 'Estimated Range' ];
+    foreach ( $all_qs as $q ) {
+        $key = sanitize_key( $q['field'] ?? '' );
+        if ( $key && ! isset( $seen[ $key ] ) ) {
+            $seen[ $key ]               = true;
+            $imp_fields[ 'implant_' . $key ] = $q['title'] ?? $key;
+        }
+    }
+
+    // ── UTM fields ──
+    $utm_fields = [
+        'utm_campaign' => 'UTM Campaign',
+        'utm_medium'   => 'UTM Medium',
+        'utm_content'  => 'UTM Content',
+        'utm_keyword'  => 'UTM Keyword',
+        'gclid'        => 'Google Click ID',
+    ];
+
+    // ── Create folders then fields ──
+    $imp_folder = $make_folder( 'Implant Estimator' );
+    $utm_folder = $make_folder( 'UTMs' );
+
+    foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
+    foreach ( $utm_fields as $key => $name ) $make_field( $name, $key, $utm_folder );
+
+    update_option( $option_key, '1' );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -5906,6 +5981,9 @@ function cfg_implant_ajax_submit() {
     if ( empty( $s['ghl_api_key'] ) || empty( $s['ghl_location_id'] ) ) {
         wp_send_json_error( 'Form is not fully configured. Please contact us directly.' );
     }
+
+    // Auto-provision GHL custom fields + folders on first ever submission
+    cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
 
     // Decode path configs
     $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
