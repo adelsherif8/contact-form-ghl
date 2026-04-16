@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.0
+ * Version:     2.0.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -307,15 +307,15 @@ function cfg_get( $key = null ) {
 function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     $logs = [];
 
-    // DEBUG: transient check disabled so we can see full logs
-    $transient_key = 'cfg_ghl_fields_' . md5( $location_id );
-    delete_transient( $transient_key );
-
     if ( ! $api_key || ! $location_id ) {
         return [ 'error' => 'missing api_key or location_id' ];
     }
 
-    $logs[] = 'running for location ' . substr( $location_id, 0, 8 ) . '...';
+    // Re-try every 6 hours — if the token gets upgraded we'll pick it up automatically
+    $transient_key = 'cfg_ghl_fields_' . md5( $location_id );
+    if ( get_transient( $transient_key ) ) {
+        return [ 'skipped' => 'transient active' ];
+    }
 
     $base    = 'https://services.leadconnectorhq.com';
     $headers = [
@@ -324,7 +324,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         'Version'       => '2021-07-28',
     ];
 
-    // ── Fetch existing custom field keys so we skip ones that already exist ──
+    // ── Fetch existing custom field keys ──
     $existing_keys = [];
     $r_list = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [
         'headers' => $headers,
@@ -332,74 +332,36 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     ] );
     if ( is_wp_error( $r_list ) ) {
         $logs[] = 'customFields GET error: ' . $r_list->get_error_message();
-    } else {
-        $code   = wp_remote_retrieve_response_code( $r_list );
-        $b_list = json_decode( wp_remote_retrieve_body( $r_list ), true );
-        $keys   = array_column( $b_list['customFields'] ?? [], 'fieldKey' );
-        $logs[] = 'customFields GET status=' . $code . ' found ' . count( $keys ) . ' keys: ' . implode( ', ', $keys );
-        foreach ( $b_list['customFields'] ?? [] as $f ) {
-            if ( isset( $f['fieldKey'] ) ) $existing_keys[ $f['fieldKey'] ] = true;
-        }
+        set_transient( $transient_key, '1', 6 * HOUR_IN_SECONDS );
+        return $logs;
     }
-
-    // ── Fetch existing folder names so we skip ones that already exist ──
-    $existing_folders = [];
-    $r_folders = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [
-        'headers' => $headers,
-        'timeout' => 10,
-    ] );
-    if ( is_wp_error( $r_folders ) ) {
-        $logs[] = 'customFieldsFolders GET error: ' . $r_folders->get_error_message();
-    } else {
-        $code      = wp_remote_retrieve_response_code( $r_folders );
-        $b_folders = json_decode( wp_remote_retrieve_body( $r_folders ), true );
-        $fnames    = array_column( $b_folders['folders'] ?? [], 'name' );
-        $logs[]    = 'folders GET status=' . $code . ' found: ' . implode( ', ', $fnames );
-        foreach ( $b_folders['folders'] ?? [] as $fd ) {
-            if ( isset( $fd['name'] ) ) $existing_folders[ $fd['name'] ] = $fd['id'];
-        }
+    $list_code = wp_remote_retrieve_response_code( $r_list );
+    if ( $list_code === 401 || $list_code === 403 ) {
+        $logs[] = 'customFields GET ' . $list_code . ': token lacks custom-fields scope — create a Private Integration in GHL Settings with contacts.write + custom-fields.readonly + custom-fields.write';
+        set_transient( $transient_key, '1', 6 * HOUR_IN_SECONDS );
+        return $logs;
     }
+    $b_list = json_decode( wp_remote_retrieve_body( $r_list ), true );
+    foreach ( $b_list['customFields'] ?? [] as $f ) {
+        if ( isset( $f['fieldKey'] ) ) $existing_keys[ $f['fieldKey'] ] = true;
+    }
+    $logs[] = 'existing fields: ' . implode( ', ', array_keys( $existing_keys ) );
 
-    // ── Create a folder (or return existing id) ──
-    $make_folder = function( $name ) use ( $base, $headers, $location_id, &$existing_folders, &$logs ) {
-        if ( isset( $existing_folders[ $name ] ) ) {
-            $logs[] = 'folder "' . $name . '" already exists (id=' . $existing_folders[ $name ] . ')';
-            return $existing_folders[ $name ];
-        }
-        $r = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
-            'headers' => $headers,
-            'body'    => wp_json_encode( [ 'name' => $name ] ),
-            'timeout' => 10,
-        ] );
-        if ( is_wp_error( $r ) ) {
-            $logs[] = 'folder create "' . $name . '" WP_ERROR: ' . $r->get_error_message();
-            return null;
-        }
-        $code   = wp_remote_retrieve_response_code( $r );
-        $raw    = wp_remote_retrieve_body( $r );
-        $b      = json_decode( $raw, true );
-        $id     = $b['folder']['id'] ?? $b['id'] ?? null;
-        $logs[] = 'folder create "' . $name . '" status=' . $code . ' id=' . $id . ' body=' . $raw;
-        if ( $id ) $existing_folders[ $name ] = $id;
-        return $id;
-    };
-
-    // ── Create a single custom field (skip if key already exists) ──
-    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
+    // ── Create a single custom field (skip if already exists) ──
+    $make_field = function( $name, $key ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
         if ( isset( $existing_keys[ $key ] ) ) {
-            $logs[] = 'field "' . $key . '" already exists — skipping';
+            $logs[] = '"' . $key . '" already exists — skipped';
             return;
         }
         $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ];
-        if ( $folder_id ) $payload['parentId'] = $folder_id;
-        $r      = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+        $r       = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
             'body'    => wp_json_encode( $payload ),
             'timeout' => 10,
         ] );
-        $code   = is_wp_error( $r ) ? 'WP_ERROR' : wp_remote_retrieve_response_code( $r );
-        $raw    = is_wp_error( $r ) ? $r->get_error_message() : wp_remote_retrieve_body( $r );
-        $logs[] = 'field create "' . $key . '" status=' . $code . ' body=' . $raw;
+        $code    = is_wp_error( $r ) ? 'WP_ERROR' : wp_remote_retrieve_response_code( $r );
+        $raw     = is_wp_error( $r ) ? $r->get_error_message() : wp_remote_retrieve_body( $r );
+        $logs[]  = '"' . $key . '" create status=' . $code . ' ' . $raw;
     };
 
     // ── Build implant field list dynamically from question editor ──
@@ -410,44 +372,26 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     $all_qs    = array_merge( $single_qs, $multi_qs, $arch_qs );
     if ( $ins_q ) $all_qs[] = $ins_q;
 
-    // Deduplicate by field key
-    $seen = [];
+    $seen       = [];
     $imp_fields = [ 'implant_flow' => 'Flow Type', 'implant_range' => 'Estimated Range' ];
     foreach ( $all_qs as $q ) {
         $key = sanitize_key( $q['field'] ?? '' );
         if ( $key && ! isset( $seen[ $key ] ) ) {
-            $seen[ $key ]               = true;
+            $seen[ $key ]                    = true;
             $imp_fields[ 'implant_' . $key ] = $q['title'] ?? $key;
         }
     }
 
-    // ── UTM fields ──
-    $utm_fields = [
-        'utm_campaign' => 'UTM Campaign',
-        'utm_medium'   => 'UTM Medium',
-        'utm_content'  => 'UTM Content',
-        'utm_keyword'  => 'UTM Keyword',
-        'gclid'        => 'Google Click ID',
-    ];
+    $all_fields = array_merge(
+        [ 'treatment_type' => 'Treatment Type', 'automation_tester' => 'Automation Tester' ],
+        $imp_fields,
+        [ 'utm_campaign' => 'UTM Campaign', 'utm_medium' => 'UTM Medium',
+          'utm_content'  => 'UTM Content',  'utm_keyword' => 'UTM Keyword', 'gclid' => 'Google Click ID' ]
+    );
 
-    // ── Contact Form fields ──
-    $cf_fields = [
-        'treatment_type'    => 'Treatment Type',
-        'automation_tester' => 'Automation Tester',
-    ];
+    foreach ( $all_fields as $key => $name ) $make_field( $name, $key );
 
-    // ── Create folders then fields ──
-    $imp_folder = $make_folder( 'Implant Estimator' );
-    $utm_folder = $make_folder( 'UTMs' );
-    $cf_folder  = $make_folder( 'Contact Form' );
-
-    foreach ( $cf_fields  as $key => $name ) $make_field( $name, $key, $cf_folder );
-    foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
-    foreach ( $utm_fields as $key => $name ) $make_field( $name, $key, $utm_folder );
-
-    // Cache for 1 hour — prevents redundant API calls on every submission
-    set_transient( $transient_key, '1', HOUR_IN_SECONDS );
-
+    set_transient( $transient_key, '1', 6 * HOUR_IN_SECONDS );
     return $logs;
 }
 
