@@ -1,6 +1,6 @@
 {
   "name": "contact-form-ghl",
-  "version": "2.2.6",
+  "version": "2.2.7",
   "description": "WordPress plugin: Contact Form + GoHighLevel integration",
   "scripts": {
     "release": "node release.js"

@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.6
+ * Version:     2.2.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -702,27 +702,61 @@ function cfg_ajax_detect_folder_ids() {
     $location_id = $s['ghl_location_id'] ?? '';
     if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
 
+    $base    = 'https://services.leadconnectorhq.com';
     $headers = [
         'Authorization' => 'Bearer ' . $api_key,
         'Content-Type'  => 'application/json',
         'Version'       => '2021-07-28',
     ];
-    $fr = wp_remote_get( 'https://services.leadconnectorhq.com/locations/' . $location_id . '/customFields', [
+
+    $fr   = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [
         'headers' => $headers, 'timeout' => 15,
     ] );
     if ( is_wp_error( $fr ) ) wp_send_json_error( $fr->get_error_message() );
+    $body = json_decode( wp_remote_retrieve_body( $fr ), true );
 
-    // Collect all unique parentIds found on existing fields
+    // ── 1. Try to match by name from a `folders` key in the response ──
+    $target_names = [ 'Contact Form', 'Invisalign Form', 'Implants Form', 'UTM Forms' ];
+    $by_name      = [];
+    foreach ( $body['folders'] ?? [] as $folder ) {
+        if ( ! empty( $folder['id'] ) && ! empty( $folder['name'] ) ) {
+            $by_name[ strtolower( trim( $folder['name'] ) ) ] = $folder['id'];
+        }
+    }
+
+    // ── 2. Collect parentIds from existing fields (fallback) ──
     $parent_ids = [];
-    foreach ( json_decode( wp_remote_retrieve_body( $fr ), true )['customFields'] ?? [] as $f ) {
+    foreach ( $body['customFields'] ?? [] as $f ) {
         if ( ! empty( $f['parentId'] ) ) {
             $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ?? '' ) );
             $parent_ids[ $f['parentId'] ][] = $bare;
         }
     }
-    // Also return already-stored map so UI can pre-fill
+
+    // ── 3. Build matched map: folder name → id ──
+    $matched = [];
+    foreach ( $target_names as $name ) {
+        $key = strtolower( $name );
+        if ( isset( $by_name[ $key ] ) ) {
+            $matched[ $name ] = $by_name[ $key ];
+        }
+    }
+
     $stored = cfg_get_folder_ids( $location_id );
-    wp_send_json_success( [ 'detected' => $parent_ids, 'stored' => $stored ] );
+
+    // If we got matches by name, auto-save them
+    if ( ! empty( $matched ) ) {
+        $merged = array_merge( $stored, $matched );
+        update_option( 'cfg_folder_ids_' . md5( $location_id ), $merged );
+        $stored = $merged;
+    }
+
+    wp_send_json_success( [
+        'detected'   => $parent_ids,
+        'by_name'    => $matched,   // folder name → id from API folders key
+        'stored'     => $stored,
+        'raw_folders'=> $body['folders'] ?? [],  // full raw so JS can show it
+    ] );
 }
 
 function cfg_ajax_move_ghl_fields() {
@@ -3611,8 +3645,23 @@ function cfg_settings_page() {
                     .then(function(res){
                         btn.disabled = false;
                         if (!res.success) { fst.textContent = '✗ ' + (res.data||'Error'); fst.style.color='#dc2626'; return; }
-                        var detected = res.data.detected; // { parentId: [fieldKey,...] }
-                        var stored   = res.data.stored;
+                        var detected  = res.data.detected;
+                        var byName    = res.data.by_name || {};  // folder name → id, matched by name
+                        var stored    = res.data.stored;
+
+                        // ── Best case: GHL returned folders by name ──
+                        var nameMatches = Object.keys(byName).length;
+                        if (nameMatches > 0) {
+                            // Fill inputs from by_name map
+                            Object.keys(byName).forEach(function(name){
+                                var k  = name.toLowerCase().replace(/ /g,'_');
+                                var el = document.getElementById('cfg-fid-' + k);
+                                if (el) el.value = byName[name];
+                            });
+                            fst.textContent = '✓ Matched ' + nameMatches + ' of 4 folders by name — saved automatically.';
+                            fst.style.color = nameMatches === 4 ? '#16a34a' : '#d97706';
+                            return;
+                        }
                         // Pre-fill stored values first
                         Object.keys(stored).forEach(function(name){
                             var k = name.toLowerCase().replace(/ /g,'_');
