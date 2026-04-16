@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.8
+ * Version:     2.1.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -700,31 +700,44 @@ function cfg_ajax_move_ghl_fields() {
     }
 
     // ── 2. Fetch existing folders; build name → id map ──
-    $folder_ids = [];
+    $folder_ids  = [];
+    $folder_error = '';
     $xr = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [
         'headers' => $headers, 'timeout' => 15,
     ] );
-    if ( ! is_wp_error( $xr ) && wp_remote_retrieve_response_code( $xr ) < 300 ) {
+    $xcode = is_wp_error( $xr ) ? 0 : wp_remote_retrieve_response_code( $xr );
+    if ( $xcode >= 200 && $xcode < 300 ) {
         $xb = json_decode( wp_remote_retrieve_body( $xr ), true );
         foreach ( $xb['folders'] ?? [] as $folder ) {
             $folder_ids[ strtolower( $folder['name'] ) ] = $folder['id'];
         }
+    } else {
+        $xbody = is_wp_error( $xr ) ? $xr->get_error_message() : wp_remote_retrieve_body( $xr );
+        $folder_error = 'GET folders HTTP ' . $xcode . ': ' . substr( $xbody, 0, 200 );
     }
 
     // ── 3. Helper: get or create a folder ──
-    $get_folder_id = function( $name ) use ( &$folder_ids, $base, $location_id, $headers ) {
+    $get_folder_id = function( $name ) use ( &$folder_ids, &$folder_error, $base, $location_id, $headers ) {
         $key = strtolower( $name );
         if ( isset( $folder_ids[ $key ] ) ) return $folder_ids[ $key ];
-        $cr = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
+        $cr    = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
             'headers' => $headers,
             'body'    => wp_json_encode( [ 'name' => $name ] ),
             'timeout' => 15,
         ] );
-        if ( is_wp_error( $cr ) ) return null;
-        $cb = json_decode( wp_remote_retrieve_body( $cr ), true );
-        $id = $cb['folder']['id'] ?? $cb['id'] ?? null;
-        if ( $id ) $folder_ids[ $key ] = $id;
-        return $id;
+        $ccode = is_wp_error( $cr ) ? 0 : wp_remote_retrieve_response_code( $cr );
+        $cb    = is_wp_error( $cr ) ? [] : ( json_decode( wp_remote_retrieve_body( $cr ), true ) ?: [] );
+        $id    = $cb['folder']['id'] ?? $cb['id'] ?? null;
+        if ( $id ) {
+            $folder_ids[ $key ] = $id;
+            return $id;
+        }
+        // Surface the real error for the first failure
+        if ( ! $folder_error ) {
+            $raw = is_wp_error( $cr ) ? $cr->get_error_message() : wp_remote_retrieve_body( $cr );
+            $folder_error = 'POST folder HTTP ' . $ccode . ': ' . substr( $raw, 0, 200 );
+        }
+        return null;
     };
 
     // ── 4. Loop definitions; move any field not already in the right folder ──
@@ -763,9 +776,10 @@ function cfg_ajax_move_ghl_fields() {
     }
 
     wp_send_json_success( [
-        'moved'   => $moved,
-        'skipped' => $skipped,
-        'errors'  => $errors,
+        'moved'        => $moved,
+        'skipped'      => $skipped,
+        'errors'       => $errors,
+        'folder_error' => $folder_error ?: null,
     ] );
 }
 
@@ -3576,9 +3590,10 @@ function cfg_settings_page() {
                             var d = res.data;
                             var msg = '✓ Moved ' + d.moved + ' field(s) to folders';
                             if (d.skipped) msg += ' (' + d.skipped + ' already correct/missing)';
-                            if (d.errors && d.errors.length) msg += ' — ' + d.errors.length + ' error(s): ' + d.errors.join('; ');
+                            if (d.folder_error) msg += ' — Folder API: ' + d.folder_error;
+                            else if (d.errors && d.errors.length) msg += ' — ' + d.errors.length + ' error(s): ' + d.errors.join('; ');
                             status.textContent = msg;
-                            status.style.color = d.errors && d.errors.length ? '#d97706' : '#16a34a';
+                            status.style.color = (d.errors && d.errors.length) || d.folder_error ? '#d97706' : '#16a34a';
                         } else {
                             status.textContent = '✗ ' + (res.data || 'Error');
                             status.style.color = '#dc2626';
