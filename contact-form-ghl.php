@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.8
+ * Version:     2.0.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -312,7 +312,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     }
 
     // Re-try every 6 hours — if the token gets upgraded we'll pick it up automatically
-    $transient_key = 'cfg_ghl_fields_v7_' . md5( $location_id );
+    $transient_key = 'cfg_ghl_fields_v8_' . md5( $location_id );
     if ( get_transient( $transient_key ) ) {
         return [ 'skipped' => 'transient active' ];
     }
@@ -343,9 +343,15 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     }
     $b_list = json_decode( wp_remote_retrieve_body( $r_list ), true );
     foreach ( $b_list['customFields'] ?? [] as $f ) {
-        if ( isset( $f['fieldKey'] ) ) $existing_keys[ $f['fieldKey'] ] = true;
+        if ( ! isset( $f['fieldKey'] ) ) continue;
+        $fk   = $f['fieldKey'];                              // e.g. "contact.utmcampaign_custom"
+        $bare = preg_replace( '/^contact\./', '', $fk );    // e.g. "utmcampaign_custom"
+        $existing_keys[ $fk ]              = true;
+        $existing_keys[ $bare ]            = true;
+        $existing_keys[ strtolower($fk) ]  = true;
+        $existing_keys[ strtolower($bare)] = true;
     }
-    $logs[] = 'existing fields (' . count( $existing_keys ) . '): ' . implode( ', ', array_keys( $existing_keys ) );
+    $logs[] = 'existing fields (' . count( $b_list['customFields'] ?? [] ) . '): ' . implode( ', ', array_column( $b_list['customFields'] ?? [], 'fieldKey' ) );
 
     // ── Fetch existing folders ──
     $existing_folders = [];
@@ -388,7 +394,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 
     // ── Create a single custom field (skip if already exists) ──
     $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
-        if ( isset( $existing_keys[ $key ] ) ) {
+        if ( isset( $existing_keys[ $key ] ) || isset( $existing_keys[ strtolower($key) ] ) ) {
             $logs[] = '"' . $key . '" already exists — skipped';
             return;
         }
@@ -443,22 +449,22 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         'timeout' => 10,
     ] );
     if ( ! is_wp_error( $r_verify ) ) {
-        $b_verify   = json_decode( wp_remote_retrieve_body( $r_verify ), true );
-        $utm_names  = [ 'UTMCampaign_custom', 'UTMMedium_custom', 'UTMContent_custom',
-                        'UTMKeyword_custom', 'UTMTerm_custom', 'GCLID_custom' ];
-        $post_to_ghl = [
-            'UTMCampaign_custom' => 'utm_campaign',
-            'UTMMedium_custom'   => 'utm_medium',
-            'UTMContent_custom'  => 'utm_content',
-            'UTMKeyword_custom'  => 'utm_keyword',
-            'UTMTerm_custom'     => 'utm_term',
-            'GCLID_custom'       => 'gclid',
+        $b_verify = json_decode( wp_remote_retrieve_body( $r_verify ), true );
+        // Match by bare fieldKey (strip contact. prefix, lowercase) — robust regardless of name casing
+        $bare_to_post = [
+            'utmcampaign_custom' => 'utm_campaign',
+            'utmmedium_custom'   => 'utm_medium',
+            'utmcontent_custom'  => 'utm_content',
+            'utmkeyword_custom'  => 'utm_keyword',
+            'utmterm_custom'     => 'utm_term',
+            'gclid_custom'       => 'gclid',
         ];
         $key_map = [];
         foreach ( $b_verify['customFields'] ?? [] as $f ) {
-            if ( in_array( $f['name'] ?? '', $utm_names ) && isset( $f['fieldKey'] ) ) {
-                $post_key = $post_to_ghl[ $f['name'] ] ?? null;
-                if ( $post_key ) $key_map[ $post_key ] = $f['fieldKey'];
+            if ( ! isset( $f['fieldKey'] ) ) continue;
+            $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ) );
+            if ( isset( $bare_to_post[ $bare ] ) ) {
+                $key_map[ $bare_to_post[ $bare ] ] = $f['fieldKey'];
             }
         }
         update_option( 'cfg_utm_key_map_' . md5( $location_id ), $key_map );
