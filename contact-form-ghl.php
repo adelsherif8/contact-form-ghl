@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.7
+ * Version:     2.1.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1057,8 +1057,8 @@ function cfg_settings_page() {
     $saved = isset( $_GET['settings-updated'] );
     ?>
     <div class="wrap">
-    <h1 style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
-        <span style="background:#2271b1;color:#fff;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;letter-spacing:.04em;">GHL</span>
+    <h1 style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
+        <img src="<?= esc_url( plugins_url( 'logo.svg', __FILE__ ) ) ?>" alt="Plugin Logo" width="48" height="48" style="border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.18);flex-shrink:0;">
         <span style="font-size:20px;font-weight:600;color:#1d2327;">Contact Form Settings</span>
     </h1>
     <?php if ( $saved ): ?>
