@@ -24,6 +24,7 @@ jobs:
           mkdir -p build
           zip -r build/contact-form-ghl.zip \
             contact-form-ghl.php \
+            logo.svg \
             vendor/ \
             composer.json \
             composer.lock \
