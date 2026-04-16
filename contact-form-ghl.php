@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.9.9
+ * Version:     2.0.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -307,11 +307,9 @@ function cfg_get( $key = null ) {
 function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     $logs = [];
 
-    // Use a 1-hour transient so fields are re-checked periodically.
+    // DEBUG: transient check disabled so we can see full logs
     $transient_key = 'cfg_ghl_fields_' . md5( $location_id );
-    if ( get_transient( $transient_key ) ) {
-        return [ 'transient_hit' => true ];
-    }
+    delete_transient( $transient_key );
 
     if ( ! $api_key || ! $location_id ) {
         return [ 'error' => 'missing api_key or location_id' ];
