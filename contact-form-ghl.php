@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.1
+ * Version:     2.0.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -345,23 +345,63 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     foreach ( $b_list['customFields'] ?? [] as $f ) {
         if ( isset( $f['fieldKey'] ) ) $existing_keys[ $f['fieldKey'] ] = true;
     }
-    $logs[] = 'existing fields: ' . implode( ', ', array_keys( $existing_keys ) );
+    $logs[] = 'existing fields (' . count( $existing_keys ) . '): ' . implode( ', ', array_keys( $existing_keys ) );
+
+    // ── Fetch existing folders ──
+    $existing_folders = [];
+    $r_folders = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [
+        'headers' => $headers,
+        'timeout' => 10,
+    ] );
+    if ( ! is_wp_error( $r_folders ) ) {
+        $fold_code = wp_remote_retrieve_response_code( $r_folders );
+        $b_folders = json_decode( wp_remote_retrieve_body( $r_folders ), true );
+        $logs[]    = 'folders GET status=' . $fold_code . ' body=' . wp_remote_retrieve_body( $r_folders );
+        foreach ( $b_folders['folders'] ?? [] as $fd ) {
+            if ( isset( $fd['name'] ) ) $existing_folders[ $fd['name'] ] = $fd['id'];
+        }
+    }
+
+    // ── Create a folder (or return existing id) ──
+    $make_folder = function( $name ) use ( $base, $headers, $location_id, &$existing_folders, &$logs ) {
+        if ( isset( $existing_folders[ $name ] ) ) {
+            $logs[] = 'folder "' . $name . '" already exists (id=' . $existing_folders[ $name ] . ')';
+            return $existing_folders[ $name ];
+        }
+        $r = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( [ 'name' => $name ] ),
+            'timeout' => 10,
+        ] );
+        if ( is_wp_error( $r ) ) {
+            $logs[] = 'folder create "' . $name . '" WP_ERROR: ' . $r->get_error_message();
+            return null;
+        }
+        $code   = wp_remote_retrieve_response_code( $r );
+        $raw    = wp_remote_retrieve_body( $r );
+        $b      = json_decode( $raw, true );
+        $id     = $b['folder']['id'] ?? $b['id'] ?? null;
+        $logs[] = 'folder create "' . $name . '" status=' . $code . ' id=' . $id . ' body=' . $raw;
+        if ( $id ) $existing_folders[ $name ] = $id;
+        return $id;
+    };
 
     // ── Create a single custom field (skip if already exists) ──
-    $make_field = function( $name, $key ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
+    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
         if ( isset( $existing_keys[ $key ] ) ) {
             $logs[] = '"' . $key . '" already exists — skipped';
             return;
         }
         $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ];
-        $r       = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+        if ( $folder_id ) $payload['parentId'] = $folder_id;
+        $r      = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
             'body'    => wp_json_encode( $payload ),
             'timeout' => 10,
         ] );
-        $code    = is_wp_error( $r ) ? 'WP_ERROR' : wp_remote_retrieve_response_code( $r );
-        $raw     = is_wp_error( $r ) ? $r->get_error_message() : wp_remote_retrieve_body( $r );
-        $logs[]  = '"' . $key . '" create status=' . $code . ' ' . $raw;
+        $code   = is_wp_error( $r ) ? 'WP_ERROR' : wp_remote_retrieve_response_code( $r );
+        $raw    = is_wp_error( $r ) ? $r->get_error_message() : wp_remote_retrieve_body( $r );
+        $logs[] = '"' . $key . '" create status=' . $code . ' ' . $raw;
     };
 
     // ── Build implant field list dynamically from question editor ──
@@ -382,14 +422,20 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         }
     }
 
-    $all_fields = array_merge(
-        [ 'treatment_type' => 'Treatment Type', 'automation_tester' => 'Automation Tester' ],
-        $imp_fields,
-        [ 'utm_campaign' => 'UTM Campaign', 'utm_medium' => 'UTM Medium',
-          'utm_content'  => 'UTM Content',  'utm_keyword' => 'UTM Keyword', 'gclid' => 'Google Click ID' ]
-    );
+    // ── Create folders then fields ──
+    $cf_folder  = $make_folder( 'Contact Form' );
+    $imp_folder = $make_folder( 'Implant Estimator' );
+    $utm_folder = $make_folder( 'UTMs' );
 
-    foreach ( $all_fields as $key => $name ) $make_field( $name, $key );
+    foreach ( [ 'treatment_type' => 'Treatment Type', 'automation_tester' => 'Automation Tester' ] as $key => $name ) {
+        $make_field( $name, $key, $cf_folder );
+    }
+    foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
+    foreach ( [ 'utm_campaign' => 'UTM Campaign', 'utm_medium' => 'UTM Medium',
+                'utm_content'  => 'UTM Content',  'utm_keyword' => 'UTM Keyword',
+                'gclid'        => 'Google Click ID' ] as $key => $name ) {
+        $make_field( $name, $key, $utm_folder );
+    }
 
     set_transient( $transient_key, '1', 6 * HOUR_IN_SECONDS );
     return $logs;
