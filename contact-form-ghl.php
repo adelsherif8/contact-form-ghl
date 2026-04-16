@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.0
+ * Version:     2.2.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -521,9 +521,9 @@ function cfg_ghl_field_definitions( $s ) {
         [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
         [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
     ] );
-    $alg = array_map( fn($f) => $f + ['folder' => 'Invisalign'],      $alg_fields );
-    $imp = array_map( fn($f) => $f + ['folder' => 'Implant Estimator'], $imp_fields );
-    $utms = array_map( fn($f) => $f + ['folder' => 'UTMs'], [
+    $alg = array_map( fn($f) => $f + ['folder' => 'Invisalign Form'],  $alg_fields );
+    $imp = array_map( fn($f) => $f + ['folder' => 'Implants Form'],    $imp_fields );
+    $utms = array_map( fn($f) => $f + ['folder' => 'UTM Forms'], [
         [ 'name' => 'UTMCampaign_custom', 'key' => 'UTMCampaign_custom' ],
         [ 'name' => 'UTMMedium_custom',   'key' => 'UTMMedium_custom' ],
         [ 'name' => 'UTMContent_custom',  'key' => 'UTMContent_custom' ],
@@ -533,10 +533,10 @@ function cfg_ghl_field_definitions( $s ) {
     ] );
 
     return [
-        'Contact Form'      => $cf,
-        'Invisalign'        => $alg,
-        'Implant Estimator' => $imp,
-        'UTMs'              => $utms,
+        'Contact Form'   => $cf,
+        'Invisalign Form' => $alg,
+        'Implants Form'  => $imp,
+        'UTM Forms'      => $utms,
     ];
 }
 
@@ -685,7 +685,7 @@ function cfg_ajax_save_folder_ids() {
     if ( ! $location_id ) wp_send_json_error( 'Location ID not configured.' );
 
     $map = [];
-    foreach ( [ 'Contact Form', 'Invisalign', 'Implant Estimator', 'UTMs' ] as $name ) {
+    foreach ( [ 'Contact Form', 'Invisalign Form', 'Implants Form', 'UTM Forms' ] as $name ) {
         $id = sanitize_text_field( $_POST[ 'folder_' . sanitize_key( $name ) ] ?? '' );
         if ( $id ) $map[ $name ] = $id;
     }
@@ -3485,16 +3485,22 @@ function cfg_settings_page() {
             $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
             $location_id = $s['ghl_location_id'] ?? '';
             $saved_fids  = cfg_get_folder_ids( $location_id );
-            $folder_names = [ 'Contact Form', 'Invisalign', 'Implant Estimator', 'UTMs' ];
+            $folder_names = [ 'Contact Form', 'Invisalign Form', 'Implants Form', 'UTM Forms' ];
             ?>
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:22px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
                     <div>
                         <strong style="font-size:13px;color:#1e293b;">Folder IDs</strong>
-                        <span style="font-size:11px;color:#94a3b8;margin-left:8px;">GHL doesn't expose folders via API — paste IDs from GHL → Custom Fields (hover a folder → copy ID from URL)</span>
+                        <div style="margin-top:6px;font-size:11px;color:#64748b;line-height:1.7;">
+                            GHL doesn't support folder creation via API. Do this once:<br>
+                            <strong style="color:#374151;">1.</strong> In GHL → Settings → Custom Fields → create 4 folders: <em>Contact Form, Invisalign Form, Implants Form, UTM Forms</em><br>
+                            <strong style="color:#374151;">2.</strong> Move one field from each group into its folder manually<br>
+                            <strong style="color:#374151;">3.</strong> Click <strong>Auto-detect</strong> below — the IDs will fill in automatically<br>
+                            <strong style="color:#374151;">4.</strong> Save, then hit <strong>Move All to Folders</strong>
+                        </div>
                     </div>
-                    <button type="button" id="cfg-detect-folders-btn" class="button" style="font-size:11px;padding:3px 12px;">
-                        &#128269; Auto-detect from existing fields
+                    <button type="button" id="cfg-detect-folders-btn" class="button" style="font-size:11px;padding:4px 14px;white-space:nowrap;">
+                        &#128269; Auto-detect
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;" id="cfg-folder-id-grid">
@@ -3545,8 +3551,8 @@ function cfg_settings_page() {
             (function(){
                 var NONCE       = '<?= wp_create_nonce('cfg_fields_nonce') ?>';
                 var AJAX        = '<?= admin_url('admin-ajax.php') ?>';
-                var FOLDER_KEYS = ['contact_form','invisalign','implant_estimator','utms'];
-                var FOLDER_NAMES = {'contact_form':'Contact Form','invisalign':'Invisalign','implant_estimator':'Implant Estimator','utms':'UTMs'};
+                var FOLDER_KEYS = ['contact_form','invisalign_form','implants_form','utm_forms'];
+                var FOLDER_NAMES = {'contact_form':'Contact Form','invisalign_form':'Invisalign Form','implants_form':'Implants Form','utm_forms':'UTM Forms'};
 
                 // ── Save folder IDs ──
                 document.getElementById('cfg-save-folder-ids-btn').addEventListener('click', function(){
@@ -3586,29 +3592,47 @@ function cfg_settings_page() {
                             var el = document.getElementById('cfg-fid-' + k);
                             if (el) el.value = stored[name];
                         });
-                        // Show detected IDs so user can assign them
+                        // Auto-match detected folder IDs to our groups by scoring field key overlap
                         var ids = Object.keys(detected);
-                        if (!ids.length) { fst.textContent = 'No folders detected on existing fields — paste IDs manually.'; fst.style.color='#d97706'; return; }
-                        var summary = 'Detected ' + ids.length + ' folder ID(s): ';
-                        summary += ids.map(function(id){ return id + ' [' + (detected[id]||[]).slice(0,3).join(', ') + '…]'; }).join(' | ');
-                        fst.textContent = summary; fst.style.color = '#2563eb';
-                        // If only 1 folder per group detected, try to auto-match by field keys
+                        if (!ids.length) { fst.textContent = 'No folders detected — create folders in GHL UI, move one field into each, then retry.'; fst.style.color='#d97706'; return; }
+
+                        // Known key prefixes/members per group — more keys = better matching
                         var groupKeys = {
-                            'contact_form':       ['treatment_type','automation_tester'],
-                            'invisalign':         ['prev_orthodontic','dental_work','teeth_alignment','has_insurance'],
-                            'implant_estimator':  ['implant_flow','implant_range'],
-                            'utms':               ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','gclid_custom']
+                            'contact_form':    ['treatment_type','automation_tester'],
+                            'invisalign_form': ['prev_orthodontic','dental_work','teeth_alignment','bite_issues','has_insurance','cdcp_covered'],
+                            'implants_form':   ['implant_flow','implant_range','implant_toothlocation','implant_timemissing','implant_bonegraft',
+                                               'implant_situationsingle','implant_teethcount','implant_teethlocation','implant_timemissingmult',
+                                               'implant_bonegraftmult','implant_situationmult','implant_archselection','implant_situationarch',
+                                               'implant_archduration','implant_insurance'],
+                            'utm_forms':       ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom']
                         };
+
+                        // For each folder ID, score it against each group
+                        var bestMatch = {}; // gk => { id, score }
                         ids.forEach(function(id){
                             var keys = (detected[id]||[]).map(function(k){ return k.toLowerCase(); });
                             Object.keys(groupKeys).forEach(function(gk){
-                                var hits = groupKeys[gk].filter(function(k){ return keys.indexOf(k) >= 0; });
-                                if (hits.length) {
-                                    var el = document.getElementById('cfg-fid-' + gk);
-                                    if (el && !el.value) el.value = id;
+                                var score = groupKeys[gk].filter(function(k){ return keys.indexOf(k) >= 0; }).length;
+                                if (score > 0 && score > ((bestMatch[gk] || {}).score || 0)) {
+                                    bestMatch[gk] = { id: id, score: score };
                                 }
                             });
                         });
+
+                        var filled = 0;
+                        Object.keys(bestMatch).forEach(function(gk){
+                            var el = document.getElementById('cfg-fid-' + gk);
+                            if (el) { el.value = bestMatch[gk].id; filled++; }
+                        });
+
+                        var unmatched = ids.filter(function(id){
+                            return !Object.values(bestMatch).some(function(m){ return m.id === id; });
+                        });
+                        var msg = '✓ Auto-filled ' + filled + ' of 4 folder IDs.';
+                        if (unmatched.length) msg += ' ' + unmatched.length + ' unrecognised folder(s) — check manually: ' + unmatched.join(', ');
+                        if (filled < 4) msg += ' Missing ' + (4 - filled) + ' — create those folders in GHL UI, move one field in, then re-detect.';
+                        fst.textContent = msg;
+                        fst.style.color = filled === 4 ? '#16a34a' : '#d97706';
                     }).catch(function(){ btn.disabled=false; fst.textContent='✗ Request failed'; fst.style.color='#dc2626'; });
                 });
 
