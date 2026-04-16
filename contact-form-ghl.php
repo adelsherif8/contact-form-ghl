@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.4
+ * Version:     2.2.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3492,11 +3492,9 @@ function cfg_settings_page() {
                     <div>
                         <strong style="font-size:13px;color:#1e293b;">Folder IDs</strong>
                         <div style="margin-top:6px;font-size:11px;color:#64748b;line-height:1.7;">
-                            GHL doesn't support folder creation via API. Do this once:<br>
-                            <strong style="color:#374151;">1.</strong> In GHL → Settings → Custom Fields → create 4 folders: <em>Contact Form, Invisalign Form, Implants Form, UTM Forms</em><br>
-                            <strong style="color:#374151;">2.</strong> Move one field from each group into its folder manually<br>
-                            <strong style="color:#374151;">3.</strong> Click <strong>Auto-detect</strong> below — the IDs will fill in automatically<br>
-                            <strong style="color:#374151;">4.</strong> Save, then hit <strong>Move All to Folders</strong>
+                            GHL doesn't expose folder IDs via API. Two ways to get them:<br>
+                            <strong style="color:#374151;">Option A — Auto-detect:</strong> In GHL, drag one field into each folder → click Auto-detect → IDs save automatically<br>
+                            <strong style="color:#374151;">Option B — From URL:</strong> In GHL → Settings → Custom Fields → click a folder → copy the <code style="background:#e2e8f0;padding:1px 4px;border-radius:3px;">folderId=</code> value from the URL → paste below
                         </div>
                     </div>
                     <button type="button" id="cfg-detect-folders-btn" class="button" style="font-size:11px;padding:4px 14px;white-space:nowrap;">
@@ -3632,11 +3630,30 @@ function cfg_settings_page() {
                         var unmatched = ids.filter(function(id){
                             return !Object.values(bestMatch).some(function(m){ return m.id === id; });
                         });
-                        var msg = '✓ Auto-filled ' + filled + ' of 4 folder IDs.';
-                        if (unmatched.length) msg += ' ' + unmatched.length + ' unrecognised folder(s) — check manually: ' + unmatched.join(', ');
-                        if (filled < 4) msg += ' Missing ' + (4 - filled) + ' — create those folders in GHL UI, move one field in, then re-detect.';
-                        fst.textContent = msg;
-                        fst.style.color = filled === 4 ? '#16a34a' : '#d97706';
+
+                        if (filled === 0) {
+                            fst.textContent = 'No fields matched any folder — move at least one field per folder in GHL UI, then re-detect.';
+                            fst.style.color = '#d97706';
+                            return;
+                        }
+
+                        // Auto-save detected IDs immediately
+                        fst.textContent = 'Saving…'; fst.style.color = '#6b7280';
+                        var saveBody = 'action=cfg_save_folder_ids&nonce=' + NONCE;
+                        FOLDER_KEYS.forEach(function(k){
+                            var val = (document.getElementById('cfg-fid-' + k) || {}).value || '';
+                            saveBody += '&folder_' + k + '=' + encodeURIComponent(val);
+                        });
+                        fetch(AJAX, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: saveBody })
+                        .then(function(r){ return r.json(); })
+                        .then(function(sr){
+                            var msg = (sr.success ? '✓ Auto-filled & saved ' : '⚠ Filled but save failed — ') + filled + ' of 4 folder IDs.';
+                            if (unmatched.length) msg += ' ' + unmatched.length + ' unrecognised: ' + unmatched.join(', ');
+                            if (filled < 4) msg += ' — ' + (4 - filled) + ' still missing, paste manually then Save.';
+                            fst.textContent = msg;
+                            fst.style.color = sr.success && filled === 4 ? '#16a34a' : '#d97706';
+                        })
+                        .catch(function(){ fst.textContent = '⚠ Filled but save request failed — click Save Folder IDs manually.'; fst.style.color='#d97706'; });
                     }).catch(function(){ btn.disabled=false; fst.textContent='✗ Request failed'; fst.style.color='#dc2626'; });
                 });
 
