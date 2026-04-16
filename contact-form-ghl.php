@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.3
+ * Version:     2.0.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -431,9 +431,9 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         $make_field( $name, $key, $cf_folder );
     }
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
-    foreach ( [ 'utm_campaign' => 'UTM Campaign', 'utm_medium' => 'UTM Medium',
-                'utm_content'  => 'UTM Content',  'utm_keyword' => 'UTM Keyword',
-                'gclid'        => 'Google Click ID' ] as $key => $name ) {
+    foreach ( [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium'  => 'UTMMedium_custom',
+                'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ] as $key => $name ) {
         $make_field( $name, $key, $utm_folder );
     }
 
@@ -3840,6 +3840,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                 utm_medium:   _up.get('utm_medium')   || '',
                 utm_content:  _up.get('utm_content')  || '',
                 utm_keyword:  _up.get('utm_keyword')  || '',
+                utm_term:     _up.get('utm_term')     || '',
                 gclid:        _up.get('gclid')        || ''
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
@@ -4021,6 +4022,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
                 utm_medium:   _up.get('utm_medium')   || '',
                 utm_content:  _up.get('utm_content')  || '',
                 utm_keyword:  _up.get('utm_keyword')  || '',
+                utm_term:     _up.get('utm_term')     || '',
                 gclid:        _up.get('gclid')        || ''
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
@@ -4364,7 +4366,7 @@ function cfg_ajax_submit() {
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
+    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $utm_key ) {
         $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
         if ( $val !== '' ) $custom_fields[] = [ 'key' => $utm_key, 'field_value' => $val ];
     }
@@ -4406,6 +4408,7 @@ function cfg_ajax_submit() {
         'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
         'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
         'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
+        'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
     ] );
     cfg_log_entry( 'contact', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
@@ -4798,7 +4801,7 @@ function cfg_aligner_shortcode() {
             sbtn.disabled=true; slbl.textContent='Sending\u2026';
             var _up=new URLSearchParams(window.location.search);
             var _fd=new FormData(form);
-            ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ _fd.append(k,_up.get(k)||''); });
+            ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ _fd.append(k,_up.get(k)||''); });
             fetch(ajaxUrl,{method:'POST',body:_fd})
             .then(function(r){ return r.json(); })
             .then(function(res){
@@ -4895,7 +4898,7 @@ function cfg_aligner_ajax_submit() {
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
+    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $utm_key ) {
         $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
         if ( $val !== '' ) $custom[] = [ 'key' => $utm_key, 'field_value' => $val ];
     }
@@ -4934,6 +4937,7 @@ function cfg_aligner_ajax_submit() {
         'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
         'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
         'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
+        'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
     ] ) );
     cfg_log_entry( 'aligner', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
@@ -6009,7 +6013,7 @@ $_badge = function($txt) use ($uid) {
     fd.append('range',           r.label + r.suffix);
     fd.append('rangeType',       panel);
     var _up = new URLSearchParams(window.location.search);
-    ['utm_campaign','utm_medium','utm_content','utm_keyword','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
+    ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
     fetch(config.ajaxUrl, { method:'POST', body:fd })
       .then(function(){ if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); } })
       .catch(function(){ navigate(panel); });
@@ -6112,7 +6116,7 @@ function cfg_implant_ajax_submit() {
             $custom[] = [ 'key' => 'implant_' . $field, 'field_value' => $val ];
         }
     }
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'gclid' ] as $utm_key ) {
+    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $utm_key ) {
         $val = sanitize_text_field( $_POST[ $utm_key ] ?? '' );
         if ( $val !== '' ) $custom[] = [ 'key' => $utm_key, 'field_value' => $val ];
     }
@@ -6154,6 +6158,7 @@ function cfg_implant_ajax_submit() {
         'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
         'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
         'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
+        'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
     ] );
     foreach ( $all_qs as $q ) {
