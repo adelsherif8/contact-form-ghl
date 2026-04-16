@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.8
+ * Version:     2.2.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3621,10 +3621,18 @@ function cfg_settings_page() {
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
                     <div>
                         <strong style="font-size:13px;color:#1e293b;">Folder IDs</strong>
-                        <div style="margin-top:6px;font-size:11px;color:#64748b;line-height:1.7;">
-                            GHL doesn't expose folder IDs via API. Two ways to get them:<br>
-                            <strong style="color:#374151;">Option A — Auto-detect:</strong> In GHL, drag one field into each folder → click Auto-detect → IDs save automatically<br>
-                            <strong style="color:#374151;">Option B — From URL:</strong> In GHL → Settings → Custom Fields → click a folder → copy the <code style="background:#e2e8f0;padding:1px 4px;border-radius:3px;">folderId=</code> value from the URL → paste below
+                        <div style="margin-top:8px;font-size:11px;color:#64748b;line-height:1.9;">
+                            <strong style="color:#0f172a;font-size:11.5px;">One-time setup — follow these steps in order:</strong><br>
+                            <strong style="color:#2563eb;">Step 1.</strong> In GHL → Settings → Custom Fields → create 4 folders named exactly:&nbsp;
+                            <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">Contact Form</code>&nbsp;
+                            <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">Invisalign Form</code>&nbsp;
+                            <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">Implants Form</code>&nbsp;
+                            <code style="background:#e2e8f0;padding:1px 5px;border-radius:3px;">UTM Forms</code><br>
+                            <strong style="color:#2563eb;">Step 2.</strong> Click <strong>+ Create Checker Fields</strong> — 4 temporary marker fields will appear in GHL under Additional Info<br>
+                            <strong style="color:#2563eb;">Step 3.</strong> In GHL, drag each checker field into its matching folder (names make it obvious)<br>
+                            <strong style="color:#2563eb;">Step 4.</strong> Click <strong>Auto-detect</strong> — folder IDs are found and saved automatically<br>
+                            <strong style="color:#2563eb;">Step 5.</strong> Click <strong>Move All to Folders</strong> — all fields are organised into their folders<br>
+                            <strong style="color:#2563eb;">Step 6.</strong> Click <strong>Delete Checkers</strong> — temporary marker fields removed from GHL
                         </div>
                     </div>
                     <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
