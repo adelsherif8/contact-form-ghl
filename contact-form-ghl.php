@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.3
+ * Version:     2.2.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -686,7 +686,7 @@ function cfg_ajax_save_folder_ids() {
 
     $map = [];
     foreach ( [ 'Contact Form', 'Invisalign Form', 'Implants Form', 'UTM Forms' ] as $name ) {
-        $id = sanitize_text_field( $_POST[ 'folder_' . sanitize_key( $name ) ] ?? '' );
+        $id = sanitize_text_field( $_POST[ 'folder_' . str_replace( ' ', '_', strtolower( $name ) ) ] ?? '' );
         if ( $id ) $map[ $name ] = $id;
     }
     update_option( 'cfg_folder_ids_' . md5( $location_id ), $map );
@@ -3504,7 +3504,7 @@ function cfg_settings_page() {
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;" id="cfg-folder-id-grid">
-                    <?php foreach ( $folder_names as $fn ): $sk = sanitize_key( $fn ); ?>
+                    <?php foreach ( $folder_names as $fn ): $sk = str_replace( ' ', '_', strtolower( $fn ) ); ?>
                     <label style="font-size:12px;color:#374151;">
                         <?= esc_html( $fn ) ?>
                         <input type="text" id="cfg-fid-<?= esc_attr($sk) ?>" placeholder="folder ID…"
@@ -3613,6 +3613,10 @@ function cfg_settings_page() {
                             var keys = (detected[id]||[]).map(function(k){ return k.toLowerCase(); });
                             Object.keys(groupKeys).forEach(function(gk){
                                 var score = groupKeys[gk].filter(function(k){ return keys.indexOf(k) >= 0; }).length;
+                                // bonus: implants_form gets +1 for every key starting with 'implant_'
+                                if (gk === 'implants_form') score += keys.filter(function(k){ return k.indexOf('implant_') === 0; }).length;
+                                // bonus: utm_forms gets +1 for every key ending with '_custom' or starting with 'utm'
+                                if (gk === 'utm_forms') score += keys.filter(function(k){ return k.indexOf('utm') === 0 || k.slice(-7) === '_custom'; }).length;
                                 if (score > 0 && score > ((bestMatch[gk] || {}).score || 0)) {
                                     bestMatch[gk] = { id: id, score: score };
                                 }
