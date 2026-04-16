@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.1
+ * Version:     2.1.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -572,8 +572,11 @@ function cfg_render_dashboard_widget() {
 add_action( 'wp_head', function () {
     echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/css/intlTelInput.min.css"/>';
     echo '<style>
-        .iti { display:block !important; width:100% !important; }
-        .iti input[type="tel"] { width:100% !important; box-sizing:border-box !important; }
+        .iti{display:block!important;width:100%!important;}
+        .iti__flag-container{z-index:10;}
+        .iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;}
+        .iti__selected-dial-code{font-size:.875rem;}
+        .iti__dropdown-content{border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);}
     </style>';
 } );
 
@@ -584,23 +587,42 @@ add_action( 'wp_footer', function () {
     (function(){
         var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/js/utils.js';
 
+        function cfgFmtNational(el, iti) {
+            if (!window.intlTelInputUtils || !el.value.trim()) return;
+            var iso  = iti.getSelectedCountryData().iso2;
+            var fmt  = intlTelInputUtils.formatNumber(
+                el.value, iso, intlTelInputUtils.numberFormat.NATIONAL
+            );
+            if (fmt) el.value = fmt;
+        }
+
         function cfgInitPhone(el) {
             if (el.dataset.itiDone || !window.intlTelInput) return;
             el.dataset.itiDone = '1';
+
             var iti = window.intlTelInput(el, {
-                initialCountry:  'us',
-                separateDialCode: true,
-                loadUtilsOnInit: ITI_UTILS,
+                initialCountry:   'us',
+                separateDialCode:  true,
+                autoPlaceholder:  'polite',   // shows national format hint per country
+                formatOnDisplay:   true,
+                loadUtilsOnInit:   ITI_UTILS,
             });
             el._cfgIti = iti;
+
+            // Format on blur
+            el.addEventListener('blur', function(){ cfgFmtNational(el, iti); });
+
+            // Re-format when country changes
+            el.closest('.iti') && el.closest('.iti').addEventListener('countrychange', function(){
+                cfgFmtNational(el, iti);
+            });
         }
 
-        // Init on load
         document.addEventListener('DOMContentLoaded', function(){
             document.querySelectorAll('input[type="tel"]').forEach(cfgInitPhone);
         });
 
-        // Init dynamically added inputs (quiz steps)
+        // Dynamically added inputs (quiz steps etc.)
         new MutationObserver(function(muts){
             muts.forEach(function(m){
                 m.addedNodes.forEach(function(n){
@@ -611,11 +633,11 @@ add_action( 'wp_footer', function () {
             });
         }).observe(document.body, { childList:true, subtree:true });
 
-        // Before ANY form submits — swap phone value with full intl number
+        // Before any form submit — replace value with full E.164 international number
         document.addEventListener('submit', function(e){
             var ph = e.target.querySelector('input[type="tel"]');
             if (ph && ph._cfgIti) ph.value = ph._cfgIti.getNumber() || ph.value;
-        }, true); // capturing phase — runs before form's own handler
+        }, true);
     })();
     </script>
     <?php
