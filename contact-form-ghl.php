@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.9
+ * Version:     2.1.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4406,7 +4406,8 @@ function cfg_ajax_submit() {
                           'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
     foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key; // use stored key or fallback to display name
+        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
+        $ghl_key = preg_replace( '/^contact\./', '', $ghl_key ); // strip contact. prefix — GHL payload uses bare key
         if ( $val !== '' ) $custom_fields[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
@@ -4944,6 +4945,7 @@ function cfg_aligner_ajax_submit() {
     foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
         $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
+        $ghl_key = preg_replace( '/^contact\./', '', $ghl_key );
         if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
@@ -6167,6 +6169,7 @@ function cfg_implant_ajax_submit() {
     foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
         $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
+        $ghl_key = preg_replace( '/^contact\./', '', $ghl_key );
         if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
