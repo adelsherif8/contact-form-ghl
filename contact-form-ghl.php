@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.0.7
+ * Version:     2.0.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -312,7 +312,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     }
 
     // Re-try every 6 hours — if the token gets upgraded we'll pick it up automatically
-    $transient_key = 'cfg_ghl_fields_v6_' . md5( $location_id );
+    $transient_key = 'cfg_ghl_fields_v7_' . md5( $location_id );
     if ( get_transient( $transient_key ) ) {
         return [ 'skipped' => 'transient active' ];
     }
@@ -4394,11 +4394,14 @@ function cfg_ajax_submit() {
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
-    $utm_key_map = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $post_key ) {
+    $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
+    $utm_display_keys = [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
+                          'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                          'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
+    foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? null;
-        if ( $val !== '' && $ghl_key ) $custom_fields[] = [ 'key' => $ghl_key, 'field_value' => $val ];
+        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key; // use stored key or fallback to display name
+        if ( $val !== '' ) $custom_fields[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -4928,11 +4931,14 @@ function cfg_aligner_ajax_submit() {
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
-    $utm_key_map = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $post_key ) {
+    $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
+    $utm_display_keys = [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
+                          'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                          'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
+    foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? null;
-        if ( $val !== '' && $ghl_key ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
+        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
+        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -6148,11 +6154,14 @@ function cfg_implant_ajax_submit() {
             $custom[] = [ 'key' => 'implant_' . $field, 'field_value' => $val ];
         }
     }
-    $utm_key_map = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    foreach ( [ 'utm_campaign', 'utm_medium', 'utm_content', 'utm_keyword', 'utm_term', 'gclid' ] as $post_key ) {
+    $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
+    $utm_display_keys = [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
+                          'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
+                          'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
+    foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? null;
-        if ( $val !== '' && $ghl_key ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
+        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
+        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
