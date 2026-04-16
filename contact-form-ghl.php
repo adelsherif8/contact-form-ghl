@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.5
+ * Version:     2.2.6
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3511,6 +3511,19 @@ function cfg_settings_page() {
                     </label>
                     <?php endforeach; ?>
                 </div>
+                <div style="margin-top:12px;padding:10px 12px;background:#f1f5f9;border-radius:6px;font-size:11px;color:#374151;">
+                    <strong>Paste GHL URL to extract ID:</strong>
+                    <div style="display:flex;gap:8px;margin-top:6px;">
+                        <input type="text" id="cfg-folder-url-input" placeholder="Paste GHL URL here (e.g. …?folderId=AbCdEf…)" style="flex:1;font-size:11px;padding:4px 7px;border:1px solid #cbd5e1;border-radius:4px;">
+                        <select id="cfg-folder-url-target" style="font-size:11px;padding:4px 7px;border:1px solid #cbd5e1;border-radius:4px;">
+                            <option value="contact_form">Contact Form</option>
+                            <option value="invisalign_form">Invisalign Form</option>
+                            <option value="implants_form">Implants Form</option>
+                            <option value="utm_forms">UTM Forms</option>
+                        </select>
+                        <button type="button" id="cfg-folder-url-btn" class="button" style="font-size:11px;padding:3px 10px;">Extract</button>
+                    </div>
+                </div>
                 <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
                     <button type="button" id="cfg-save-folder-ids-btn" class="button button-secondary" style="font-size:12px;padding:4px 14px;">
                         &#10003; Save Folder IDs
@@ -3571,6 +3584,22 @@ function cfg_settings_page() {
                     }).catch(function(){ btn.disabled=false; fst.textContent='✗ Request failed'; fst.style.color='#dc2626'; });
                 });
 
+                // ── URL extractor ──
+                document.getElementById('cfg-folder-url-btn').addEventListener('click', function(){
+                    var url    = document.getElementById('cfg-folder-url-input').value.trim();
+                    var target = document.getElementById('cfg-folder-url-target').value;
+                    var fst    = document.getElementById('cfg-folder-ids-status');
+                    // Try ?folderId=X or /folderId/X or hash #folderId=X
+                    var m = url.match(/[?#&/]folderId[=/]([A-Za-z0-9_-]+)/i) ||
+                            url.match(/folder[_-]?id[=:/]([A-Za-z0-9_-]+)/i) ||
+                            url.match(/\/([A-Za-z0-9]{15,25})(?:[/?#]|$)/);
+                    if (!m) { fst.textContent = '✗ No folder ID found in URL — try copying the full URL'; fst.style.color='#dc2626'; return; }
+                    var extracted = m[1];
+                    var el = document.getElementById('cfg-fid-' + target);
+                    if (el) { el.value = extracted; fst.textContent = '✓ Extracted: ' + extracted; fst.style.color='#16a34a'; }
+                    document.getElementById('cfg-folder-url-input').value = '';
+                });
+
                 // ── Auto-detect folder IDs from existing GHL fields ──
                 document.getElementById('cfg-detect-folders-btn').addEventListener('click', function(){
                     var btn = this, fst = document.getElementById('cfg-folder-ids-status');
@@ -3605,20 +3634,32 @@ function cfg_settings_page() {
                             'utm_forms':       ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom']
                         };
 
-                        // For each folder ID, score it against each group
-                        var bestMatch = {}; // gk => { id, score }
+                        // Score each folder ID against each group
+                        var scores = {}; // id => { gk: score }
                         ids.forEach(function(id){
                             var keys = (detected[id]||[]).map(function(k){ return k.toLowerCase(); });
+                            scores[id] = {};
                             Object.keys(groupKeys).forEach(function(gk){
-                                var score = groupKeys[gk].filter(function(k){ return keys.indexOf(k) >= 0; }).length;
-                                // bonus: implants_form gets +1 for every key starting with 'implant_'
-                                if (gk === 'implants_form') score += keys.filter(function(k){ return k.indexOf('implant_') === 0; }).length;
-                                // bonus: utm_forms gets +1 for every key ending with '_custom' or starting with 'utm'
-                                if (gk === 'utm_forms') score += keys.filter(function(k){ return k.indexOf('utm') === 0 || k.slice(-7) === '_custom'; }).length;
-                                if (score > 0 && score > ((bestMatch[gk] || {}).score || 0)) {
-                                    bestMatch[gk] = { id: id, score: score };
-                                }
+                                var s = groupKeys[gk].filter(function(k){ return keys.indexOf(k) >= 0; }).length;
+                                if (gk === 'implants_form') s += keys.filter(function(k){ return k.indexOf('implant_') === 0; }).length;
+                                if (gk === 'utm_forms')     s += keys.filter(function(k){ return k.indexOf('utmcampaign') === 0 || k.indexOf('utmmedium') === 0 || k.indexOf('utmcontent') === 0 || k === 'gclid_custom'; }).length;
+                                scores[id][gk] = s;
                             });
+                        });
+
+                        // Exclusive assignment: each folder ID → only the ONE group it scores highest for
+                        // Then per group, pick the folder ID with the highest score
+                        var bestMatch = {}; // gk => { id, score }
+                        ids.forEach(function(id){
+                            // Find which group this folder ID fits best
+                            var topGk = null, topScore = 0;
+                            Object.keys(groupKeys).forEach(function(gk){
+                                if (scores[id][gk] > topScore) { topScore = scores[id][gk]; topGk = gk; }
+                            });
+                            if (!topGk || topScore === 0) return; // skip unrecognised folders
+                            if (topScore > ((bestMatch[topGk] || {}).score || 0)) {
+                                bestMatch[topGk] = { id: id, score: topScore };
+                            }
                         });
 
                         var filled = 0;
