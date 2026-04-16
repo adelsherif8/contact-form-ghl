@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.9.8
+ * Version:     1.9.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -305,18 +305,19 @@ function cfg_get( $key = null ) {
 //  GHL — AUTO-CREATE CUSTOM FIELDS + FOLDERS
 // ═══════════════════════════════════════════════════════════════
 function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
+    $logs = [];
+
     // Use a 1-hour transient so fields are re-checked periodically.
-    // If a field was deleted in GHL it will be recreated within the hour.
     $transient_key = 'cfg_ghl_fields_' . md5( $location_id );
     if ( get_transient( $transient_key ) ) {
-        error_log( '[CFG] ensure_fields: transient hit, skipping' );
-        return;
+        return [ 'transient_hit' => true ];
     }
-    error_log( '[CFG] ensure_fields: running for location ' . substr( $location_id, 0, 8 ) . '...' );
+
     if ( ! $api_key || ! $location_id ) {
-        error_log( '[CFG] ensure_fields: missing api_key or location_id — aborting' );
-        return;
+        return [ 'error' => 'missing api_key or location_id' ];
     }
+
+    $logs[] = 'running for location ' . substr( $location_id, 0, 8 ) . '...';
 
     $base    = 'https://services.leadconnectorhq.com';
     $headers = [
@@ -332,11 +333,12 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         'timeout' => 10,
     ] );
     if ( is_wp_error( $r_list ) ) {
-        error_log( '[CFG] ensure_fields: customFields GET error: ' . $r_list->get_error_message() );
+        $logs[] = 'customFields GET error: ' . $r_list->get_error_message();
     } else {
         $code   = wp_remote_retrieve_response_code( $r_list );
         $b_list = json_decode( wp_remote_retrieve_body( $r_list ), true );
-        error_log( '[CFG] ensure_fields: customFields GET status=' . $code . ' keys=' . implode( ',', array_column( $b_list['customFields'] ?? [], 'fieldKey' ) ) );
+        $keys   = array_column( $b_list['customFields'] ?? [], 'fieldKey' );
+        $logs[] = 'customFields GET status=' . $code . ' found ' . count( $keys ) . ' keys: ' . implode( ', ', $keys );
         foreach ( $b_list['customFields'] ?? [] as $f ) {
             if ( isset( $f['fieldKey'] ) ) $existing_keys[ $f['fieldKey'] ] = true;
         }
@@ -348,17 +350,22 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         'headers' => $headers,
         'timeout' => 10,
     ] );
-    if ( ! is_wp_error( $r_folders ) ) {
+    if ( is_wp_error( $r_folders ) ) {
+        $logs[] = 'customFieldsFolders GET error: ' . $r_folders->get_error_message();
+    } else {
+        $code      = wp_remote_retrieve_response_code( $r_folders );
         $b_folders = json_decode( wp_remote_retrieve_body( $r_folders ), true );
+        $fnames    = array_column( $b_folders['folders'] ?? [], 'name' );
+        $logs[]    = 'folders GET status=' . $code . ' found: ' . implode( ', ', $fnames );
         foreach ( $b_folders['folders'] ?? [] as $fd ) {
             if ( isset( $fd['name'] ) ) $existing_folders[ $fd['name'] ] = $fd['id'];
         }
     }
 
     // ── Create a folder (or return existing id) ──
-    $make_folder = function( $name ) use ( $base, $headers, $location_id, &$existing_folders ) {
+    $make_folder = function( $name ) use ( $base, $headers, $location_id, &$existing_folders, &$logs ) {
         if ( isset( $existing_folders[ $name ] ) ) {
-            error_log( '[CFG] folder "' . $name . '" already exists: ' . $existing_folders[ $name ] );
+            $logs[] = 'folder "' . $name . '" already exists (id=' . $existing_folders[ $name ] . ')';
             return $existing_folders[ $name ];
         }
         $r = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
@@ -367,33 +374,34 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
             'timeout' => 10,
         ] );
         if ( is_wp_error( $r ) ) {
-            error_log( '[CFG] folder create error "' . $name . '": ' . $r->get_error_message() );
+            $logs[] = 'folder create "' . $name . '" WP_ERROR: ' . $r->get_error_message();
             return null;
         }
-        $code = wp_remote_retrieve_response_code( $r );
-        $b    = json_decode( wp_remote_retrieve_body( $r ), true );
-        $id   = $b['folder']['id'] ?? $b['id'] ?? null;
-        error_log( '[CFG] folder create "' . $name . '" status=' . $code . ' id=' . $id . ' body=' . wp_remote_retrieve_body( $r ) );
+        $code   = wp_remote_retrieve_response_code( $r );
+        $raw    = wp_remote_retrieve_body( $r );
+        $b      = json_decode( $raw, true );
+        $id     = $b['folder']['id'] ?? $b['id'] ?? null;
+        $logs[] = 'folder create "' . $name . '" status=' . $code . ' id=' . $id . ' body=' . $raw;
         if ( $id ) $existing_folders[ $name ] = $id;
         return $id;
     };
 
     // ── Create a single custom field (skip if key already exists) ──
-    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys ) {
+    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
         if ( isset( $existing_keys[ $key ] ) ) {
-            error_log( '[CFG] field "' . $key . '" already exists, skipping' );
+            $logs[] = 'field "' . $key . '" already exists — skipping';
             return;
         }
         $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ];
         if ( $folder_id ) $payload['parentId'] = $folder_id;
-        $r = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+        $r      = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
             'body'    => wp_json_encode( $payload ),
             'timeout' => 10,
         ] );
-        $code = is_wp_error( $r ) ? 'WP_ERROR' : wp_remote_retrieve_response_code( $r );
-        $body = is_wp_error( $r ) ? $r->get_error_message() : wp_remote_retrieve_body( $r );
-        error_log( '[CFG] field create "' . $key . '" status=' . $code . ' body=' . $body );
+        $code   = is_wp_error( $r ) ? 'WP_ERROR' : wp_remote_retrieve_response_code( $r );
+        $raw    = is_wp_error( $r ) ? $r->get_error_message() : wp_remote_retrieve_body( $r );
+        $logs[] = 'field create "' . $key . '" status=' . $code . ' body=' . $raw;
     };
 
     // ── Build implant field list dynamically from question editor ──
@@ -441,6 +449,8 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 
     // Cache for 1 hour — prevents redundant API calls on every submission
     set_transient( $transient_key, '1', HOUR_IN_SECONDS );
+
+    return $logs;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3854,6 +3864,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
+                    if (d.data && d.data.ghl_debug) console.log('[CFG GHL field provisioning]', d.data.ghl_debug);
                     if (REDIRECT) { window.location.href = REDIRECT; }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
@@ -4034,6 +4045,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
+                    if (d.data && d.data.ghl_debug) console.log('[CFG GHL field provisioning]', d.data.ghl_debug);
                     if (REDIRECT) { window.location.href = REDIRECT; }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
@@ -4356,7 +4368,7 @@ function cfg_ajax_submit() {
     }
 
     // Auto-provision GHL custom fields + folders on first ever submission
-    cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
+    $ghl_field_logs = cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
 
     // ── Build GHL payload ────────────────────────────────────
     $custom_fields = [];
@@ -4411,7 +4423,7 @@ function cfg_ajax_submit() {
     cfg_log_entry( 'contact', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
-        wp_send_json_success( 'Contact created.' );
+        wp_send_json_success( [ 'message' => 'Contact created.', 'ghl_debug' => $ghl_field_logs ] );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         error_log( '[CFG] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
@@ -4803,6 +4815,7 @@ function cfg_aligner_shortcode() {
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
+                    if(res.data && res.data.ghl_debug) console.log('[CFG GHL field provisioning]', res.data.ghl_debug);
                     if(surl){ window.location.href=surl; }
                     else{
                         form.innerHTML='<div style="text-align:center;padding:2.5rem 0;">'+
@@ -4876,7 +4889,7 @@ function cfg_aligner_ajax_submit() {
     }
 
     // Auto-provision GHL custom fields + folders on first ever submission
-    cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
+    $ghl_field_logs = cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
 
     // Quiz answers
     $ans_raw = sanitize_text_field( $_POST['alg_answers'] ?? '' );
@@ -4938,7 +4951,7 @@ function cfg_aligner_ajax_submit() {
     cfg_log_entry( 'aligner', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
-        wp_send_json_success( 'Contact created.' );
+        wp_send_json_success( [ 'message' => 'Contact created.', 'ghl_debug' => $ghl_field_logs ] );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         error_log( '[CFG Aligner] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
@@ -6077,7 +6090,7 @@ function cfg_implant_ajax_submit() {
     }
 
     // Auto-provision GHL custom fields + folders on first ever submission
-    cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
+    $ghl_field_logs = cfg_ghl_ensure_fields( $s['ghl_api_key'], $s['ghl_location_id'], $s );
 
     // Decode path configs
     $single_qs = json_decode( $s['imp_single_qs'], true ) ?: [];
@@ -6163,7 +6176,7 @@ function cfg_implant_ajax_submit() {
     cfg_log_entry( 'implant', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
-        wp_send_json_success( 'Contact created.' );
+        wp_send_json_success( [ 'message' => 'Contact created.', 'ghl_debug' => $ghl_field_logs ] );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         error_log( '[CFG Implant] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
