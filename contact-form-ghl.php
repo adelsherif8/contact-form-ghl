@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.9.6
+ * Version:     1.9.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -305,8 +305,10 @@ function cfg_get( $key = null ) {
 //  GHL — AUTO-CREATE CUSTOM FIELDS + FOLDERS
 // ═══════════════════════════════════════════════════════════════
 function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
-    $option_key = 'cfg_ghl_fields_' . md5( $location_id );
-    if ( get_option( $option_key ) ) return; // already provisioned
+    // Use a 1-hour transient so fields are re-checked periodically.
+    // If a field was deleted in GHL it will be recreated within the hour.
+    $transient_key = 'cfg_ghl_fields_' . md5( $location_id );
+    if ( get_transient( $transient_key ) ) return;
 
     $base    = 'https://services.leadconnectorhq.com';
     $headers = [
@@ -315,8 +317,35 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         'Version'       => '2021-07-28',
     ];
 
-    // ── Create a folder, return its id ──
-    $make_folder = function( $name ) use ( $base, $headers, $location_id ) {
+    // ── Fetch existing custom field keys so we skip ones that already exist ──
+    $existing_keys = [];
+    $r_list = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [
+        'headers' => $headers,
+        'timeout' => 10,
+    ] );
+    if ( ! is_wp_error( $r_list ) ) {
+        $b_list = json_decode( wp_remote_retrieve_body( $r_list ), true );
+        foreach ( $b_list['customFields'] ?? [] as $f ) {
+            if ( isset( $f['fieldKey'] ) ) $existing_keys[ $f['fieldKey'] ] = true;
+        }
+    }
+
+    // ── Fetch existing folder names so we skip ones that already exist ──
+    $existing_folders = [];
+    $r_folders = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [
+        'headers' => $headers,
+        'timeout' => 10,
+    ] );
+    if ( ! is_wp_error( $r_folders ) ) {
+        $b_folders = json_decode( wp_remote_retrieve_body( $r_folders ), true );
+        foreach ( $b_folders['folders'] ?? [] as $fd ) {
+            if ( isset( $fd['name'] ) ) $existing_folders[ $fd['name'] ] = $fd['id'];
+        }
+    }
+
+    // ── Create a folder (or return existing id) ──
+    $make_folder = function( $name ) use ( $base, $headers, $location_id, &$existing_folders ) {
+        if ( isset( $existing_folders[ $name ] ) ) return $existing_folders[ $name ];
         $r = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
             'headers' => $headers,
             'body'    => wp_json_encode( [ 'name' => $name ] ),
@@ -324,13 +353,16 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
         ] );
         if ( is_wp_error( $r ) ) return null;
         $b = json_decode( wp_remote_retrieve_body( $r ), true );
-        return $b['folder']['id'] ?? $b['id'] ?? null;
+        $id = $b['folder']['id'] ?? $b['id'] ?? null;
+        if ( $id ) $existing_folders[ $name ] = $id;
+        return $id;
     };
 
-    // ── Create a single custom field ──
-    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id ) {
+    // ── Create a single custom field (skip if key already exists) ──
+    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys ) {
+        if ( isset( $existing_keys[ $key ] ) ) return; // already exists in GHL
         $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ];
-        if ( $folder_id ) $payload['id'] = $folder_id;
+        if ( $folder_id ) $payload['parentId'] = $folder_id;
         wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
             'body'    => wp_json_encode( $payload ),
@@ -381,7 +413,8 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
     foreach ( $utm_fields as $key => $name ) $make_field( $name, $key, $utm_folder );
 
-    update_option( $option_key, '2' ); // bump version to force re-run on existing installs
+    // Cache for 1 hour — prevents redundant API calls on every submission
+    set_transient( $transient_key, '1', HOUR_IN_SECONDS );
 }
 
 // ═══════════════════════════════════════════════════════════════
