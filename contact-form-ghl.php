@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.2
+ * Version:     2.2.3
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1086,7 +1086,7 @@ function cfg_settings_page() {
     ?>
     <div class="wrap">
     <h1 style="display:flex;align-items:center;gap:14px;margin-bottom:18px;">
-        <img src="<?= esc_url( plugins_url( 'logo.svg', __FILE__ ) ) ?>" alt="Plugin Logo" width="48" height="48" style="border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.18);flex-shrink:0;">
+        <span style="flex-shrink:0;display:inline-block;width:48px;height:48px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.18);overflow:hidden;line-height:0;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="48" height="48"><defs><linearGradient id="cfg-bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#0f172a"/><stop offset="100%" style="stop-color:#1e293b"/></linearGradient><linearGradient id="cfg-acc" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#f59e0b"/><stop offset="100%" style="stop-color:#ef4444"/></linearGradient></defs><rect width="256" height="256" rx="40" fill="url(#cfg-bg)"/><rect x="22" y="54" width="88" height="112" rx="10" fill="#1e3a5f"/><rect x="22" y="54" width="88" height="112" rx="10" fill="none" stroke="#334155" stroke-width="1.5"/><rect x="34" y="76" width="64" height="7" rx="3.5" fill="#475569"/><rect x="34" y="91" width="64" height="7" rx="3.5" fill="#334155"/><rect x="34" y="108" width="40" height="7" rx="3.5" fill="#475569"/><rect x="34" y="123" width="64" height="7" rx="3.5" fill="#334155"/><rect x="34" y="138" width="50" height="7" rx="3.5" fill="#475569"/><rect x="34" y="152" width="64" height="4" rx="2" fill="url(#cfg-acc)" opacity="0.6"/><line x1="118" y1="110" x2="140" y2="110" stroke="url(#cfg-acc)" stroke-width="3" stroke-linecap="round"/><polyline points="133,103 141,110 133,117" fill="none" stroke="url(#cfg-acc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="146" y="78" width="88" height="64" rx="10" fill="url(#cfg-acc)"/><text x="190" y="121" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="26" fill="#0f172a" text-anchor="middle" letter-spacing="-1">GHL</text><text x="128" y="193" font-family="Arial,sans-serif" font-weight="700" font-size="13" fill="#94a3b8" text-anchor="middle" letter-spacing="2">CONTACT FORM</text><text x="128" y="212" font-family="Arial,sans-serif" font-size="10" fill="#475569" text-anchor="middle" letter-spacing="1.5">INTEGRATION</text><circle cx="128" cy="232" r="3" fill="url(#cfg-acc)" opacity="0.7"/><circle cx="118" cy="232" r="2" fill="#475569" opacity="0.5"/><circle cx="138" cy="232" r="2" fill="#475569" opacity="0.5"/></svg></span>
         <span style="font-size:20px;font-weight:600;color:#1d2327;">Contact Form Settings</span>
     </h1>
     <?php if ( $saved ): ?>
