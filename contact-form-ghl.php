@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     1.9.3
+ * Version:     1.9.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2807,6 +2807,36 @@ function cfg_settings_page() {
         <div class="og-step">
             <div class="og-num">4</div>
             <div class="og-body">
+                <h3>Contact Form Fields</h3>
+                <p>Sent on every contact form submission. Create these as Text fields in GHL.</p>
+                <table class="og-table">
+                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Example value</th></tr>
+                    <tr><td><span class="og-field">treatment_type</span></td><td>Treatment Type</td><td><em>Invisalign</em>, <em>Implants</em>, <em>General</em> — set by the treatment dropdown on the form</td></tr>
+                </table>
+                <div class="og-tip"><strong>Note:</strong> The treatment dropdown options are fully configurable in the Contact Form settings tab. The value sent to GHL is exactly the option label the patient selected.</div>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">5</div>
+            <div class="og-body">
+                <h3>Aligner / Invisalign Form Fields</h3>
+                <p>Sent on every aligner quiz submission. These capture the patient's quiz answers and treatment type.</p>
+                <table class="og-table">
+                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Example value</th></tr>
+                    <tr><td><span class="og-field">treatment_type</span></td><td>Treatment Type</td><td><em>Invisalign</em> — always set automatically</td></tr>
+                    <tr><td><span class="og-field">prev_orthodontic</span></td><td>Previous Orthodontic Treatment</td><td><em>yes</em> or <em>no</em></td></tr>
+                    <tr><td><span class="og-field">dental_work</span></td><td>Existing Dental Work</td><td><em>yes</em> or <em>no</em></td></tr>
+                    <tr><td><span class="og-field">teeth_alignment</span></td><td>Teeth Alignment</td><td><em>Very crowded</em>, <em>Slightly crowded</em>, etc.</td></tr>
+                    <tr><td><span class="og-field">bite_issues</span></td><td>Bite Issues</td><td><em>Overbite</em>, <em>Underbite</em>, <em>None of the above</em>, etc.</td></tr>
+                </table>
+                <div class="og-tip"><strong>Note:</strong> The aligner quiz steps are fully customizable in the Aligner Form settings tab — field keys match whatever you set in the <em>Field Key</em> input for each step. Only steps with a non-empty answer are sent.</div>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">6</div>
+            <div class="og-body">
                 <h3>Implant Estimator Answer Fields</h3>
                 <p>These capture what the patient selected during the quiz. Each answer is stored in its own field so you can filter and segment in GHL.</p>
                 <table class="og-table">
@@ -2819,20 +2849,7 @@ function cfg_settings_page() {
                     <tr><td><span class="og-field">implant_insurance</span></td><td>Has Dental Insurance</td><td><em>yes</em> or <em>no</em></td></tr>
                     <tr><td><span class="og-field">implant_range</span></td><td>Estimated Price Range</td><td><em>$9,750 – $13,500 — 2 implants</em></td></tr>
                 </table>
-                <div class="og-tip"><strong>Note:</strong> Field keys are prefixed with <code class="og-code">implant_</code> followed by the quiz field name exactly as configured in the estimator settings. Only fields with a non-empty answer are sent — blank answers are skipped.</div>
-            </div>
-        </div>
-
-        <div class="og-step">
-            <div class="og-num">5</div>
-            <div class="og-body">
-                <h3>Lead Source / Trigger Field</h3>
-                <p>Create one additional Text field to identify which tool the lead came from. This makes it easy to filter contacts and trigger workflows by source.</p>
-                <table class="og-table">
-                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Values sent</th></tr>
-                    <tr><td><span class="og-field">lead_source</span></td><td>Lead Source</td><td><em>implant-estimator</em>, <em>contact-form</em>, <em>aligner-quiz</em></td></tr>
-                </table>
-                <div class="og-warn"><strong>Important:</strong> This field is not yet sent automatically — the plugin sends <strong>tags</strong> to identify the source (see Phase 3). You can set the value in a GHL workflow action using the tag as the trigger. Alternatively, you can use the tag directly as your workflow trigger without needing this field.</div>
+                <div class="og-tip"><strong>Note:</strong> Field keys are prefixed with <code class="og-code">implant_</code> followed by the quiz field name exactly as configured in the estimator settings. Only fields with a non-empty answer are sent — blank answers are skipped. <strong>These fields are created automatically on the first form submission</strong> — no manual setup needed.</div>
             </div>
         </div>
 
@@ -2843,27 +2860,29 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">6</div>
+            <div class="og-num">7</div>
             <div class="og-body">
                 <h3>Tags Applied per Form</h3>
                 <p>Every submission adds tags to the contact in GHL. No setup needed — they are applied automatically. Here is the full list:</p>
+                <div class="og-section-label">Contact Form</div>
+                <ul>
+                    <li><span class="og-tag">website-contact-form</span> — every contact form submission</li>
+                </ul>
+                <div class="og-section-label">Aligner / Invisalign Form</div>
+                <ul>
+                    <li><span class="og-tag">website-invisalign-form</span> — use this as your primary workflow trigger</li>
+                    <li><span class="og-tag">aligner-quiz</span> — also applied on every submission</li>
+                    <li><span class="og-tag">website-lead</span> — applied on every aligner and implant lead</li>
+                </ul>
                 <div class="og-section-label">Implant Estimator</div>
                 <ul>
-                    <li><span class="og-tag">implant-estimator</span> — applied on every implant lead</li>
+                    <li><span class="og-tag">implant-estimator</span> — every implant lead</li>
                     <li><span class="og-tag">website-lead</span> — applied on every implant and aligner lead</li>
                     <li><span class="og-tag">implant-single</span> / <span class="og-tag">implant-multiple</span> / <span class="og-tag">implant-fullarch</span> — the path they took</li>
                     <li><span class="og-tag">bone-graft-yes</span> / <span class="og-tag">bone-graft-no</span> / <span class="og-tag">bone-graft-not-sure</span> — their bone graft answer</li>
                     <li><span class="og-tag">has-insurance</span> / <span class="og-tag">no-insurance</span> — their insurance answer (if enabled)</li>
                 </ul>
-                <div class="og-section-label">Contact Form</div>
-                <ul>
-                    <li><span class="og-tag">website-contact-form</span></li>
-                </ul>
-                <div class="og-section-label">Aligner Quiz</div>
-                <ul>
-                    <li><span class="og-tag">aligner-quiz</span>, <span class="og-tag">website-lead</span></li>
-                </ul>
-                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> (not <em>Contact Created</em>) as your workflow trigger type. This fires even when an existing patient re-submits the form.</div>
+                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> as your workflow trigger (not <em>Contact Created</em>). This fires even when an existing patient re-submits — and <span class="og-tag">website-invisalign-form</span> is the cleanest trigger for the aligner workflow.</div>
             </div>
         </div>
 
@@ -2874,7 +2893,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">7</div>
+            <div class="og-num">8</div>
             <div class="og-body">
                 <h3>Workflow 1 — Implant Lead Follow-Up</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-estimator</span></p>
@@ -2891,7 +2910,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">8</div>
+            <div class="og-num">9</div>
             <div class="og-body">
                 <h3>Workflow 2 — Full-Arch Leads (high-value segment)</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-fullarch</span></p>
@@ -2905,7 +2924,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">9</div>
+            <div class="og-num">10</div>
             <div class="og-body">
                 <h3>Workflow 3 — Bone Graft Segment</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">bone-graft-yes</span> <em>or</em> <span class="og-tag">bone-graft-not-sure</span></p>
@@ -2918,7 +2937,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">10</div>
+            <div class="og-num">11</div>
             <div class="og-body">
                 <h3>Workflow 4 — Contact Form Enquiries</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">website-contact-form</span></p>
@@ -2931,7 +2950,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">11</div>
+            <div class="og-num">12</div>
             <div class="og-body">
                 <h3>Add Contacts to Your Pipeline on Every Workflow</h3>
                 <p>Every workflow above should include an <strong>Add to Pipeline / Stage</strong> action so new leads don't fall through the cracks. Suggested pipeline stages:</p>
@@ -2952,7 +2971,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">12</div>
+            <div class="og-num">13</div>
             <div class="og-body">
                 <h3>Submit a Test Implant Lead</h3>
                 <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL:</p>
@@ -2973,7 +2992,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">13</div>
+            <div class="og-num">14</div>
             <div class="og-body">
                 <h3>Submit a Test Contact Form Lead</h3>
                 <p>Fill out the main contact form (not the estimator) with a test email and verify:</p>
