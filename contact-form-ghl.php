@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.1.0
+ * Version:     2.1.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -567,42 +567,55 @@ function cfg_render_dashboard_widget() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  PHONE FORMATTER (frontend — all forms)
+//  INTL-TEL-INPUT — country code phone picker (all forms)
 // ═══════════════════════════════════════════════════════════════
+add_action( 'wp_head', function () {
+    echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/css/intlTelInput.min.css"/>';
+    echo '<style>
+        .iti { display:block !important; width:100% !important; }
+        .iti input[type="tel"] { width:100% !important; box-sizing:border-box !important; }
+    </style>';
+} );
+
 add_action( 'wp_footer', function () {
     ?>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/js/intlTelInput.min.js"></script>
     <script>
     (function(){
-        function cfgFmtPhone(el) {
-            var v = el.value.replace(/\D/g,'').substring(0,10);
-            if (v.length >= 7)      el.value = '(' + v.substring(0,3) + ') ' + v.substring(3,6) + '-' + v.substring(6);
-            else if (v.length >= 4) el.value = '(' + v.substring(0,3) + ') ' + v.substring(3);
-            else if (v.length > 0)  el.value = '(' + v;
-            else                    el.value = v;
-        }
-        document.addEventListener('DOMContentLoaded', function(){
-            document.querySelectorAll('input[type="tel"]').forEach(function(el){
-                el.addEventListener('input', function(){ cfgFmtPhone(el); });
-                el.addEventListener('blur',  function(){ cfgFmtPhone(el); });
+        var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/js/utils.js';
+
+        function cfgInitPhone(el) {
+            if (el.dataset.itiDone || !window.intlTelInput) return;
+            el.dataset.itiDone = '1';
+            var iti = window.intlTelInput(el, {
+                initialCountry:  'us',
+                separateDialCode: true,
+                loadUtilsOnInit: ITI_UTILS,
             });
+            el._cfgIti = iti;
+        }
+
+        // Init on load
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('input[type="tel"]').forEach(cfgInitPhone);
         });
-        // Also handle dynamically added inputs (quiz steps rendered later)
-        var _cfgPhoneObserver = new MutationObserver(function(muts){
+
+        // Init dynamically added inputs (quiz steps)
+        new MutationObserver(function(muts){
             muts.forEach(function(m){
                 m.addedNodes.forEach(function(n){
                     if (n.nodeType !== 1) return;
-                    var inputs = n.querySelectorAll ? n.querySelectorAll('input[type="tel"]') : [];
-                    inputs.forEach(function(el){
-                        if (!el.dataset.cfgFmt) {
-                            el.dataset.cfgFmt = '1';
-                            el.addEventListener('input', function(){ cfgFmtPhone(el); });
-                            el.addEventListener('blur',  function(){ cfgFmtPhone(el); });
-                        }
-                    });
+                    (n.querySelectorAll ? n.querySelectorAll('input[type="tel"]') : []).forEach(cfgInitPhone);
+                    if (n.matches && n.matches('input[type="tel"]')) cfgInitPhone(n);
                 });
             });
-        });
-        _cfgPhoneObserver.observe(document.body, { childList: true, subtree: true });
+        }).observe(document.body, { childList:true, subtree:true });
+
+        // Before ANY form submits — swap phone value with full intl number
+        document.addEventListener('submit', function(e){
+            var ph = e.target.querySelector('input[type="tel"]');
+            if (ph && ph._cfgIti) ph.value = ph._cfgIti.getNumber() || ph.value;
+        }, true); // capturing phase — runs before form's own handler
     })();
     </script>
     <?php
@@ -3793,7 +3806,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                         </div>
                         <div>
                             <label for="cfg_phone" style="<?= $label_style ?>">Phone <?php if ( $s['req_phone'] === '1' ): ?><span style="color:<?= $pri ?>">*</span><?php endif; ?></label>
-                            <input id="cfg_phone" name="phone" type="tel" <?= $s['req_phone'] === '1' ? 'required' : '' ?> placeholder="(555) 123-4567" style="<?= $input_style ?>"/>
+                            <input id="cfg_phone" name="phone" type="tel" <?= $s['req_phone'] === '1' ? 'required' : '' ?> placeholder="Phone number" style="<?= $input_style ?>"/>
                         </div>
                     </div>
 
@@ -3986,7 +3999,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
                     </div>
                     <div>
                         <label for="cfge_phone" style="<?= $label_style ?>">Phone <?php if ( $s['req_phone'] === '1' ): ?><span style="color:<?= $pri ?>">*</span><?php endif; ?></label>
-                        <input id="cfge_phone" name="phone" type="tel" <?= $s['req_phone'] === '1' ? 'required' : '' ?> placeholder="(555) 123-4567" style="<?= $input_style ?>"/>
+                        <input id="cfge_phone" name="phone" type="tel" <?= $s['req_phone'] === '1' ? 'required' : '' ?> placeholder="Phone number" style="<?= $input_style ?>"/>
                     </div>
                 </div>
 
@@ -4740,7 +4753,7 @@ function cfg_aligner_shortcode() {
                         echo '<div><label style="display:block;margin-bottom:0.4rem;font-size:0.83rem;font-weight:600;color:#374151;">Last Name <span style="color:' . $accent . '">*</span></label><input type="text" name="lastName" required placeholder="Smith" class="' . $uid . '-input"/></div>';
                         echo '</div>';
                         echo '<div class="' . $uid . '-fgrid" style="margin-bottom:1.5rem;">';
-                        echo '<div><label style="display:block;margin-bottom:0.4rem;font-size:0.83rem;font-weight:600;color:#374151;">Phone <span style="color:' . $accent . '">*</span></label><input type="tel" name="phone" required placeholder="(555) 123-4567" class="' . $uid . '-input"/></div>';
+                        echo '<div><label style="display:block;margin-bottom:0.4rem;font-size:0.83rem;font-weight:600;color:#374151;">Phone <span style="color:' . $accent . '">*</span></label><input type="tel" name="phone" required placeholder="Phone number" class="' . $uid . '-input"/></div>';
                         echo '<div><label style="display:block;margin-bottom:0.4rem;font-size:0.83rem;font-weight:600;color:#374151;">Email <span style="color:' . $accent . '">*</span></label><input type="email" name="email" required placeholder="jane@example.com" class="' . $uid . '-input"/></div>';
                         echo '</div>';
                         echo '<div id="' . $uid . '-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.75rem 1rem;color:#dc2626;font-size:0.875rem;margin-bottom:1rem;"></div>';
@@ -5409,7 +5422,7 @@ if ( $show_insurance && $ins_q ) {
               </div>
               <div>
                 <label for="<?= $uid ?>-phone" style="display:block;margin-bottom:.375rem;font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;">Phone Number <span style="color:hsl(var(--primary));">*</span></label>
-                <input type="tel" id="<?= $uid ?>-phone" class="imp-input" placeholder="(000) 000-0000" autocomplete="tel" required>
+                <input type="tel" id="<?= $uid ?>-phone" class="imp-input" placeholder="Phone number" autocomplete="tel" required>
               </div>
               <button type="submit" id="<?= $uid ?>-reveal-btn" disabled
                 style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:.5rem;width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;border:none;cursor:not-allowed;opacity:.6;margin-top:4px;transition:box-shadow .2s;">
