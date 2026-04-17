@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.0
+ * Version:     2.3.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6433,13 +6433,17 @@ $cal_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewB
 $ph_svg  = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 $show_book = ( $s['imp_cta_book_enabled'] ?? '1' ) === '1';
 $show_call = ( $s['imp_cta_call_enabled'] ?? '0' ) === '1' && ! empty( $s['imp_cta_phone'] );
-$book_href = ! empty( $s['imp_cta_book_url'] ) ? esc_url( $s['imp_cta_book_url'] ) : ( ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '#' );
+$book_url  = ! empty( $s['imp_cta_book_url'] ) ? esc_url( $s['imp_cta_book_url'] ) : ( ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '' );
 $phone_clean = esc_attr( preg_replace('/[^0-9+\-\(\)\s]/', '', $s['imp_cta_phone'] ?? '' ) );
 $cta_buttons = '';
 if ( $show_book || $show_call ) {
     $cta_buttons = '<div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;padding-top:1.25rem;">';
     if ( $show_book ) {
-        $cta_buttons .= '<a href="' . $book_href . '" class="imp-cta-btn" style="text-decoration:none;">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</a>';
+        if ( $book_url ) {
+            $cta_buttons .= '<a href="' . $book_url . '" class="imp-cta-btn" style="text-decoration:none;">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</a>';
+        } else {
+            $cta_buttons .= '<button type="button" class="imp-cta-btn" onclick="window[\'' . esc_js( $uid ) . 'Nav\'](\'lead\')">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</button>';
+        }
     }
     if ( $show_call ) {
         $cta_buttons .= '<a href="tel:' . $phone_clean . '" class="imp-cta-btn-outline">' . $ph_svg . ' ' . esc_html( $s['imp_cta_call_label'] ) . '</a>';
@@ -6456,13 +6460,16 @@ $fin_block = ( $show_fin && ! empty( $s['imp_financing_text'] ) )
 $disc_block = ! empty( $s['imp_disclaimer'] )
     ? '<div style="margin-bottom:1.5rem;text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;">' . esc_html( $s['imp_disclaimer'] ) . '</p></div>'
     : '';
-$np_href = ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '#';
+$np_href = ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '';
 $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">'
     . '<div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:hsl(var(--primary)/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
     . '<h2 style="font-family:\'Cormorant Garamond\',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,4vw,2rem);line-height:1.25;margin:0 0 1rem;">' . esc_html($no_price_title) . '</h2>'
     . '<p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;margin:0 auto 2rem;max-width:26rem;">' . esc_html($no_price_sub) . '</p>'
-    . '<a href="' . $np_href . '" class="imp-cta-btn" style="text-decoration:none;margin:0 auto;">' . esc_html($no_price_btn)
-    . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a></div>';
+    . ( $np_href
+        ? '<a href="' . $np_href . '" class="imp-cta-btn" style="text-decoration:none;margin:0 auto;">' . esc_html($no_price_btn) . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>'
+        : '<button type="button" class="imp-cta-btn" style="margin:0 auto;" onclick="window[\'' . esc_js($uid) . 'Nav\'](\'lead\')">' . esc_html($no_price_btn) . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>'
+      )
+    . '</div>';
 ?>
 
 <?php
