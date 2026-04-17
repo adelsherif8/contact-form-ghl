@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.1
+ * Version:     2.3.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6595,7 +6595,7 @@ $_badge = function($txt) use ($uid) {
     result_suffix_single:   '<?= esc_js( $s['imp_result_single_suffix'] ) ?>',
     result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
     result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>',
-    successUrl:        '<?= esc_js( ! empty( $s['imp_contact_btn_url'] ) ? $s['imp_contact_btn_url'] : $s['imp_success_url'] ) ?>',
+    successUrl:        '<?= esc_js( ! empty( $s['imp_contact_btn_url'] ) ? $s['imp_contact_btn_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : $s['success_redirect_url'] ) ) ?>',
     graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>'
   };
 
@@ -7016,8 +7016,17 @@ $_badge = function($txt) use ($uid) {
     var _up = new URLSearchParams(window.location.search);
     ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
     fetch(config.ajaxUrl, { method:'POST', body:fd })
-      .then(function(){ if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); } })
-      .catch(function(){ navigate(panel); });
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+        isSubmitting = false;
+        if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); }
+      })
+      .catch(function(){
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+        isSubmitting = false;
+        if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); }
+      });
   }
 
   /* ── INIT ── */
