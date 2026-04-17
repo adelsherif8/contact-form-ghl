@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.2.9
+ * Version:     2.3.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4284,8 +4284,23 @@ function cfg_settings_page() {
                     <div class="cfg-detail-row"><span class="cfg-detail-key">Email</span><span class="cfg-detail-val"><a href="mailto:<?= esc_attr( $row['email'] ) ?>" style="color:#2271b1;"><?= esc_html( $row['email'] ) ?></a></span></div>
                     <div class="cfg-detail-row"><span class="cfg-detail-key">Phone</span><span class="cfg-detail-val"><a href="tel:<?= esc_attr( $row['phone'] ) ?>" style="color:#2271b1;"><?= esc_html( $row['phone'] ) ?></a></span></div>
                     <div class="cfg-detail-row"><span class="cfg-detail-key">Submitted</span><span class="cfg-detail-val"><?= esc_html( date( 'M j, Y g:ia', strtotime( $row['created_at'] ) ) ) ?></span></div>
-                    <div class="cfg-detail-row"><span class="cfg-detail-key">GHL Status</span><span class="cfg-detail-val"><?= $row['ghl_status'] === 'ok' ? '<span style="color:#16a34a;font-weight:600;">✓ Sent</span>' : '<span style="color:#b91c1c;font-weight:600;">✗ Failed</span>' ?></span></div>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">GHL Status</span><span class="cfg-detail-val"><?= $row['ghl_status'] === 'ok' ? '<span style="color:#16a34a;font-weight:600;">✓ Sent (HTTP ' . ( $meta['_ghl_http_code'] ?? '?' ) . ')</span>' : '<span style="color:#b91c1c;font-weight:600;">✗ Failed (HTTP ' . ( $meta['_ghl_http_code'] ?? '?' ) . ')</span>' ?></span></div>
+                    <?php if ( ! empty( $meta['_ghl_response']['contact']['id'] ) ): ?>
+                    <div class="cfg-detail-row"><span class="cfg-detail-key">GHL Contact ID</span><span class="cfg-detail-val" style="font-family:monospace;font-size:12px;"><?= esc_html( $meta['_ghl_response']['contact']['id'] ) ?></span></div>
+                    <?php endif; ?>
                 </div>
+
+                <?php if ( ! empty( $meta['_ghl_fields_sent'] ) ): ?>
+                <div class="cfg-detail-group">
+                    <div class="cfg-detail-group-title">Custom Fields Sent to GHL</div>
+                    <?php foreach ( $meta['_ghl_fields_sent'] as $cf ): ?>
+                    <div class="cfg-detail-row">
+                        <span class="cfg-detail-key" style="font-family:monospace;font-size:12px;"><?= esc_html( $cf['key'] ) ?></span>
+                        <span class="cfg-detail-val"><?= esc_html( $cf['field_value'] ) ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
 
                 <?php if ( ! empty( array_intersect_key( $meta, array_flip( $est_keys ) ) ) ): ?>
                 <!-- Estimate -->
@@ -5380,13 +5395,17 @@ function cfg_ajax_submit() {
         'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
     ] );
+    $entry_meta['_ghl_fields_sent'] = $custom_fields;
+    $entry_meta['_ghl_http_code']   = $code;
+    $entry_meta['_ghl_response']    = $body;
+    error_log( '[CFG Contact] sent customFields: ' . wp_json_encode( $custom_fields ) );
+    error_log( '[CFG Contact] GHL HTTP ' . $code . ': ' . wp_json_encode( $body ) );
     cfg_log_entry( 'contact', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
         wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
-        error_log( '[CFG] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
         wp_send_json_error( $msg );
     }
 }
@@ -5911,13 +5930,17 @@ function cfg_aligner_ajax_submit() {
         'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
     ] ) );
+    $entry_meta['_ghl_fields_sent'] = $custom;
+    $entry_meta['_ghl_http_code']   = $code;
+    $entry_meta['_ghl_response']    = $body;
+    error_log( '[CFG Aligner] sent customFields: ' . wp_json_encode( $custom ) );
+    error_log( '[CFG Aligner] GHL HTTP ' . $code . ': ' . wp_json_encode( $body ) );
     cfg_log_entry( 'aligner', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
         wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
-        error_log( '[CFG Aligner] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
         wp_send_json_error( $msg );
     }
 }
@@ -7140,13 +7163,17 @@ function cfg_implant_ajax_submit() {
         $val   = sanitize_text_field( $answers[ $field ] ?? '' );
         if ( $field !== '' && $val !== '' ) $entry_meta[ $field ] = $val;
     }
+    $entry_meta['_ghl_fields_sent'] = $custom;
+    $entry_meta['_ghl_http_code']   = $code;
+    $entry_meta['_ghl_response']    = $body;
+    error_log( '[CFG Implant] sent customFields: ' . wp_json_encode( $custom ) );
+    error_log( '[CFG Implant] GHL HTTP ' . $code . ': ' . wp_json_encode( $body ) );
     cfg_log_entry( 'implant', $first, $last, $email, $phone, $entry_meta, $ghl_ok ? 'ok' : 'error' );
 
     if ( $ghl_ok ) {
         wp_send_json_success( 'Contact created.' );
     } else {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
-        error_log( '[CFG Implant] GHL error ' . $code . ': ' . wp_json_encode( $body ) );
         wp_send_json_error( $msg );
     }
 }
