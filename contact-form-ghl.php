@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.3
+ * Version:     2.3.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6433,13 +6433,12 @@ $cal_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewB
 $ph_svg  = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 $show_book = ( $s['imp_cta_book_enabled'] ?? '1' ) === '1';
 $show_call = ( $s['imp_cta_call_enabled'] ?? '0' ) === '1' && ! empty( $s['imp_cta_phone'] );
-$book_href = ! empty( $s['imp_cta_book_url'] ) ? esc_url( $s['imp_cta_book_url'] ) : ( ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : ( ! empty( $s['success_redirect_url'] ) ? esc_url( $s['success_redirect_url'] ) : '#' ) );
 $phone_clean = esc_attr( preg_replace('/[^0-9+\-\(\)\s]/', '', $s['imp_cta_phone'] ?? '' ) );
 $cta_buttons = '';
 if ( $show_book || $show_call ) {
     $cta_buttons = '<div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;padding-top:1.25rem;">';
     if ( $show_book ) {
-        $cta_buttons .= '<a href="' . $book_href . '" class="imp-cta-btn" style="text-decoration:none;">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</a>';
+        $cta_buttons .= '<button type="button" class="imp-cta-btn" onclick="window[\'' . esc_js( $uid ) . 'BookCTA\']()">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</button>';
     }
     if ( $show_call ) {
         $cta_buttons .= '<a href="tel:' . $phone_clean . '" class="imp-cta-btn-outline">' . $ph_svg . ' ' . esc_html( $s['imp_cta_call_label'] ) . '</a>';
@@ -6989,40 +6988,47 @@ $_badge = function($txt) use ($uid) {
     var btn = document.getElementById(uid + '-reveal-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
 
-    var r      = getRange();
-    var panel  = 'result-' + (s.flow || 'single');
-    var fd     = new FormData();
-    fd.append('action',          'cfg_implant_submit');
-    fd.append('imp_nonce',       config.nonce);
-    fd.append('firstName',       fn);
-    fd.append('lastName',        ln);
-    fd.append('email',           em);
-    fd.append('phone',           ph);
+    // Just show results — GHL submission happens when they click Book CTA
+    var panel = 'result-' + (s.flow || 'single');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+    isSubmitting = false;
+    navigate(panel);
+  }
+
+  /* ── CTA BOOK BUTTON — submits to GHL then redirects ── */
+  function handleCTABook() {
+    if (isSubmitting) return;
+    var fn = document.getElementById(uid + '-firstName').value.trim();
+    var ln = document.getElementById(uid + '-lastName').value.trim();
+    var em = document.getElementById(uid + '-email').value.trim();
+    var ph = document.getElementById(uid + '-phone').value.trim();
+    if (!fn || !ln || !em || !ph) { navigate('lead'); return; }
+    isSubmitting = true;
+
+    var r     = getRange();
+    var panel = 'result-' + (s.flow || 'single');
+    var fd    = new FormData();
+    fd.append('action',    'cfg_implant_submit');
+    fd.append('imp_nonce', config.nonce);
+    fd.append('firstName', fn);
+    fd.append('lastName',  ln);
+    fd.append('email',     em);
+    fd.append('phone',     ph);
     <?php if($honeypot): ?>fd.append('imp_hp', '');<?php endif; ?>
     fd.append('flow', s.flow || '');
-    // Append all path answers
     var allQs = (getPathQs(s.flow) || []).concat(impPaths.ins ? [impPaths.ins] : []);
     for (var qi = 0; qi < allQs.length; qi++) {
       var qf = allQs[qi].field;
       fd.append('answer[' + qf + ']',  s.answers[qf]  || '');
       fd.append('answerL[' + qf + ']', s.answersL[qf] || '');
     }
-    fd.append('range',           r.label + r.suffix);
-    fd.append('rangeType',       panel);
+    fd.append('range',     r.label + r.suffix);
+    fd.append('rangeType', panel);
     var _up = new URLSearchParams(window.location.search);
     ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
     fetch(config.ajaxUrl, { method:'POST', body:fd })
-      .then(function(res){ return res.json(); })
-      .then(function(data){
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
-        isSubmitting = false;
-        if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); }
-      })
-      .catch(function(){
-        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
-        isSubmitting = false;
-        if (config.successUrl) { window.location.href = config.successUrl; } else { navigate(panel); }
-      });
+      .then(function(){ isSubmitting = false; if (config.successUrl) window.location.href = config.successUrl; })
+      .catch(function(){ isSubmitting = false; if (config.successUrl) window.location.href = config.successUrl; });
   }
 
   /* ── INIT ── */
@@ -7040,9 +7046,10 @@ $_badge = function($txt) use ($uid) {
     });
   }
 
-  window[uid + 'Nav']  = navigate;
-  window[uid + 'Back'] = goBack;
-  window[uid + 'Sel']  = selectOpt;
+  window[uid + 'Nav']     = navigate;
+  window[uid + 'Back']    = goBack;
+  window[uid + 'Sel']     = selectOpt;
+  window[uid + 'BookCTA'] = handleCTABook;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
