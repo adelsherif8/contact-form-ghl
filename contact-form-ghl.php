@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.7
+ * Version:     2.3.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -58,6 +58,11 @@ $cfg_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdate
     'contact-form-ghl'
 );
 $cfg_update_checker->getVcsApi()->enableReleaseAssets();
+$cfg_update_checker->addResultFilter( function( $info ) {
+    $icon = 'https://raw.githubusercontent.com/adelsherif8/contact-form-ghl/main/logo.svg';
+    $info->icons = [ 'svg' => $icon, '1x' => $icon, '2x' => $icon ];
+    return $info;
+} );
 
 // ═══════════════════════════════════════════════════════════════
 //  DEFAULTS
@@ -5353,9 +5358,9 @@ function cfg_ajax_submit() {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
     $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    $utm_display_keys = [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
-                          'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
-                          'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
+    $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
+                          'utm_content'  => 'utmcontent_custom',  'utm_keyword' => 'utmkeyword_custom',
+                          'utm_term'     => 'utmterm_custom',      'gclid'       => 'gclid_custom' ];
     foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
         $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
@@ -5885,9 +5890,9 @@ function cfg_aligner_ajax_submit() {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
     $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    $utm_display_keys = [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
-                          'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
-                          'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
+    $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
+                          'utm_content'  => 'utmcontent_custom',  'utm_keyword' => 'utmkeyword_custom',
+                          'utm_term'     => 'utmterm_custom',      'gclid'       => 'gclid_custom' ];
     foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
         $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
@@ -7139,9 +7144,9 @@ function cfg_implant_ajax_submit() {
         }
     }
     $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    $utm_display_keys = [ 'utm_campaign' => 'UTMCampaign_custom', 'utm_medium' => 'UTMMedium_custom',
-                          'utm_content'  => 'UTMContent_custom',  'utm_keyword' => 'UTMKeyword_custom',
-                          'utm_term'     => 'UTMTerm_custom',      'gclid'       => 'GCLID_custom' ];
+    $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
+                          'utm_content'  => 'utmcontent_custom',  'utm_keyword' => 'utmkeyword_custom',
+                          'utm_term'     => 'utmterm_custom',      'gclid'       => 'gclid_custom' ];
     foreach ( $utm_display_keys as $post_key => $fallback_key ) {
         $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
         $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
