@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.5
+ * Version:     2.3.6
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3821,7 +3821,7 @@ function cfg_settings_page() {
                         // Checker fields score 999 so they always win unambiguously
                         var groupKeys = {
                             'contact_form':    ['cfg_checker_contact_form','treatment_type','automation_tester'],
-                            'invisalign_form': ['cfg_checker_invisalign_form','prev_orthodontic','dental_work','teeth_alignment','bite_issues','has_insurance','cdcp_covered'],
+                            'invisalign_form': ['cfg_checker_invisalign_form','prev_orthodontic','dental_work','teeth_alignment','bite_issues','has_insurance'],
                             'implants_form':   ['cfg_checker_implants_form','implant_flow','implant_range','implant_toothlocation','implant_timemissing','implant_bonegraft',
                                                'implant_situationsingle','implant_teethcount','implant_teethlocation','implant_timemissingmult',
                                                'implant_bonegraftmult','implant_situationmult','implant_archselection','implant_situationarch',
@@ -5469,12 +5469,6 @@ function cfg_aligner_defaults() {
             'field_key' => 'has_insurance',
         ],
         [
-            'type'      => 'yesno',
-            'question'  => 'Are you covered with CDCP?',
-            'hint'      => '',
-            'field_key' => 'cdcp_covered',
-        ],
-        [
             'type'     => 'content',
             'title'    => 'Limited Time Offer',
             'subtitle' => 'Get an average of $3000 in savings',
@@ -6690,7 +6684,7 @@ $_badge = function($txt) use ($uid) {
       return {label: fmt(p.arch_min * multi)+' \u2013 '+fmt(p.arch_max * multi), suffix: ' \u2014 '+archSuffix};
     }
     var graftVal = getGraftVal(s.flow);
-    var addGraft = config.graftDisplay !== 'included' && (graftVal === 'yes' || graftVal === 'not-sure');
+    var addGraft = config.graftDisplay === 'included' && (graftVal === 'yes' || graftVal === 'not-sure');
     var bMin, bMax;
     if (s.flow === 'multiple') {
       var count = s.teethCountN;
