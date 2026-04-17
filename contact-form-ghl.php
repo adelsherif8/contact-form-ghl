@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.8
+ * Version:     2.3.9
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1052,6 +1052,12 @@ add_action( 'wp_footer', function () {
             );
             if (fmt) el.value = fmt;
         }
+
+        window.cfgPhoneValid = function(el) {
+            if (!el || !el._cfgIti) return true; // no ITI = no validation
+            if (!el.value.trim()) return true;    // empty handled by required check
+            return el._cfgIti.isValidNumber();
+        };
 
         function cfgInitPhone(el) {
             if (el.dataset.itiDone || !window.intlTelInput) return;
@@ -4858,6 +4864,8 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
         form.addEventListener('submit', function(e){
             e.preventDefault(); hideErr();
+            var phEl = form.querySelector('input[type="tel"]');
+            if (phEl && !window.cfgPhoneValid(phEl)) { showErr('Please enter a valid phone number.'); return; }
             if (HAS_TERMS) {
                 var terms = form.querySelector('[name="terms"]');
                 if (!terms||!terms.checked){ showErr('Please agree to the terms before submitting.'); return; }
@@ -5039,6 +5047,8 @@ function cfg_embed_shortcode_OLD_UNUSED() {
 
         form.addEventListener('submit', function(e){
             e.preventDefault(); hideErr();
+            var phEl = form.querySelector('input[type="tel"]');
+            if (phEl && !window.cfgPhoneValid(phEl)) { showErr('Please enter a valid phone number.'); return; }
             if (HAS_TERMS) {
                 var terms = form.querySelector('[name="terms"]');
                 if (!terms||!terms.checked){ showErr('Please agree to the terms before submitting.'); return; }
@@ -5790,6 +5800,8 @@ function cfg_aligner_shortcode() {
             if(!fn.trim()){ showErr('First name is required.'); return; }
             if(!ln.trim()){ showErr('Last name is required.'); return; }
             if(!ph.trim()){ showErr('Phone number is required.'); return; }
+            var phEl=form.querySelector('input[type="tel"]');
+            if(phEl && !window.cfgPhoneValid(phEl)){ showErr('Please enter a valid phone number.'); return; }
             if(!em.trim()){ showErr('Please enter your email address.'); return; }
             var ansEl=document.getElementById(uid+'-ans');
             if(ansEl) ansEl.value=JSON.stringify(answers);
@@ -6988,6 +7000,8 @@ $_badge = function($txt) use ($uid) {
     var em = document.getElementById(uid + '-email').value.trim();
     var ph = document.getElementById(uid + '-phone').value.trim();
     if (!fn || !ln || !em || !ph) { isSubmitting = false; return; }
+    var phElL = document.getElementById(uid + '-phone');
+    if (phElL && !window.cfgPhoneValid(phElL)) { isSubmitting = false; return; }
     <?php if($honeypot): ?>
     var hp = document.getElementById(uid + '-hp');
     if (hp && hp.value) { isSubmitting = false; return; }
@@ -7010,6 +7024,8 @@ $_badge = function($txt) use ($uid) {
     var em = document.getElementById(uid + '-email').value.trim();
     var ph = document.getElementById(uid + '-phone').value.trim();
     if (!fn || !ln || !em || !ph) { navigate('lead'); return; }
+    var phElB = document.getElementById(uid + '-phone');
+    if (phElB && !window.cfgPhoneValid(phElB)) { navigate('lead'); return; }
     isSubmitting = true;
 
     var r     = getRange();
