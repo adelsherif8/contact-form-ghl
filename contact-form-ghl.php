@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.9
+ * Version:     2.4.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -95,6 +95,7 @@ function cfg_defaults() {
         'card_shadow'            => '1',
         'btn_hover_bg_color'     => '',
         'btn_hover_text_color'   => '',
+        'page_top_padding'       => '7',
 
         // ── Contact Form ─────────────────────────────────────────────────
         'show_hero'              => '1',
@@ -1644,6 +1645,11 @@ function cfg_settings_page() {
             <div class="cfg-field">
                 <label>Input / Button Border Radius (px)</label>
                 <input type="text" name="<?= CFG_OPTION ?>[input_radius]" value="<?= esc_attr( $s['input_radius'] ) ?>" maxlength="4"/>
+            </div>
+            <div class="cfg-field">
+                <label>Page Top Padding (rem) <span class="cfg-badge">all shortcode pages</span></label>
+                <input type="number" name="<?= CFG_OPTION ?>[page_top_padding]" value="<?= esc_attr( $s['page_top_padding'] ) ?>" min="0" max="30" step="0.5" style="width:80px;"/>
+                <span class="cfg-desc">rem — controls top spacing on contact form, booking, and thank-you pages. Default: 7</span>
             </div>
             <div class="cfg-toggle-row">
                 <input type="checkbox" id="card_border" name="<?= CFG_OPTION ?>[card_border]" value="1" <?= checked( $s['card_border'], '1', false ) ?>/>
@@ -4697,6 +4703,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
     $treatments = array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ) ) );
     $nonce      = wp_create_nonce( 'cfg_submit' );
+    $tp         = floatval( $s['page_top_padding'] ?: 7 ) . 'rem';
 
     ob_start();
     if ( $font['url'] ) echo '<link rel="stylesheet" href="' . esc_url( $font['url'] ) . '"/>';
@@ -4713,7 +4720,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     <div id="cfg-wrap" style="font-family:<?= esc_attr( $font['stack'] ) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;line-height:1.6;">
 
     <?php if ( $s['show_hero'] === '1' ): ?>
-    <section style="background:<?= esc_attr( $s['hero_bg_color'] ) ?>;padding:6rem 1.5rem 3.5rem;text-align:center;">
+    <section style="background:<?= esc_attr( $s['hero_bg_color'] ) ?>;padding:<?= $tp ?> 1.5rem 3.5rem;text-align:center;">
         <div style="max-width:800px;margin:0 auto;">
             <?php if ( $s['hero_eyebrow'] ): ?><p style="margin:0 0 1rem;font-weight:<?= $bw ?>;color:<?= $mc ?>;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;"><?= esc_html( $s['hero_eyebrow'] ) ?></p><?php endif; ?>
             <?php if ( $s['hero_heading'] ): ?><h1 style="margin:0 0 1.25rem;font-size:clamp(1.75rem,5vw,3rem);font-weight:<?= $bw ?>;line-height:1.15;color:<?= $tc ?>;"><?= esc_html( $s['hero_heading'] ) ?></h1><?php endif; ?>
@@ -4722,7 +4729,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     </section>
     <?php endif; ?>
 
-    <section style="padding:<?= $s['show_hero'] === '1' ? '3.5rem' : '6rem' ?> 1.5rem 3.5rem;">
+    <section style="padding:<?= $s['show_hero'] === '1' ? '3.5rem' : $tp ?> 1.5rem 3.5rem;">
         <div style="max-width:660px;margin:0 auto;">
             <div class="cfg-card" style="<?= $card_style ?>">
                 <form id="cfg-form" novalidate>
@@ -5082,6 +5089,7 @@ function cfg_booking_method_shortcode() {
     $bw  = esc_attr( $s['font_weight_bold'] );
     $nw  = esc_attr( $s['font_weight_normal'] );
 
+    $tp        = floatval( $s['page_top_padding'] ?: 7 ) . 'rem';
     $card_base = "background:{$bg};border-radius:{$cr};padding:2.5rem;display:flex;flex-direction:column;align-items:center;text-align:center;";
     if ( $s['card_border'] === '1' ) $card_base .= "border:1px solid {$bc};";
     if ( $s['card_shadow'] === '1' ) $card_base .= "box-shadow:0 4px 24px rgba(0,0,0,0.08);";
@@ -5100,7 +5108,7 @@ function cfg_booking_method_shortcode() {
     <div id="cfg-bm-wrap" style="font-family:<?= esc_attr( $font['stack'] ) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;line-height:1.6;">
 
     <?php if ( $s['bm_show_hero'] === '1' ): ?>
-    <section style="background:<?= esc_attr( $s['bm_hero_bg_color'] ) ?>;padding:6rem 1.5rem 3.5rem;text-align:center;">
+    <section style="background:<?= esc_attr( $s['bm_hero_bg_color'] ) ?>;padding:<?= $tp ?> 1.5rem 3.5rem;text-align:center;">
         <div style="max-width:800px;margin:0 auto;">
             <?php if ( $s['bm_hero_eyebrow'] ): ?><p style="margin:0 0 1rem;font-weight:<?= $bw ?>;color:<?= $mc ?>;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;"><?= esc_html( $s['bm_hero_eyebrow'] ) ?></p><?php endif; ?>
             <?php if ( $s['bm_hero_heading'] ): ?><h1 style="margin:0 0 1.25rem;font-size:clamp(1.75rem,5vw,3rem);font-weight:<?= $bw ?>;line-height:1.15;color:<?= $tc ?>;"><?= esc_html( $s['bm_hero_heading'] ) ?></h1><?php endif; ?>
@@ -5114,7 +5122,7 @@ function cfg_booking_method_shortcode() {
     $bm_cols = $bm_card_count === 4 ? '1fr 1fr 1fr 1fr' : ( $bm_card_count === 3 ? '1fr 1fr 1fr' : '1fr 1fr' );
     $bm_max  = $bm_card_count === 4 ? '1200px' : ( $bm_card_count === 3 ? '960px' : '800px' );
     ?>
-    <section style="padding:<?= $s['bm_show_hero'] === '1' ? '3.5rem' : '6rem' ?> 1.5rem 3.5rem;">
+    <section style="padding:<?= $s['bm_show_hero'] === '1' ? '3.5rem' : $tp ?> 1.5rem 3.5rem;">
         <div style="max-width:<?= $bm_max ?>;margin:0 auto;">
             <div class="cfg-bm-grid" style="display:grid;grid-template-columns:<?= $bm_cols ?>;gap:2rem;">
 
@@ -5236,6 +5244,7 @@ function cfg_thank_you_shortcode() {
     $bw  = esc_attr( $s['font_weight_bold'] );
     $nw  = esc_attr( $s['font_weight_normal'] );
     $bg  = esc_attr( $s['ty_bg_color'] );
+    $tp  = floatval( $s['page_top_padding'] ?: 7 ) . 'rem';
 
     // Social icon
     $social_icons = [
@@ -5253,7 +5262,7 @@ function cfg_thank_you_shortcode() {
     </style>
 
     <div id="cfg-ty-wrap" style="background:<?= $bg ?>;font-family:<?= esc_attr( $font['stack'] ) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;line-height:1.6;">
-        <div class="cfg-ty-grid" style="display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:4rem;max-width:1100px;margin:0 auto;padding:6rem 2rem;">
+        <div class="cfg-ty-grid" style="display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:4rem;max-width:1100px;margin:0 auto;padding:<?= $tp ?> 2rem 6rem;">
 
             <!-- Left: Text -->
             <div>
