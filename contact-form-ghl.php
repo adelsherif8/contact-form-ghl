@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.2
+ * Version:     2.3.3
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6433,17 +6433,13 @@ $cal_svg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewB
 $ph_svg  = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.56 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 $show_book = ( $s['imp_cta_book_enabled'] ?? '1' ) === '1';
 $show_call = ( $s['imp_cta_call_enabled'] ?? '0' ) === '1' && ! empty( $s['imp_cta_phone'] );
-$book_url  = ! empty( $s['imp_cta_book_url'] ) ? esc_url( $s['imp_cta_book_url'] ) : ( ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '' );
+$book_href = ! empty( $s['imp_cta_book_url'] ) ? esc_url( $s['imp_cta_book_url'] ) : ( ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : ( ! empty( $s['success_redirect_url'] ) ? esc_url( $s['success_redirect_url'] ) : '#' ) );
 $phone_clean = esc_attr( preg_replace('/[^0-9+\-\(\)\s]/', '', $s['imp_cta_phone'] ?? '' ) );
 $cta_buttons = '';
 if ( $show_book || $show_call ) {
     $cta_buttons = '<div style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;padding-top:1.25rem;">';
     if ( $show_book ) {
-        if ( $book_url ) {
-            $cta_buttons .= '<a href="' . $book_url . '" class="imp-cta-btn" style="text-decoration:none;">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</a>';
-        } else {
-            $cta_buttons .= '<button type="button" class="imp-cta-btn" onclick="window[\'' . esc_js( $uid ) . 'Nav\'](\'lead\')">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</button>';
-        }
+        $cta_buttons .= '<a href="' . $book_href . '" class="imp-cta-btn" style="text-decoration:none;">' . $cal_svg . ' ' . esc_html( $s['imp_cta_book_label'] ) . '</a>';
     }
     if ( $show_call ) {
         $cta_buttons .= '<a href="tel:' . $phone_clean . '" class="imp-cta-btn-outline">' . $ph_svg . ' ' . esc_html( $s['imp_cta_call_label'] ) . '</a>';
