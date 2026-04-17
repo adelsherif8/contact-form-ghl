@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.4
+ * Version:     2.3.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7120,8 +7120,10 @@ function cfg_implant_ajax_submit() {
     $custom[] = [ 'key' => 'implant_flow',  'field_value' => $flow ];
     $custom[] = [ 'key' => 'implant_range', 'field_value' => $range ];
     foreach ( $all_qs as $q ) {
-        $field = sanitize_key( $q['field'] ?? '' );
-        $val   = sanitize_text_field( $answers[ $field ] ?? '' );
+        $raw_field = $q['field'] ?? '';
+        $field     = sanitize_key( $raw_field );
+        // POST key uses original case (camelCase); fall back to sanitized (lowercase) key
+        $val = sanitize_text_field( $answers[ $raw_field ] ?? $answers[ $field ] ?? '' );
         if ( $field !== '' && $val !== '' ) {
             $custom[] = [ 'key' => 'implant_' . $field, 'field_value' => $val ];
         }
@@ -7178,8 +7180,9 @@ function cfg_implant_ajax_submit() {
         'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
     ] );
     foreach ( $all_qs as $q ) {
-        $field = sanitize_key( $q['field'] ?? '' );
-        $val   = sanitize_text_field( $answers[ $field ] ?? '' );
+        $raw_field = $q['field'] ?? '';
+        $field     = sanitize_key( $raw_field );
+        $val       = sanitize_text_field( $answers[ $raw_field ] ?? $answers[ $field ] ?? '' );
         if ( $field !== '' && $val !== '' ) $entry_meta[ $field ] = $val;
     }
     $entry_meta['_ghl_fields_sent'] = $custom;
