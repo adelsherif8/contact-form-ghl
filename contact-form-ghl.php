@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.3.6
+ * Version:     2.3.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4792,6 +4792,14 @@ function cfg_shortcode( $atts = [], $embed = false ) {
         var REDIRECT  = <?= wp_json_encode( $s['success_redirect_url'] ) ?>;
         var HAS_TERMS = <?= $s['show_terms'] === '1' ? 'true' : 'false' ?>;
         var RC_KEY    = <?= wp_json_encode( $s['spam_recaptcha_site'] ) ?>;
+        function utmRedirect(url) {
+            var up = new URLSearchParams(window.location.search);
+            var dest = url;
+            ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){
+                var v = up.get(k); if (v) dest += (dest.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
+            });
+            window.location.href = dest;
+        }
 
         var form   = document.getElementById('cfg-form');
         var btn    = document.getElementById('cfg-submit-btn');
@@ -4836,7 +4844,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
-                    if (REDIRECT) { window.location.href = REDIRECT; }
+                    if (REDIRECT) { utmRedirect(REDIRECT); }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
             })
@@ -5017,7 +5025,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
-                    if (REDIRECT) { window.location.href = REDIRECT; }
+                    if (REDIRECT) { utmRedirect(REDIRECT); }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
             })
@@ -5788,7 +5796,7 @@ function cfg_aligner_shortcode() {
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
-                    if(surl){ window.location.href=surl; }
+                    if(surl){ var _up2=new URLSearchParams(window.location.search),_d=surl;['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){var v=_up2.get(k);if(v)_d+=(_d.indexOf('?')>=0?'&':'?')+k+'='+encodeURIComponent(v);});window.location.href=_d; }
                     else{
                         form.innerHTML='<div style="text-align:center;padding:2.5rem 0;">'+
                             '<div style="font-size:3.5rem;margin-bottom:1rem;">&#x2705;</div>'+
@@ -7020,9 +7028,17 @@ $_badge = function($txt) use ($uid) {
     fd.append('rangeType', panel);
     var _up = new URLSearchParams(window.location.search);
     ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
+    function _utmRedir(url) {
+      var up = new URLSearchParams(window.location.search);
+      var d = url;
+      ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){
+        var v = up.get(k); if (v) d += (d.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
+      });
+      window.location.href = d;
+    }
     fetch(config.ajaxUrl, { method:'POST', body:fd })
-      .then(function(){ isSubmitting = false; if (config.successUrl) window.location.href = config.successUrl; })
-      .catch(function(){ isSubmitting = false; if (config.successUrl) window.location.href = config.successUrl; });
+      .then(function(){ isSubmitting = false; if (config.successUrl) _utmRedir(config.successUrl); })
+      .catch(function(){ isSubmitting = false; if (config.successUrl) _utmRedir(config.successUrl); });
   }
 
   /* ── INIT ── */
