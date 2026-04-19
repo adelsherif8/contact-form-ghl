@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.0
+ * Version:     2.5.1
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -442,6 +442,11 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
             $imp_fields[ 'implant_' . $key ] = $q['title'] ?? $key;
         }
     }
+    // Add consultation offer field if enabled
+    $offer_key = sanitize_key( $s['imp_offer_ghl_key'] ?? 'consultation_offer' ) ?: 'consultation_offer';
+    if ( $s['imp_offer_enabled'] === '1' ) {
+        $imp_fields[ $offer_key ] = 'Consultation Offer';
+    }
 
     // ── Create folders then fields ──
     $cf_folder  = $make_folder( 'Contact Form' );
@@ -614,6 +619,10 @@ function cfg_ghl_field_definitions( $s ) {
             $seen[$k]     = true;
             $imp_fields[] = [ 'name' => $q['title'] ?? $k, 'key' => 'implant_' . $k ];
         }
+    }
+    $offer_key_def = sanitize_key( $s['imp_offer_ghl_key'] ?? 'consultation_offer' ) ?: 'consultation_offer';
+    if ( $s['imp_offer_enabled'] === '1' ) {
+        $imp_fields[] = [ 'name' => 'Consultation Offer', 'key' => $offer_key_def ];
     }
 
     // ── Invisalign fields (dynamic from aligner quiz steps) ──
@@ -2988,7 +2997,7 @@ function cfg_settings_page() {
                 <div class="cfg-grid">
                     <div class="cfg-field"><label>Title <span style="font-weight:400;color:#9ca3af;">— small label above price</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_result_title]" value="<?= esc_attr( $s['imp_result_title'] ) ?>"/></div>
                     <div class="cfg-field cfg-full"><label>Subtitle <span style="font-weight:400;color:#9ca3af;">— shown below title, above price</span></label><textarea name="<?= CFG_OPTION ?>[imp_result_subtitle]"><?= esc_textarea( $s['imp_result_subtitle'] ) ?></textarea></div>
-                    <div class="cfg-field cfg-full" style="color:#6b7280;font-size:12px;padding:8px 10px;background:#f9fafb;border-radius:6px;">Financing note text is configured in the <strong>Consultation Offer Step</strong> section below.</div>
+                    <div class="cfg-field cfg-full" style="color:#6b7280;font-size:12px;padding:8px 10px;background:#f9fafb;border-radius:6px;">Financing note text is configured in the <strong>Lead Capture Form</strong> section below.</div>
                 </div>
             </div>
             <div class="cfg-card-section">
@@ -3192,8 +3201,8 @@ function cfg_settings_page() {
         <div class="imp-section-hdr" style="margin-top:28px;">
             <div class="imp-section-icon" style="background:#fef3c7;">📬</div>
             <div>
-                <h3>Consultation Offer Step</h3>
-                <p>The lead capture screen shown after the patient sees their estimate</p>
+                <h3>Lead Capture Form</h3>
+                <p>The contact details form where patients enter their name, email, and phone to receive their estimate. This is the final step before results are shown.</p>
             </div>
         </div>
 
@@ -3535,22 +3544,22 @@ function cfg_settings_page() {
                 <div class="og-section-label">Contact Form</div>
                 <ul>
                     <li><span class="og-tag">website-contact-form</span> — every contact form submission</li>
+                    <li><span class="og-tag">website-lead</span> — applied on every submission</li>
                 </ul>
                 <div class="og-section-label">Aligner / Invisalign Form</div>
                 <ul>
-                    <li><span class="og-tag">website-invisalign-form</span> — use this as your primary workflow trigger</li>
-                    <li><span class="og-tag">aligner-quiz</span> — also applied on every submission</li>
-                    <li><span class="og-tag">website-lead</span> — applied on every aligner and implant lead</li>
+                    <li><span class="og-tag">aligner-quiz</span> — every aligner submission</li>
+                    <li><span class="og-tag">website-lead</span> — applied on every submission</li>
                 </ul>
                 <div class="og-section-label">Implant Estimator</div>
                 <ul>
                     <li><span class="og-tag">implant-estimator</span> — every implant lead</li>
-                    <li><span class="og-tag">website-lead</span> — applied on every implant and aligner lead</li>
+                    <li><span class="og-tag">website-lead</span> — applied on every submission</li>
                     <li><span class="og-tag">implant-single</span> / <span class="og-tag">implant-multiple</span> / <span class="og-tag">implant-fullarch</span> — the path they took</li>
                     <li><span class="og-tag">bone-graft-yes</span> / <span class="og-tag">bone-graft-no</span> / <span class="og-tag">bone-graft-not-sure</span> — their bone graft answer</li>
                     <li><span class="og-tag">has-insurance</span> / <span class="og-tag">no-insurance</span> — their insurance answer (if enabled)</li>
                 </ul>
-                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> as your workflow trigger (not <em>Contact Created</em>). This fires even when an existing patient re-submits — and <span class="og-tag">website-invisalign-form</span> is the cleanest trigger for the aligner workflow.</div>
+                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> as your workflow trigger (not <em>Contact Created</em>). This fires even when an existing patient re-submits — and <span class="og-tag">aligner-quiz</span> is the cleanest trigger for the aligner workflow.</div>
             </div>
         </div>
 
@@ -6417,40 +6426,46 @@ if ( $show_insurance && $ins_q ) {
 <!-- CONSULTATION OFFER -->
 <div class="die-panel" id="<?= $uid ?>-panel-offer">
   <main style="display:flex;flex-direction:column;flex:1;">
-    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:40rem;box-sizing:border-box;">
-      <div style="text-align:center;margin-bottom:2rem;">
-        <?php if ( $offer_badge ): ?>
-        <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--primary)/.1);border:1px solid hsl(var(--primary)/.2);border-radius:9999px;padding:.375rem 1rem;font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:hsl(var(--primary));text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.25rem;">
-          🎁 <?= esc_html($offer_badge) ?>
-        </div>
-        <?php endif; ?>
-        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(1.75rem,5vw,2.5rem);line-height:1.2;color:hsl(var(--foreground));margin:0 0 1rem;"><?= esc_html($offer_heading) ?></h2>
-        <?php if ( $offer_subtext ): ?>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;max-width:30rem;margin:0 auto 1.75rem;"><?= esc_html($offer_subtext) ?></p>
-        <?php endif; ?>
-      </div>
-      <?php if ( $offer_bullets ): ?>
-      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.5rem 1.75rem;margin-bottom:2rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-        <div style="display:flex;flex-direction:column;gap:.875rem;">
-          <?php foreach ( $offer_bullets as $b ): ?>
-          <div style="display:flex;align-items:center;gap:.875rem;">
-            <div style="flex-shrink:0;width:1.5rem;height:1.5rem;background:hsl(var(--primary)/.12);border-radius:50%;display:flex;align-items:center;justify-content:center;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><polyline points="20 6 9 17 4 12"/></svg>
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem;width:100%;max-width:64rem;box-sizing:border-box;">
+      <?= $back_btn ?>
+      <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;">
+        <div style="flex:1;min-width:0;">
+          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.5rem 1.75rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+            <?php if ( $offer_badge ): ?>
+            <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--primary)/.1);border:1px solid hsl(var(--primary)/.2);border-radius:9999px;padding:.375rem 1rem;font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:hsl(var(--primary));text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.25rem;">
+              🎁 <?= esc_html($offer_badge) ?>
             </div>
-            <span style="font-family:Inter,sans-serif;font-size:.9375rem;color:hsl(var(--foreground));"><?= esc_html($b) ?></span>
+            <?php endif; ?>
+            <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(1.5rem,4vw,2rem);line-height:1.2;color:hsl(var(--foreground));margin:0 0 .625rem;"><?= esc_html($offer_heading) ?></h2>
+            <?php if ( $offer_subtext ): ?>
+            <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9rem;line-height:1.6;margin:0 0 1.5rem;"><?= esc_html($offer_subtext) ?></p>
+            <?php endif; ?>
+            <?php if ( $offer_bullets ): ?>
+            <div style="background:hsl(var(--accent)/.4);border:1px solid hsl(var(--border));border-radius:.75rem;padding:1.25rem 1.5rem;margin-bottom:1.75rem;">
+              <div style="display:flex;flex-direction:column;gap:.875rem;">
+                <?php foreach ( $offer_bullets as $b ): ?>
+                <div style="display:flex;align-items:center;gap:.875rem;">
+                  <div style="flex-shrink:0;width:1.5rem;height:1.5rem;background:hsl(var(--primary)/.12);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span style="font-family:Inter,sans-serif;font-size:.9375rem;color:hsl(var(--foreground));"><?= esc_html($b) ?></span>
+                </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+            <?php endif; ?>
+            <div style="display:flex;flex-direction:column;gap:.875rem;">
+              <button onclick="window['<?= esc_js($uid) ?>OfferChoice']('claimed')" class="imp-cta-btn" style="width:100%;justify-content:center;">
+                <?= esc_html($offer_claim_btn) ?>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </button>
+              <button onclick="window['<?= esc_js($uid) ?>OfferChoice']('skipped')" class="imp-cta-btn-outline" style="width:100%;justify-content:center;">
+                <?= esc_html($offer_skip_btn) ?>
+              </button>
+            </div>
           </div>
-          <?php endforeach; ?>
         </div>
-      </div>
-      <?php endif; ?>
-      <div style="display:flex;flex-direction:column;gap:.875rem;">
-        <button onclick="window['<?= esc_js($uid) ?>OfferChoice']('claimed')" class="imp-cta-btn" style="width:100%;justify-content:center;">
-          <?= esc_html($offer_claim_btn) ?>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-        </button>
-        <button onclick="window['<?= esc_js($uid) ?>OfferChoice']('skipped')" class="imp-cta-btn-outline" style="width:100%;justify-content:center;">
-          <?= esc_html($offer_skip_btn) ?>
-        </button>
+        <?= $sidebar ?>
       </div>
     </div>
   </main>
