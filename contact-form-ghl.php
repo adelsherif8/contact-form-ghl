@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.4.2
+ * Version:     2.4.3
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5404,7 +5404,7 @@ function cfg_ajax_submit() {
         'phone'      => $phone,
         'locationId' => $s['ghl_location_id'],
         'source'     => 'Website Contact Form',
-        'tags'       => [ 'website-contact-form' ],
+        'tags'       => [ 'website-contact-form', 'website-lead' ],
     ];
     if ( $custom_fields ) $payload['customFields'] = $custom_fields;
 
@@ -5908,11 +5908,7 @@ function cfg_aligner_ajax_submit() {
     $ans_raw = sanitize_text_field( $_POST['alg_answers'] ?? '' );
     $answers = json_decode( wp_unslash( $ans_raw ), true ) ?: [];
 
-    // Tags: one per answer + base tags
-    $tags = [ 'aligner-quiz', 'website-lead', 'website-invisalign-form' ];
-    foreach ( $answers as $key => $val ) {
-        $tags[] = sanitize_title( $key . '-' . $val );
-    }
+    $tags = [ 'aligner-quiz', 'website-lead' ];
 
     // Custom fields
     $custom = [];
@@ -7160,9 +7156,6 @@ function cfg_implant_ajax_submit() {
 
     // Tags
     $tags = [ 'implant-estimator', 'website-lead' ];
-    if ( $flow === 'single' )        $tags[] = 'implant-single';
-    elseif ( $flow === 'multiple' )  $tags[] = 'implant-multiple';
-    elseif ( $flow === 'fullarch' )  $tags[] = 'implant-fullarch';
 
     // Custom fields — dynamic
     $answers  = $_POST['answer']  ?? [];
