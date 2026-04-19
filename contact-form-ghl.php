@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.1
+ * Version:     2.5.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6800,9 +6800,11 @@ $_badge = function($txt) use ($uid) {
     var flow = s.flow || 'single';
     var qs = getPathQs(flow);
     var hasIns = (flow !== 'fullarch') && <?php echo $show_insurance ? 'true' : 'false'; ?>;
-    var total = qs.length + 4 + (hasIns ? 1 : 0);
-    if (id === 'summary') return {label:'Step '+(total-2)+' of '+total, pct:76};
-    if (id === 'lead')    return {label:'Step '+(total-1)+' of '+total, pct:88};
+    var hasOffer = <?php echo $offer_enabled ? 'true' : 'false'; ?>;
+    var total = qs.length + 4 + (hasIns ? 1 : 0) + (hasOffer ? 1 : 0);
+    if (id === 'summary') return {label:'Step '+(total - (hasOffer ? 3 : 2))+' of '+total, pct:Math.round((total-(hasOffer?3:2))/total*100)};
+    if (id === 'offer')   return {label:'Step '+(total-2)+' of '+total, pct:Math.round((total-2)/total*100)};
+    if (id === 'lead')    return {label:'Step '+(total-1)+' of '+total, pct:Math.round((total-1)/total*100)};
     if (id.indexOf('result') === 0) return {label:'Step '+total+' of '+total, pct:100};
     return {label:'', pct:0};
   }
