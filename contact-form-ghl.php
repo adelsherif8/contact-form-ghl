@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.4.3
+ * Version:     2.5.0
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -297,6 +297,15 @@ function cfg_defaults() {
         'imp_no_price_title'    => 'Your Estimate Is Ready',
         'imp_no_price_subtitle' => 'Book a free consultation and our team will walk you through your personalised treatment options and costs.',
         'imp_no_price_btn'      => 'Book My Free Consultation',
+        // Consultation offer gatekeeper step
+        'imp_offer_enabled'    => '0',
+        'imp_offer_badge'      => 'Limited Time Offer',
+        'imp_offer_heading'    => 'Claim Your Free Consultation',
+        'imp_offer_subtext'    => 'Before we connect you with our team, take advantage of this exclusive offer.',
+        'imp_offer_bullets'    => "Complimentary implant consultation\nFree 3D imaging scan (CBCT)\nPersonalised treatment plan & cost breakdown",
+        'imp_offer_claim_btn'  => 'Claim My Free Offer',
+        'imp_offer_skip_btn'   => 'Skip for Now',
+        'imp_offer_ghl_key'    => 'consultation_offer',
     ];
 }
 
@@ -1150,6 +1159,7 @@ function cfg_sanitize( $input ) {
         'hero_subheading','terms_text','success_msg','treatment_options',
         'bm_hero_subheading','bm_card1_body','bm_card2_body','bm_card3_body','bm_card4_body','bm_cta_body','ty_body',
         'imp_intro_subtitle','imp_intro_bullets','imp_financing_text','imp_disclaimer','imp_result_subtitle','imp_contact_subtitle','imp_no_price_subtitle',
+        'imp_offer_subtext','imp_offer_bullets',
     ];
     $bool_fields = [
         'show_hero','req_first_name','req_last_name','req_email','req_phone',
@@ -1160,6 +1170,7 @@ function cfg_sanitize( $input ) {
         'ty_social_show','ty_show_image',
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
+        'imp_offer_enabled',
     ];
     $json_fields = ['imp_router_opts','imp_single_qs','imp_multi_qs','imp_arch_qs','imp_ins_q','imp_result_sections','imp_single_includes','imp_fullarch_includes'];
 
@@ -2526,7 +2537,7 @@ function cfg_settings_page() {
             <div class="imp-section-icon" style="background:#f0fdf4;">💰</div>
             <div>
                 <h3>Pricing Ranges</h3>
-                <p>Bone graft cost is added on top when the patient selects "Yes" or "Not sure"</p>
+                <p>Set your min/max estimate for each tooth path. The patient sees a range like <strong>"$3,000 – $6,000"</strong> on the results screen. The bone graft add-on is added on top of the path range only when the patient selects <em>"Yes"</em> or <em>"Not sure"</em> on the bone graft question — options 1 and 3 just show a note without adding to the total.</p>
             </div>
         </div>
 
@@ -2576,7 +2587,7 @@ function cfg_settings_page() {
             <div class="imp-section-icon" style="background:#fdf4ff;">📝</div>
             <div>
                 <h3>Question Editor</h3>
-                <p>Add, remove or reorder questions and options for each path. The current values are the defaults.</p>
+                <p>The estimator has <strong>3 paths</strong> — the patient lands on one based on the router answer. Each path asks its own questions, then optionally shows the insurance question, then shows results. <strong>Single Tooth:</strong> 1 missing tooth. <strong>Multiple Teeth:</strong> 2–5+ missing teeth. <strong>Full Arch:</strong> full-arch/denture replacement (skips insurance). Each question has a <em>Field Key</em> (sent to GHL as a custom field) and <em>Answer Options</em> — the value is what gets stored, the label is what the patient sees.</p>
             </div>
         </div>
 
@@ -3134,7 +3145,44 @@ function cfg_settings_page() {
                     <div class="cfg-field cfg-full"><label>Body Text</label><textarea name="<?= CFG_OPTION ?>[imp_no_price_subtitle]" rows="3"><?= esc_textarea( $s['imp_no_price_subtitle'] ) ?></textarea></div>
                     <div class="cfg-field"><label>Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_no_price_btn]" value="<?= esc_attr( $s['imp_no_price_btn'] ) ?>"/></div>
                 </div>
-                <p class="cfg-desc" style="margin-top:8px;">Button links to the Success Redirect URL set above.</p>
+                <p class="cfg-desc" style="margin-top:8px;">Leave button text empty to hide the button entirely.</p>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════ -->
+        <!--  5b · CONSULTATION OFFER GATEKEEPER                  -->
+        <!-- ════════════════════════════════════════════════════ -->
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fef9ec;">🎁</div>
+            <div>
+                <h3>Consultation Offer Step <span style="font-size:11px;font-weight:400;color:#6b7280;background:#f0f0f1;padding:2px 8px;border-radius:10px;margin-left:6px;">optional</span></h3>
+                <p>A bonus opt-in screen shown between the results and the booking form. Patients choose <strong>Claim</strong> or <strong>Skip</strong> — the choice is recorded as a custom field in GHL. Both paths continue to the booking form.</p>
+            </div>
+        </div>
+        <div class="imp-sw-row" style="margin-bottom:14px;">
+            <div class="imp-sw-info">
+                <strong>Enable Consultation Offer Step</strong>
+                <span>When on, the offer screen is shown after the results panel, before the booking form</span>
+            </div>
+            <label class="imp-sw">
+                <input type="checkbox" id="imp_offer_enabled" name="<?= CFG_OPTION ?>[imp_offer_enabled]" value="1" <?= checked( $s['imp_offer_enabled'], '1', false ) ?> onchange="document.getElementById('imp-offer-fields').style.display=this.checked?'block':'none'"/>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+        <div id="imp-offer-fields" style="display:<?= $s['imp_offer_enabled'] === '1' ? 'block' : 'none' ?>;">
+            <div class="cfg-card-section" style="border-left:3px solid #f59e0b;">
+                <div class="cfg-grid">
+                    <div class="cfg-field"><label>Badge Text <span style="font-weight:400;color:#9ca3af;">shown above heading</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_offer_badge]" value="<?= esc_attr( $s['imp_offer_badge'] ) ?>" placeholder="Limited Time Offer"/></div>
+                    <div class="cfg-field cfg-full"><label>Heading</label><input type="text" name="<?= CFG_OPTION ?>[imp_offer_heading]" value="<?= esc_attr( $s['imp_offer_heading'] ) ?>"/></div>
+                    <div class="cfg-field cfg-full"><label>Sub-text</label><textarea name="<?= CFG_OPTION ?>[imp_offer_subtext]" rows="2"><?= esc_textarea( $s['imp_offer_subtext'] ) ?></textarea></div>
+                    <div class="cfg-field cfg-full">
+                        <label>Bullet Points <span style="font-weight:400;color:#9ca3af;">one per line</span></label>
+                        <textarea name="<?= CFG_OPTION ?>[imp_offer_bullets]" rows="4" placeholder="Free consultation&#10;Free 3D imaging scan&#10;Personalised treatment plan"><?= esc_textarea( $s['imp_offer_bullets'] ) ?></textarea>
+                    </div>
+                    <div class="cfg-field"><label>Claim Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_offer_claim_btn]" value="<?= esc_attr( $s['imp_offer_claim_btn'] ) ?>"/></div>
+                    <div class="cfg-field"><label>Skip Button Text</label><input type="text" name="<?= CFG_OPTION ?>[imp_offer_skip_btn]" value="<?= esc_attr( $s['imp_offer_skip_btn'] ) ?>"/></div>
+                    <div class="cfg-field"><label>GHL Field Key <span style="font-weight:400;color:#9ca3af;">stores "claimed" or "skipped"</span></label><input type="text" name="<?= CFG_OPTION ?>[imp_offer_ghl_key]" value="<?= esc_attr( $s['imp_offer_ghl_key'] ) ?>" placeholder="consultation_offer"/></div>
+                </div>
             </div>
         </div>
 
@@ -6053,6 +6101,14 @@ function cfg_implant_shortcode() {
     $no_price_title   = $s['imp_no_price_title']    ?? 'Your Estimate Is Ready';
     $no_price_sub     = $s['imp_no_price_subtitle'] ?? 'Book a free consultation and our team will walk you through your personalised treatment options and costs.';
     $no_price_btn     = $s['imp_no_price_btn']      ?? 'Book My Free Consultation';
+    $offer_enabled    = $s['imp_offer_enabled']   === '1';
+    $offer_badge      = $s['imp_offer_badge']     ?? 'Limited Time Offer';
+    $offer_heading    = $s['imp_offer_heading']   ?? 'Claim Your Free Consultation';
+    $offer_subtext    = $s['imp_offer_subtext']   ?? '';
+    $offer_bullets    = array_filter( array_map( 'trim', explode( "\n", $s['imp_offer_bullets'] ?? '' ) ) );
+    $offer_claim_btn  = $s['imp_offer_claim_btn'] ?? 'Claim My Free Offer';
+    $offer_skip_btn   = $s['imp_offer_skip_btn']  ?? 'Skip for Now';
+    $offer_ghl_key    = sanitize_key( $s['imp_offer_ghl_key'] ?? 'consultation_offer' ) ?: 'consultation_offer';
     $prices_json = wp_json_encode([
         'single_min' => (int)($s['imp_single_min'] ?? 3000),
         'single_max' => (int)($s['imp_single_max'] ?? 6000),
@@ -6342,7 +6398,7 @@ if ( $show_insurance && $ins_q ) {
             <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;margin:0 0 .75rem;">What we factored in</p>
             <div id="<?= $uid ?>-summary-list" style="display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.25rem;"></div>
             <p id="<?= $uid ?>-summary-desc" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;padding:1rem;background:hsl(var(--accent)/.4);border-radius:.75rem;margin-bottom:1.5rem;"></p>
-            <button onclick="<?= $uid ?>Nav('lead')" style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:.5rem;width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;cursor:pointer;transition:box-shadow .2s;border:none;">
+            <button onclick="<?= $uid ?>Nav('<?= $offer_enabled ? 'offer' : 'lead' ?>')" style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:.5rem;width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;cursor:pointer;transition:box-shadow .2s;border:none;">
               Continue to My Estimate
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
@@ -6356,6 +6412,50 @@ if ( $show_insurance && $ins_q ) {
     </div>
   </main>
 </div>
+
+<?php if ( $offer_enabled ): ?>
+<!-- CONSULTATION OFFER -->
+<div class="die-panel" id="<?= $uid ?>-panel-offer">
+  <main style="display:flex;flex-direction:column;flex:1;">
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:40rem;box-sizing:border-box;">
+      <div style="text-align:center;margin-bottom:2rem;">
+        <?php if ( $offer_badge ): ?>
+        <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--primary)/.1);border:1px solid hsl(var(--primary)/.2);border-radius:9999px;padding:.375rem 1rem;font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:hsl(var(--primary));text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.25rem;">
+          🎁 <?= esc_html($offer_badge) ?>
+        </div>
+        <?php endif; ?>
+        <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(1.75rem,5vw,2.5rem);line-height:1.2;color:hsl(var(--foreground));margin:0 0 1rem;"><?= esc_html($offer_heading) ?></h2>
+        <?php if ( $offer_subtext ): ?>
+        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;max-width:30rem;margin:0 auto 1.75rem;"><?= esc_html($offer_subtext) ?></p>
+        <?php endif; ?>
+      </div>
+      <?php if ( $offer_bullets ): ?>
+      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.5rem 1.75rem;margin-bottom:2rem;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+        <div style="display:flex;flex-direction:column;gap:.875rem;">
+          <?php foreach ( $offer_bullets as $b ): ?>
+          <div style="display:flex;align-items:center;gap:.875rem;">
+            <div style="flex-shrink:0;width:1.5rem;height:1.5rem;background:hsl(var(--primary)/.12);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span style="font-family:Inter,sans-serif;font-size:.9375rem;color:hsl(var(--foreground));"><?= esc_html($b) ?></span>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <?php endif; ?>
+      <div style="display:flex;flex-direction:column;gap:.875rem;">
+        <button onclick="window['<?= esc_js($uid) ?>OfferChoice']('claimed')" class="imp-cta-btn" style="width:100%;justify-content:center;">
+          <?= esc_html($offer_claim_btn) ?>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </button>
+        <button onclick="window['<?= esc_js($uid) ?>OfferChoice']('skipped')" class="imp-cta-btn-outline" style="width:100%;justify-content:center;">
+          <?= esc_html($offer_skip_btn) ?>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+<?php endif; ?>
 
 <!-- LEAD CAPTURE -->
 <div class="die-panel" id="<?= $uid ?>-panel-lead">
@@ -6489,14 +6589,13 @@ $fin_block = ( $show_fin && ! empty( $s['imp_financing_text'] ) )
 $disc_block = ! empty( $s['imp_disclaimer'] )
     ? '<div style="margin-bottom:1.5rem;text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;">' . esc_html( $s['imp_disclaimer'] ) . '</p></div>'
     : '';
-$np_href = ! empty( $s['imp_success_url'] ) ? esc_url( $s['imp_success_url'] ) : '';
 $no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">'
     . '<div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:hsl(var(--primary)/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
     . '<h2 style="font-family:\'Cormorant Garamond\',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,4vw,2rem);line-height:1.25;margin:0 0 1rem;">' . esc_html($no_price_title) . '</h2>'
     . '<p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;margin:0 auto 2rem;max-width:26rem;">' . esc_html($no_price_sub) . '</p>'
-    . ( $np_href
-        ? '<a href="' . $np_href . '" class="imp-cta-btn" style="text-decoration:none;margin:0 auto;">' . esc_html($no_price_btn) . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>'
-        : '<button type="button" class="imp-cta-btn" style="margin:0 auto;" onclick="window[\'' . esc_js($uid) . 'Nav\'](\'lead\')">' . esc_html($no_price_btn) . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>'
+    . ( $no_price_btn
+        ? '<button type="button" class="imp-cta-btn" style="margin:0 auto;" onclick="window[\'' . esc_js($uid) . 'BookCTA\']()">' . esc_html($no_price_btn) . '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>'
+        : ''
       )
     . '</div>';
 ?>
@@ -6625,14 +6724,17 @@ $_badge = function($txt) use ($uid) {
     result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
     result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>',
     successUrl:        '<?= esc_js( ! empty( $s['imp_contact_btn_url'] ) ? $s['imp_contact_btn_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : $s['success_redirect_url'] ) ) ?>',
-    graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>'
+    graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>',
+    offerEnabled: <?= $offer_enabled ? 'true' : 'false' ?>,
+    offerGhlKey:  '<?= esc_js( $offer_ghl_key ) ?>'
   };
 
   /* ── STATE ── */
   var s = {
     flow: null,
-    answers:  {},   // {fieldKey: val}
-    answersL: {}    // {fieldKey: label}
+    answers:     {},   // {fieldKey: val}
+    answersL:    {},   // {fieldKey: label}
+    offerChoice: ''    // 'claimed' | 'skipped' | ''
   };
 
   // ── Path configs injected by PHP ──
@@ -6641,7 +6743,7 @@ $_badge = function($txt) use ($uid) {
     'single'   => $single_qs,
     'multiple' => $multi_qs,
     'fullarch' => $arch_qs,
-    'ins'      => $ins_q,
+    'ins'      => $show_insurance ? $ins_q : null,
   ], JSON_UNESCAPED_UNICODE); ?>;
 
   function getPathQs(flow) {
@@ -7062,6 +7164,10 @@ $_badge = function($txt) use ($uid) {
     }
     fd.append('range',     r.label + r.suffix);
     fd.append('rangeType', panel);
+    if (config.offerEnabled && s.offerChoice) {
+      fd.append('offer_choice',   s.offerChoice);
+      fd.append('offer_ghl_key',  config.offerGhlKey);
+    }
     var _up = new URLSearchParams(window.location.search);
     ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
     function _utmRedir(url) {
@@ -7092,10 +7198,14 @@ $_badge = function($txt) use ($uid) {
     });
   }
 
-  window[uid + 'Nav']     = navigate;
-  window[uid + 'Back']    = goBack;
-  window[uid + 'Sel']     = selectOpt;
-  window[uid + 'BookCTA'] = handleCTABook;
+  window[uid + 'Nav']         = navigate;
+  window[uid + 'Back']        = goBack;
+  window[uid + 'Sel']         = selectOpt;
+  window[uid + 'BookCTA']     = handleCTABook;
+  window[uid + 'OfferChoice'] = function(choice) {
+    s.offerChoice = choice;
+    navigate('lead');
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -7170,6 +7280,11 @@ function cfg_implant_ajax_submit() {
         if ( $field !== '' && $val !== '' ) {
             $custom[] = [ 'key' => 'implant_' . $field, 'field_value' => $val ];
         }
+    }
+    $offer_choice  = sanitize_text_field( $_POST['offer_choice']  ?? '' );
+    $offer_ghl_key = sanitize_key( $_POST['offer_ghl_key'] ?? '' );
+    if ( $offer_choice !== '' && $offer_ghl_key !== '' ) {
+        $custom[] = [ 'key' => $offer_ghl_key, 'field_value' => $offer_choice ];
     }
     $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
     $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
