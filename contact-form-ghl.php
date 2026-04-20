@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.5
+ * Version:     2.5.6
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6639,32 +6639,57 @@ $_badge = function($txt) use ($uid) {
 };
 ?>
 
-<!-- RESULT: SINGLE -->
-<div class="die-panel" id="<?= $uid ?>-panel-result-single">
-  <main style="display:flex;flex-direction:column;flex:1;">
-    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:48rem;box-sizing:border-box;">
-      <?= $_badge('Your Estimate Is Ready') ?>
-      <?php if ( $show_price ): ?>
+<?php
+// Shared left-column price card builder
+$_price_col = function( $range_id, $label_id, $subtitle, $includes_html, $graft_id, $extra_inner = '', $includes_label = 'Included in your estimate' ) use ( $uid, $s, $graft_note_inner, $fin_block, $disc_block, $cta_buttons ) {
+    ob_start(); ?>
+    <div style="flex:1;min-width:0;">
       <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1rem;">
-        <p id="<?= $uid ?>-result-single-label" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.8125rem;font-weight:500;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
-        <p id="<?= $uid ?>-result-single-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.375rem;">Calculating&hellip;</p>
-        <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.875rem;margin-bottom:<?= $single_includes_html ? '1.5rem' : '.5rem' ?>;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
-        <?php if ( $single_includes_html ): ?>
+        <p id="<?= $label_id ?>" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.8125rem;font-weight:500;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
+        <p id="<?= $range_id ?>" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.375rem;">Calculating&hellip;</p>
+        <p id="<?= $subtitle ?>" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.875rem;margin-bottom:<?= $includes_html ? '1.5rem' : '.5rem' ?>;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
+        <?php if ( $includes_html ): ?>
         <div style="display:flex;flex-direction:column;gap:.5rem;max-width:20rem;margin:0 auto;text-align:left;">
-          <p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.8125rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem;">Included in your estimate</p>
-          <?= $single_includes_html ?>
+          <p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.8125rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem;"><?= esc_html($includes_label) ?></p>
+          <?= $includes_html ?>
         </div>
         <?php endif; ?>
+        <?= $extra_inner ?>
         <?php if ( $graft_note_inner ): ?>
-        <div id="<?= $uid ?>-graft-note-single" style="display:none;background:hsl(var(--accent)/.5);padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-top:1.25rem;">
+        <div id="<?= $graft_id ?>" style="display:none;background:hsl(var(--accent)/.5);padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-top:1.25rem;">
           <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;line-height:1.6;"><?= $graft_note_inner ?></p>
         </div>
         <?php endif; ?>
       </div>
-      <?= $result_sections_html ?>
       <?= $fin_block ?>
       <?= $disc_block ?>
       <?= $cta_buttons ?>
+    </div>
+    <?php return ob_get_clean();
+};
+
+// Shared right-column sections (only when sections exist)
+$_sections_col = $result_sections_html
+    ? '<div style="width:100%;max-width:22rem;flex-shrink:0;">' . $result_sections_html . '</div>'
+    : '';
+?>
+
+<!-- RESULT: SINGLE -->
+<div class="die-panel" id="<?= $uid ?>-panel-result-single">
+  <main style="display:flex;flex-direction:column;flex:1;">
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:64rem;box-sizing:border-box;">
+      <?= $_badge('Your Estimate Is Ready') ?>
+      <?php if ( $show_price ): ?>
+      <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;align-items:flex-start;">
+        <?= $_price_col(
+            $uid.'-result-single-range',
+            $uid.'-result-single-label',
+            $uid.'-result-single-subtitle',
+            $single_includes_html,
+            $uid.'-graft-note-single'
+        ) ?>
+        <?= $_sections_col ?>
+      </div>
       <?php else: ?>
       <?= $no_price_card ?>
       <?= $disc_block ?>
@@ -6676,32 +6701,21 @@ $_badge = function($txt) use ($uid) {
 <!-- RESULT: MULTIPLE -->
 <div class="die-panel" id="<?= $uid ?>-panel-result-multiple">
   <main style="display:flex;flex-direction:column;flex:1;">
-    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:48rem;box-sizing:border-box;">
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:64rem;box-sizing:border-box;">
       <?= $_badge('Your Estimate Is Ready') ?>
       <?php if ( $show_price ): ?>
-      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1rem;">
-        <p id="<?= $uid ?>-result-multiple-label" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.8125rem;font-weight:500;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
-        <p id="<?= $uid ?>-result-multiple-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.375rem;">Calculating&hellip;</p>
-        <p id="<?= $uid ?>-result-multiple-count" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.875rem;margin-bottom:.75rem;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
-        <div id="<?= $uid ?>-multi-tier-note" style="display:none;background:hsl(var(--accent)/.4);border:1px solid hsl(var(--border));border-radius:.75rem;padding:.875rem 1rem;text-align:left;margin-bottom:1rem;">
-          <p id="<?= $uid ?>-multi-tier-text" style="font-family:Inter,sans-serif;font-size:.825rem;color:hsl(var(--foreground)/.75);line-height:1.6;margin:0;"></p>
-        </div>
-        <?php if ( $single_includes_html ): ?>
-        <div style="display:flex;flex-direction:column;gap:.5rem;max-width:20rem;margin:0 auto;text-align:left;">
-          <p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.8125rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem;">Included per implant</p>
-          <?= $single_includes_html ?>
-        </div>
-        <?php endif; ?>
-        <?php if ( $graft_note_inner ): ?>
-        <div id="<?= $uid ?>-graft-note-multiple" style="display:none;background:hsl(var(--accent)/.5);padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-top:1.25rem;">
-          <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;line-height:1.6;"><?= $graft_note_inner ?></p>
-        </div>
-        <?php endif; ?>
+      <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;align-items:flex-start;">
+        <?= $_price_col(
+            $uid.'-result-multiple-range',
+            $uid.'-result-multiple-label',
+            $uid.'-result-multiple-count',
+            $single_includes_html,
+            $uid.'-graft-note-multiple',
+            '<div id="'.$uid.'-multi-tier-note" style="display:none;background:hsl(var(--accent)/.4);border:1px solid hsl(var(--border));border-radius:.75rem;padding:.875rem 1rem;text-align:left;margin-bottom:1rem;margin-top:.75rem;"><p id="'.$uid.'-multi-tier-text" style="font-family:Inter,sans-serif;font-size:.825rem;color:hsl(var(--foreground)/.75);line-height:1.6;margin:0;"></p></div>',
+            'Included per implant'
+        ) ?>
+        <?= $_sections_col ?>
       </div>
-      <?= $result_sections_html ?>
-      <?= $fin_block ?>
-      <?= $disc_block ?>
-      <?= $cta_buttons ?>
       <?php else: ?>
       <?= $no_price_card ?>
       <?= $disc_block ?>
@@ -6713,24 +6727,19 @@ $_badge = function($txt) use ($uid) {
 <!-- RESULT: FULL ARCH -->
 <div class="die-panel" id="<?= $uid ?>-panel-result-fullarch">
   <main style="display:flex;flex-direction:column;flex:1;">
-    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:48rem;box-sizing:border-box;">
+    <div style="flex:1;margin:0 auto;padding:1.5rem 1rem 2rem;width:100%;max-width:64rem;box-sizing:border-box;">
       <?= $_badge('Your Estimate Is Ready') ?>
       <?php if ( $show_price ): ?>
-      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1rem;">
-        <p id="<?= $uid ?>-result-fullarch-label" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.8125rem;font-weight:500;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
-        <p id="<?= $uid ?>-result-fullarch-range" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.375rem;">Calculating&hellip;</p>
-        <p id="<?= $uid ?>-result-fullarch-suffix" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.875rem;margin-bottom:<?= $arch_includes_html ? '1.5rem' : '.5rem' ?>;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
-        <?php if ( $arch_includes_html ): ?>
-        <div style="display:flex;flex-direction:column;gap:.5rem;max-width:20rem;margin:0 auto;text-align:left;">
-          <p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.8125rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem;">Included in your estimate</p>
-          <?= $arch_includes_html ?>
-        </div>
-        <?php endif; ?>
+      <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;align-items:flex-start;">
+        <?= $_price_col(
+            $uid.'-result-fullarch-range',
+            $uid.'-result-fullarch-label',
+            $uid.'-result-fullarch-suffix',
+            $arch_includes_html,
+            $uid.'-graft-note-fullarch'
+        ) ?>
+        <?= $_sections_col ?>
       </div>
-      <?= $result_sections_html ?>
-      <?= $fin_block ?>
-      <?= $disc_block ?>
-      <?= $cta_buttons ?>
       <?php else: ?>
       <?= $no_price_card ?>
       <?= $disc_block ?>
