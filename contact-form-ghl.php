@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.2
+ * Version:     2.5.3
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1047,6 +1047,7 @@ function cfg_render_dashboard_widget() {
 // ═══════════════════════════════════════════════════════════════
 add_action( 'wp_head', function () {
     echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/css/intlTelInput.min.css"/>';
+    echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>';
     echo '<style>
         .iti{display:block!important;width:100%!important;}
         .iti__flag-container{z-index:10;}
@@ -1266,6 +1267,7 @@ function cfg_settings_page() {
     <?php endif; ?>
 
     <style>
+    .imp-section-icon i{font-size:15px;}
     /* ════════════════════════════════
        LAYOUT
     ════════════════════════════════ */
@@ -2462,7 +2464,7 @@ function cfg_settings_page() {
         <!--  1 · DISPLAY & TOGGLES                               -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:0;">
-            <div class="imp-section-icon" style="background:#eff6ff;">⚙️</div>
+            <div class="imp-section-icon" style="background:#eff6ff;color:#2563eb;"><i class="fa-solid fa-gear"></i></div>
             <div>
                 <h3>Display Settings</h3>
                 <p>Control what appears in the estimator and basic redirect behaviour</p>
@@ -2543,7 +2545,7 @@ function cfg_settings_page() {
         <!--  2 · PRICING                                         -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#f0fdf4;">💰</div>
+            <div class="imp-section-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fa-solid fa-dollar-sign"></i></div>
             <div>
                 <h3>Pricing Ranges</h3>
                 <p>Set your min/max estimate for each tooth path. The patient sees a range like <strong>"$3,000 – $6,000"</strong> on the results screen. The bone graft add-on is added on top of the path range only when the patient selects <em>"Yes"</em> or <em>"Not sure"</em> on the bone graft question — options 1 and 3 just show a note without adding to the total.</p>
@@ -2593,7 +2595,7 @@ function cfg_settings_page() {
         <!--  3 · QUESTION EDITOR                                 -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#fdf4ff;">📝</div>
+            <div class="imp-section-icon" style="background:#fdf4ff;color:#9333ea;"><i class="fa-solid fa-pen-to-square"></i></div>
             <div>
                 <h3>Question Editor</h3>
                 <p>The estimator has <strong>3 paths</strong> — the patient lands on one based on the router answer. Each path asks its own questions, then optionally shows the insurance question, then shows results. <strong>Single Tooth:</strong> 1 missing tooth. <strong>Multiple Teeth:</strong> 2–5+ missing teeth. <strong>Full Arch:</strong> full-arch/denture replacement (skips insurance). Each question has a <em>Field Key</em> (sent to GHL as a custom field) and <em>Answer Options</em> — the value is what gets stored, the label is what the patient sees.</p>
@@ -2942,7 +2944,7 @@ function cfg_settings_page() {
         <!--  4 · INTRO SCREEN                                    -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#fff7ed;">🏠</div>
+            <div class="imp-section-icon" style="background:#fff7ed;color:#ea580c;"><i class="fa-solid fa-house"></i></div>
             <div>
                 <h3>Intro Screen</h3>
                 <p>The first thing patients see before they start the estimator</p>
@@ -2983,7 +2985,7 @@ function cfg_settings_page() {
         <!--  5 · RESULTS SCREEN                                  -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#f0fdf4;">📊</div>
+            <div class="imp-section-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fa-solid fa-chart-bar"></i></div>
             <div>
                 <h3>Results Screen</h3>
                 <p>What the patient sees after completing the quiz</p>
@@ -3162,7 +3164,7 @@ function cfg_settings_page() {
         <!--  5b · CONSULTATION OFFER GATEKEEPER                  -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#fef9ec;">🎁</div>
+            <div class="imp-section-icon" style="background:#fef9ec;color:#d97706;"><i class="fa-solid fa-gift"></i></div>
             <div>
                 <h3>Consultation Offer Step <span style="font-size:11px;font-weight:400;color:#6b7280;background:#f0f0f1;padding:2px 8px;border-radius:10px;margin-left:6px;">optional</span></h3>
                 <p>A bonus opt-in screen shown between the results and the booking form. Patients choose <strong>Claim</strong> or <strong>Skip</strong> — the choice is recorded as a custom field in GHL. Both paths continue to the booking form.</p>
@@ -3199,7 +3201,7 @@ function cfg_settings_page() {
         <!--  6 · CONSULTATION OFFER STEP                         -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#fef3c7;">📬</div>
+            <div class="imp-section-icon" style="background:#fef3c7;color:#b45309;"><i class="fa-solid fa-envelope"></i></div>
             <div>
                 <h3>Lead Capture Form</h3>
                 <p>The contact details form where patients enter their name, email, and phone to receive their estimate. This is the final step before results are shown.</p>
@@ -3276,7 +3278,7 @@ function cfg_settings_page() {
         <!--  7 · DISCLAIMER                                      -->
         <!-- ════════════════════════════════════════════════════ -->
         <div class="imp-section-hdr" style="margin-top:28px;">
-            <div class="imp-section-icon" style="background:#fef2f2;">⚠️</div>
+            <div class="imp-section-icon" style="background:#fef2f2;color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i></div>
             <div>
                 <h3>Disclaimer</h3>
                 <p>Shown in small text below the estimate on the results screen</p>
@@ -6433,7 +6435,7 @@ if ( $show_insurance && $ins_q ) {
           <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.5rem 1.75rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <?php if ( $offer_badge ): ?>
             <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--primary)/.1);border:1px solid hsl(var(--primary)/.2);border-radius:9999px;padding:.375rem 1rem;font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:hsl(var(--primary));text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.25rem;">
-              🎁 <?= esc_html($offer_badge) ?>
+              <i class="fa-solid fa-gift" style="font-size:.7rem;"></i> <?= esc_html($offer_badge) ?>
             </div>
             <?php endif; ?>
             <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(1.5rem,4vw,2rem);line-height:1.2;color:hsl(var(--foreground));margin:0 0 .625rem;"><?= esc_html($offer_heading) ?></h2>
