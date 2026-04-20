@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.3
+ * Version:     2.5.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2851,6 +2851,22 @@ function cfg_settings_page() {
 
             var optsLabel = document.createElement('label'); optsLabel.textContent='Answer Options';
             optsSection.appendChild(optsLabel);
+
+            // Explainer for value column + pricing algorithm
+            var optsHelp = document.createElement('div');
+            optsHelp.style = 'background:#f0f6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:11.5px;color:#1d4ed8;line-height:1.7;';
+            optsHelp.innerHTML = '<strong style="display:block;margin-bottom:4px;"><i class="fa-solid fa-circle-info" style="margin-right:5px;"></i>How option values work</strong>'
+              + '<b>Value (internal)</b> — stored in GHL and shown in the estimate sidebar. Must be unique within this question.<br>'
+              + '<b>Label</b> — what the patient sees on the button.<br>'
+              + '<b>Sub-label</b> — optional smaller text beneath the label.<br>'
+              + '<hr style="border:none;border-top:1px solid #bfdbfe;margin:7px 0;">'
+              + '<strong>Pricing algorithm (teethCount field only)</strong><br>'
+              + 'When the field key is <code style="background:#dbeafe;padding:1px 4px;border-radius:3px;font-size:11px;">teethCount</code>, the value controls how the price is calculated:<br>'
+              + '&bull; <b>Numeric value</b> (e.g. <code style="background:#dbeafe;padding:1px 4px;border-radius:3px;font-size:11px;">2</code>, <code style="background:#dbeafe;padding:1px 4px;border-radius:3px;font-size:11px;">3</code>, <code style="background:#dbeafe;padding:1px 4px;border-radius:3px;font-size:11px;">4</code>) — multiplies the single-tooth price by that number. The result is capped at the configured Multiple max.<br>'
+              + '&bull; <b>Non-numeric value</b> (e.g. <code style="background:#dbeafe;padding:1px 4px;border-radius:3px;font-size:11px;">5plus</code>) — skips multiplication and shows the flat Multiple Min&ndash;Max range directly. Use this for "5 or more" style options.<br>'
+              + '<b>All other field keys</b> — values are informational only; they do not affect pricing.';
+            optsSection.appendChild(optsHelp);
+
             var optsList = document.createElement('div'); optsList.id = 'imp-opts-' + path + '-' + qi;
             optsSection.appendChild(optsList);
             var addOptBtn = document.createElement('button'); addOptBtn.type='button'; addOptBtn.className='imp-add-opt-btn'; addOptBtn.textContent='+ Add Option';
