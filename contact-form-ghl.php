@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.6
+ * Version:     2.5.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6922,11 +6922,19 @@ $_sections_col = $result_sections_html
     } else if (s.flow === 'fullarch') {
       tags.push({l:'Replacing:', v:'Full arch / denture'});
     }
+    var _fieldLabels = {
+      toothLocation:   'Location:',    timeMissing:     'Missing for:',
+      boneGraft:       'Bone graft:',  situationSingle: 'Situation:',
+      teethCount:      'Replacing:',   teethLocation:   'Location:',
+      timeMissingMult: 'Missing for:', boneGraftMult:   'Bone graft:',
+      situationMult:   'Situation:',   archSelection:   'Arch:',
+      situationArch:   'Situation:',   archDuration:    'Duration:'
+    };
     var pathQs = getPathQs(s.flow) || [];
     for (var si = 0; si < pathQs.length; si++) {
       var sq = pathQs[si];
       var sv = s.answersL[sq.field];
-      if (sv) tags.push({l: (sq.sidebar_label || sq.title.split(' ').slice(0,2).join(' ') + ':'), v: sv});
+      if (sv) tags.push({l: (sq.sidebar_label || _fieldLabels[sq.field] || sq.title.split(' ').slice(0,2).join(' ') + ':'), v: sv});
     }
     if (impPaths.ins) {
       var insV = s.answersL[impPaths.ins.field];
