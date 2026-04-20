@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.7
+ * Version:     2.5.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2822,6 +2822,15 @@ function cfg_settings_page() {
                 data.field = this.value; impEdSave(p);
             }; })(path, qi);
             fkF.appendChild(fkIn); fields.appendChild(fkF);
+
+            // Sidebar label
+            var slF = impEdField('Sidebar Label');
+            var slIn = document.createElement('input'); slIn.type='text'; slIn.placeholder='e.g. Location: (shown in profile sidebar)'; slIn.value = q.sidebar_label||'';
+            slIn.oninput = (function(p,i){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.sidebar_label = this.value; impEdSave(p);
+            }; })(path, qi);
+            slF.appendChild(slIn); fields.appendChild(slF);
 
             // Type
             var typeF = impEdField('Type');
@@ -6925,7 +6934,7 @@ $_sections_col = $result_sections_html
     var _fieldLabels = {
       toothLocation:   'Location:',    timeMissing:     'Missing for:',
       boneGraft:       'Bone graft:',  situationSingle: 'Situation:',
-      teethCount:      'Replacing:',   teethLocation:   'Location:',
+      teethCount:      'Teeth:',       teethLocation:   'Location:',
       timeMissingMult: 'Missing for:', boneGraftMult:   'Bone graft:',
       situationMult:   'Situation:',   archSelection:   'Arch:',
       situationArch:   'Situation:',   archDuration:    'Duration:'
