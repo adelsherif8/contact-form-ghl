@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.4
+ * Version:     2.5.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3111,7 +3111,7 @@ function cfg_settings_page() {
                         </div>
                         <div class="cfg-grid" style="--cols:2;">
                             <div class="cfg-field"><label>Label</label><input type="text" name="<?= CFG_OPTION ?>[imp_cta_book_label]" value="<?= esc_attr( $s['imp_cta_book_label'] ) ?>" placeholder="Book My Consultation"/></div>
-                            <div class="cfg-field"><label>URL <span class="cfg-badge">optional</span></label><input type="url" name="<?= CFG_OPTION ?>[imp_cta_book_url]" value="<?= esc_url( $s['imp_cta_book_url'] ) ?>" placeholder="Leave blank to go to lead form step"/></div>
+                            <div class="cfg-field"><label>Redirect URL <span class="cfg-badge">required</span></label><input type="url" name="<?= CFG_OPTION ?>[imp_cta_book_url]" value="<?= esc_url( $s['imp_cta_book_url'] ) ?>" placeholder="e.g. /thank-you or booking page URL"/><p class="cfg-desc" style="margin:4px 0 0;">Where to send the patient when they click this button on the results screen. UTM params are forwarded automatically.</p></div>
                         </div>
                     </div>
                     <!-- Call button -->
@@ -6756,7 +6756,7 @@ $_badge = function($txt) use ($uid) {
     result_suffix_single:   '<?= esc_js( $s['imp_result_single_suffix'] ) ?>',
     result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
     result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>',
-    successUrl:        '<?= esc_js( ! empty( $s['imp_contact_btn_url'] ) ? $s['imp_contact_btn_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : $s['success_redirect_url'] ) ) ?>',
+    resultCtaUrl:      '<?= esc_js( ! empty( $s['imp_cta_book_url'] ) ? $s['imp_cta_book_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : '' ) ) ?>',
     graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>',
     offerEnabled: <?= $offer_enabled ? 'true' : 'false' ?>,
     offerGhlKey:  '<?= esc_js( $offer_ghl_key ) ?>'
@@ -7161,25 +7161,7 @@ $_badge = function($txt) use ($uid) {
     var btn = document.getElementById(uid + '-reveal-btn');
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; }
 
-    // Just show results — GHL submission happens when they click Book CTA
-    var panel = 'result-' + (s.flow || 'single');
-    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
-    isSubmitting = false;
-    navigate(panel);
-  }
-
-  /* ── CTA BOOK BUTTON — submits to GHL then redirects ── */
-  function handleCTABook() {
-    if (isSubmitting) return;
-    var fn = document.getElementById(uid + '-firstName').value.trim();
-    var ln = document.getElementById(uid + '-lastName').value.trim();
-    var em = document.getElementById(uid + '-email').value.trim();
-    var ph = document.getElementById(uid + '-phone').value.trim();
-    if (!fn || !ln || !em || !ph) { navigate('lead'); return; }
-    var phElB = document.getElementById(uid + '-phone');
-    if (phElB && !window.cfgPhoneValid(phElB)) { navigate('lead'); return; }
-    isSubmitting = true;
-
+    // Submit to GHL then navigate to results
     var r     = getRange();
     var panel = 'result-' + (s.flow || 'single');
     var fd    = new FormData();
@@ -7205,17 +7187,23 @@ $_badge = function($txt) use ($uid) {
     }
     var _up = new URLSearchParams(window.location.search);
     ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
-    function _utmRedir(url) {
-      var up = new URLSearchParams(window.location.search);
-      var d = url;
-      ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){
-        var v = up.get(k); if (v) d += (d.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
-      });
-      window.location.href = d;
+    function _done() {
+      isSubmitting = false;
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+      navigate(panel);
     }
-    fetch(config.ajaxUrl, { method:'POST', body:fd })
-      .then(function(){ isSubmitting = false; if (config.successUrl) _utmRedir(config.successUrl); })
-      .catch(function(){ isSubmitting = false; if (config.successUrl) _utmRedir(config.successUrl); });
+    fetch(config.ajaxUrl, { method:'POST', body:fd }).then(_done).catch(_done);
+  }
+
+  /* ── RESULTS CTA — redirects to configured URL (with UTM params) ── */
+  function handleCTABook() {
+    if (!config.resultCtaUrl) return;
+    var up  = new URLSearchParams(window.location.search);
+    var url = config.resultCtaUrl;
+    ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){
+      var v = up.get(k); if (v) url += (url.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
+    });
+    window.location.href = url;
   }
 
   /* ── INIT ── */
