@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.30
+ * Version:     2.5.31
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5806,8 +5806,8 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;overflow-x:hidden;}
-#<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;max-width:100%;overflow-x:hidden;}
+#<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;max-width:100%;}
 /* Top bar — single contained row: [STEP X OF Y] [====progress====] [Free · No Obligation] */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
 #<?= $uid ?>-topbar-inner{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;gap:1.25rem;}
@@ -5817,13 +5817,13 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-trust{font-size:0.7rem;color:<?= esc_attr($s['muted_color']) ?>;white-space:nowrap;flex-shrink:0;}
 @media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1rem;}#<?= $uid ?>-trust{display:none;}}
 /* Two-column page grid */
-#<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
+#<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;width:100%;}
 @media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;padding-right:1.5rem;padding-left:1.5rem;}}
-@media(max-width:560px){#<?= $uid ?>-grid{padding:1.5rem 1rem 3rem;}}
+@media(max-width:560px){#<?= $uid ?>-grid{padding:1.25rem 1rem 3rem;width:100%;}}
 /* Slider — IDs/classes used by JS must not change */
-#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;max-width:640px;width:100%;}
-#<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
-.<?= $uid ?>-step{flex:0 0 100%;min-width:100%;padding:0.5rem 0 2rem;}
+#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;max-width:100%;width:100%;}
+#<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;width:100%;}
+.<?= $uid ?>-step{flex:0 0 100%;min-width:0;width:100%;padding:0.5rem 0 2rem;overflow-wrap:break-word;word-break:break-word;}
 /* Back link row */
 .<?= $uid ?>-backrow{padding:0.25rem 0 1.25rem;}
 .<?= $uid ?>-ghost{background:none;border:none;color:<?= esc_attr($s['muted_color']) ?>;font-size:0.875rem;font-weight:500;cursor:pointer;font-family:inherit;transition:color 0.15s;display:inline-flex;align-items:center;gap:0.45rem;padding:0;}
