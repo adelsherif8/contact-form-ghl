@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.18
+ * Version:     2.5.19
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5747,11 +5747,11 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-counter{font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:<?= esc_attr($s['muted_color']) ?>;}
 #<?= $uid ?>-trust{font-size:0.78rem;color:<?= esc_attr($s['muted_color']) ?>;}
 /* Two-column page grid */
-#<?= $uid ?>-grid{max-width:1060px;margin:0 auto;padding:0 2rem 5rem;display:grid;grid-template-columns:1fr 300px;gap:3rem;align-items:start;}
-@media(max-width:860px){#<?= $uid ?>-grid{grid-template-columns:1fr;}}
+#<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:0 2rem 5rem;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
+@media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;}}
 @media(max-width:560px){#<?= $uid ?>-grid{padding:0 1.25rem 4rem;}}
 /* Slider — IDs/classes used by JS must not change */
-#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;}
+#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;max-width:640px;}
 #<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
 .<?= $uid ?>-step{flex:0 0 100%;min-width:100%;padding:0.5rem 0 2rem;}
 /* Back link row */
@@ -5863,7 +5863,8 @@ function cfg_aligner_shortcode() {
                     if ( ! empty( $c['img'] ) ) {
                         echo '<img src="' . esc_url( $c['img'] ) . '" alt="' . esc_attr( $c['label'] ) . '" style="width:44px;height:44px;object-fit:contain;display:block;"/>';
                     } else {
-                        echo '<div style="font-size:1.75rem;line-height:1;">' . esc_html( $c['emoji'] ?? '🦷' ) . '</div>';
+                        $fa_icon = cfg_alg_choice_icon( $c['label'] ?? '' );
+                        echo '<i class="fa-solid ' . esc_attr( $fa_icon ) . '" style="font-size:1.35rem;color:' . $accent . ';"></i>';
                     }
                     echo '<div style="font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';line-height:1.3;">' . esc_html( $c['label'] ) . '</div>';
                     echo '</div>';
@@ -5967,8 +5968,9 @@ function cfg_aligner_shortcode() {
     var uid     = '<?= $uid ?>';
     var cur     = 0;
     var total   = <?= (int)$total ?>;
-    var answers = {};
-    var labels  = {};
+    var answers     = {};
+    var labels      = {};
+    var answerOrder = [];
     var acc     = '<?= esc_js($accent) ?>';
     var ajaxUrl = '<?= esc_js($ajax) ?>';
     var surl    = '<?= $surl ?>';
@@ -6018,13 +6020,10 @@ function cfg_aligner_shortcode() {
     function renderChips(){
         var box=document.getElementById(uid+'-chips');
         if(!box) return;
-        var keys=Object.keys(answers);
-        if(!keys.length){ box.innerHTML='<div style="padding:0.75rem 0;font-size:0.82rem;color:<?= esc_js($s['muted_color']) ?>;font-style:italic;">Your answers will appear here.</div>'; return; }
+        if(!answerOrder.length){ box.innerHTML='<div style="padding:0.75rem 0;font-size:0.82rem;color:<?= esc_js($s['muted_color']) ?>;font-style:italic;">Your answers will appear here.</div>'; return; }
         var html='';
-        keys.forEach(function(k){
-            var lbl=labels[k]||k;
-            if(lbl.length>32) lbl=lbl.substring(0,30)+'…';
-            html+='<div class="'+uid+'-chip"><span class="'+uid+'-chip-k">'+lbl+':</span><span class="'+uid+'-chip-v">'+answers[k]+'</span></div>';
+        answerOrder.forEach(function(k,idx){
+            html+='<div class="'+uid+'-chip"><span class="'+uid+'-chip-k">Q'+(idx+1)+':</span><span class="'+uid+'-chip-v">'+answers[k]+'</span></div>';
         });
         box.innerHTML=html;
     }
@@ -6036,7 +6035,7 @@ function cfg_aligner_shortcode() {
         var key=step.dataset.key;
         step.querySelectorAll('.'+uid+'-card').forEach(function(c){ c.classList.remove('alg-sel'); });
         card.classList.add('alg-sel');
-        if(key) answers[key]=card.dataset.value;
+        if(key){ if(answerOrder.indexOf(key)<0) answerOrder.push(key); answers[key]=card.dataset.value; }
         setTimeout(function(){ goTo(cur+1); }, 360);
     };
 
@@ -6045,7 +6044,7 @@ function cfg_aligner_shortcode() {
         var key=step.dataset.key;
         step.querySelectorAll('.'+uid+'-card').forEach(function(c){ c.classList.remove('alg-sel'); });
         card.classList.add('alg-sel');
-        if(key) answers[key]=card.dataset.value;
+        if(key){ if(answerOrder.indexOf(key)<0) answerOrder.push(key); answers[key]=card.dataset.value; }
         setTimeout(function(){ goTo(cur+1); }, 400);
     };
 
@@ -6105,6 +6104,43 @@ function cfg_aligner_shortcode() {
 </script>
     <?php
     return ob_get_clean();
+}
+
+// Maps choice label text to a FA6 solid icon class
+function cfg_alg_choice_icon( $label ) {
+    $l = strtolower( trim( $label ) );
+    $map = [
+        'overbite'        => 'fa-chevron-up',
+        'underbite'       => 'fa-chevron-down',
+        'crossbite'       => 'fa-arrows-left-right',
+        'open bite'       => 'fa-circle-notch',
+        'openbite'        => 'fa-circle-notch',
+        'none'            => 'fa-check',
+        'crowding'        => 'fa-compress',
+        'crowded'         => 'fa-compress',
+        'spacing'         => 'fa-expand',
+        'gaps'            => 'fa-expand',
+        'straight'        => 'fa-minus',
+        'slightly'        => 'fa-tooth',
+        'moderate'        => 'fa-tooth',
+        'severe'          => 'fa-triangle-exclamation',
+        'upper'           => 'fa-arrow-up',
+        'lower'           => 'fa-arrow-down',
+        'front'           => 'fa-circle-dot',
+        'back'            => 'fa-circle',
+        'yes'             => 'fa-check',
+        'no'              => 'fa-xmark',
+        'not sure'        => 'fa-circle-question',
+        'insurance'       => 'fa-shield-halved',
+        'implant'         => 'fa-tooth',
+        'crown'           => 'fa-tooth',
+        'bridge'          => 'fa-tooth',
+        'veneer'          => 'fa-tooth',
+    ];
+    foreach ( $map as $keyword => $icon ) {
+        if ( strpos( $l, $keyword ) !== false ) return $icon;
+    }
+    return 'fa-tooth';
 }
 
 // Helper: Next button only — Back is rendered inline above each question
