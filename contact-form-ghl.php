@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.29
+ * Version:     2.5.30
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5839,8 +5839,8 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-img2{display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;margin-bottom:1.75rem;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:100px;padding:1rem 0.75rem;gap:0.5rem;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card:hover,.<?= $uid ?>-img3 .<?= $uid ?>-card:hover,.<?= $uid ?>-img2 .<?= $uid ?>-card.alg-sel,.<?= $uid ?>-img3 .<?= $uid ?>-card.alg-sel{transform:translateY(-2px);}
-@media(max-width:500px){.<?= $uid ?>-img3{grid-template-columns:1fr 1fr;}}
-@media(max-width:340px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr;}}
+@media(max-width:560px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
+.<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}}
 /* CTA button */
 .<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:<?= absint($s['input_radius']) ?>px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
 .<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:'.esc_attr($s['btn_hover_bg_color']).'!important;'.($s['btn_hover_text_color']?'color:'.esc_attr($s['btn_hover_text_color']).'!important;':''):'filter:brightness(1.08);'?>}
@@ -5865,7 +5865,6 @@ function cfg_aligner_shortcode() {
 @media(max-width:560px){
   .<?= $uid ?>-card{font-size:0.9rem;padding:0.9rem 1rem;}
   .<?= $uid ?>-card i{font-size:1.1rem;}
-  .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{min-height:80px;padding:0.75rem 0.5rem;}
   .<?= $uid ?>-btn{width:100%!important;padding:0.85rem 1rem!important;font-size:0.9rem!important;box-sizing:border-box;}
   .<?= $uid ?>-fgrid{grid-template-columns:1fr;}
   .<?= $uid ?>-input{font-size:16px;}
