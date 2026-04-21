@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.8
+ * Version:     2.5.10
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -977,7 +977,7 @@ function cfg_log_entry( $form_type, $first, $last, $email, $phone, $meta = [], $
     // ── GHL error alert ──
     if ( $ghl_status === 'error' ) {
         $admin_email = get_option( 'admin_email' );
-        $form_labels = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+        $form_labels = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator', 'review' => 'Review Form' ];
         $label       = $form_labels[ $form_type ] ?? $form_type;
         wp_mail(
             $admin_email,
@@ -1480,6 +1480,7 @@ function cfg_settings_page() {
                 <div class="cfg-nav-item" onclick="cfgTab(this,'form')" data-group="forms">Contact Form</div>
                 <div class="cfg-nav-item" onclick="cfgTab(this,'bm')" data-group="forms">Booking Method</div>
                 <div class="cfg-nav-item" onclick="cfgTab(this,'ty')" data-group="forms">Thank You Page</div>
+                <div class="cfg-nav-item" onclick="cfgTab(this,'rv')" data-group="forms">Review Form</div>
             </div>
         </div>
 
@@ -4153,6 +4154,80 @@ function cfg_settings_page() {
     </div>
     <!-- ══════════════════ /GHL FIELDS PANEL ══════════════════ -->
 
+    <!-- ═══ REVIEW FORM TAB ═══ -->
+    <?php
+    $rv = cfg_review_get();
+    ?>
+    <div id="cfg-rv" class="cfg-panel">
+        <div class="cfg-panel-hdr">
+            <h2>Review Form</h2>
+            <p>Collect patient reviews and guide happy patients to Google. Unhappy patients submit private feedback instead. Shortcode: <code>[cfg_review_form]</code></p>
+        </div>
+        <div class="cfg-panel-body">
+
+        <div class="imp-section-hdr" style="margin-top:0;">
+            <div class="imp-section-icon" style="background:#fef9ec;color:#d97706;"><i class="fa-solid fa-star"></i></div>
+            <div><h3>Review Destinations</h3><p>Where patients are sent to leave their review.</p></div>
+        </div>
+        <div class="cfg-card-section">
+            <div class="cfg-grid">
+                <div class="cfg-field cfg-full"><label>Clinic / Practice Name <span class="cfg-badge">used in review templates</span></label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[clinic_name]" value="<?= esc_attr( $rv['clinic_name'] ) ?>" placeholder="<?= esc_attr( get_bloginfo('name') ) ?>"/></div>
+                <div class="cfg-field cfg-full"><label>Google Reviews URL</label><input type="url" name="<?= CFG_REVIEW_OPTION ?>[google_url]" value="<?= esc_url( $rv['google_url'] ) ?>" placeholder="https://g.page/r/.../review"/></div>
+                <div class="cfg-field"><label>Facebook Reviews URL <span class="cfg-badge">optional</span></label><input type="url" name="<?= CFG_REVIEW_OPTION ?>[facebook_url]" value="<?= esc_url( $rv['facebook_url'] ) ?>" placeholder="https://facebook.com/.../reviews"/></div>
+                <div class="cfg-field"><label>Yelp URL <span class="cfg-badge">optional</span></label><input type="url" name="<?= CFG_REVIEW_OPTION ?>[yelp_url]" value="<?= esc_url( $rv['yelp_url'] ) ?>" placeholder="https://yelp.com/biz/..."/></div>
+            </div>
+        </div>
+
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#eff6ff;color:#2563eb;"><i class="fa-solid fa-list"></i></div>
+            <div><h3>Form Options</h3><p>Configure the multi-select options patients see when leaving a good review.</p></div>
+        </div>
+        <div class="cfg-card-section">
+            <div class="cfg-grid">
+                <div class="cfg-field"><label>Treatment Options <span style="font-weight:400;color:#9ca3af;">— one per line</span></label><textarea name="<?= CFG_REVIEW_OPTION ?>[treatments]" rows="7"><?= esc_textarea( $rv['treatments'] ) ?></textarea></div>
+                <div class="cfg-field"><label>Staff / Doctors <span style="font-weight:400;color:#9ca3af;">— one per line</span></label><textarea name="<?= CFG_REVIEW_OPTION ?>[staff]" rows="7"><?= esc_textarea( $rv['staff'] ) ?></textarea></div>
+                <div class="cfg-field cfg-full"><label>Hidden Keyword Phrases <span style="font-weight:400;color:#9ca3af;">— one per line, woven naturally into generated reviews</span></label><textarea name="<?= CFG_REVIEW_OPTION ?>[keywords]" rows="5"><?= esc_textarea( $rv['keywords'] ) ?></textarea><p class="cfg-desc">e.g. "gentle team", "no wait time", "clean and modern", "easy parking". These rotate into reviews naturally — patients won't see this list.</p></div>
+            </div>
+        </div>
+
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fef2f2;color:#dc2626;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div><h3>Negative Feedback Path</h3><p>Shown to patients who rate 1–3 stars or click "Could Be Better". Stays private — no Google redirect.</p></div>
+        </div>
+        <div class="cfg-card-section">
+            <div class="cfg-grid">
+                <div class="cfg-field cfg-full"><label>Thank You Message (bad path)</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[bad_thanks_msg]" value="<?= esc_attr( $rv['bad_thanks_msg'] ) ?>"/></div>
+            </div>
+        </div>
+
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fa-solid fa-plug"></i></div>
+            <div><h3>GHL Field Keys</h3><p>Custom field keys where review data is saved in GoHighLevel.</p></div>
+        </div>
+        <div class="cfg-card-section">
+            <div class="cfg-grid">
+                <div class="cfg-field"><label>Sentiment</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[ghl_sentiment]" value="<?= esc_attr( $rv['ghl_sentiment'] ) ?>" style="font-family:monospace;" placeholder="review_sentiment"/></div>
+                <div class="cfg-field"><label>Generated Review</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[ghl_review]" value="<?= esc_attr( $rv['ghl_review'] ) ?>" style="font-family:monospace;" placeholder="review_text"/></div>
+                <div class="cfg-field"><label>Treatments</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[ghl_treatments]" value="<?= esc_attr( $rv['ghl_treatments'] ) ?>" style="font-family:monospace;" placeholder="review_treatments"/></div>
+                <div class="cfg-field"><label>Staff Seen</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[ghl_staff]" value="<?= esc_attr( $rv['ghl_staff'] ) ?>" style="font-family:monospace;" placeholder="review_staff"/></div>
+                <div class="cfg-field"><label>Feedback (bad)</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[ghl_feedback]" value="<?= esc_attr( $rv['ghl_feedback'] ) ?>" style="font-family:monospace;" placeholder="review_feedback"/></div>
+                <div class="cfg-field"><label>Star Rating</label><input type="text" name="<?= CFG_REVIEW_OPTION ?>[ghl_stars]" value="<?= esc_attr( $rv['ghl_stars'] ) ?>" style="font-family:monospace;" placeholder="review_stars"/></div>
+            </div>
+        </div>
+
+        <div class="imp-section-hdr" style="margin-top:28px;">
+            <div class="imp-section-icon" style="background:#fdf4ff;color:#9333ea;"><i class="fa-solid fa-ruler-combined"></i></div>
+            <div><h3>Page Settings</h3></div>
+        </div>
+        <div class="cfg-card-section">
+            <div class="cfg-grid">
+                <div class="cfg-field"><label>Page Top Padding (rem)</label><input type="number" step="0.5" name="<?= CFG_REVIEW_OPTION ?>[page_top_padding]" value="<?= esc_attr( $rv['page_top_padding'] ) ?>" placeholder="7"/></div>
+            </div>
+        </div>
+
+        </div><!-- /cfg-panel-body -->
+    </div>
+
     <div id="cfg-save-bar">
     <?php submit_button( 'Save All Settings', 'primary large' ); ?>
     </div>
@@ -4276,6 +4351,7 @@ function cfg_settings_page() {
                 <option value="contact"  <?= selected( $filter_type, 'contact',  false ) ?>>Contact Form</option>
                 <option value="aligner"  <?= selected( $filter_type, 'aligner',  false ) ?>>Aligner Quiz</option>
                 <option value="implant"  <?= selected( $filter_type, 'implant',  false ) ?>>Implant Estimator</option>
+                <option value="review"   <?= selected( $filter_type, 'review',   false ) ?>>Review Form</option>
             </select>
             <select name="filter_status">
                 <option value="">All statuses</option>
@@ -4322,7 +4398,7 @@ function cfg_settings_page() {
         <tr><td colspan="8" style="text-align:center;padding:32px;color:#646970;">No entries yet.</td></tr>
     <?php else: foreach ( $rows as $row ):
         $meta    = json_decode( $row['meta'] ?? '{}', true ) ?: [];
-        $form_labels = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+        $form_labels = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator', 'review' => 'Review Form' ];
         $form_label  = $form_labels[ $row['form_type'] ] ?? $row['form_type'];
     ?>
         <tr style="cursor:pointer;" onclick="cfgToggleDetail(<?= $row['id'] ?>)">
@@ -4507,7 +4583,7 @@ function cfg_settings_page() {
     );
     $form_map = [];
     foreach ( $by_form as $r ) $form_map[ $r['form_type'] ] = (int) $r['cnt'];
-    $form_labels_all = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+    $form_labels_all = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator', 'review' => 'Review Form' ];
 
     // GHL success rate
     $total_30   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
@@ -7405,4 +7481,714 @@ function cfg_implant_ajax_submit() {
         $msg = $body['message'] ?? ( 'Unexpected error (HTTP ' . $code . ').' );
         wp_send_json_error( $msg );
     }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REVIEW FORM — SETTINGS & HELPERS
+// ═══════════════════════════════════════════════════════════════
+define( 'CFG_REVIEW_OPTION', 'cfg_review_settings' );
+
+function cfg_review_defaults() {
+    return [
+        'clinic_name'      => '',
+        'google_url'       => '',
+        'facebook_url'     => '',
+        'yelp_url'         => '',
+        'treatments'       => "Dental Implants\nInvisalign\nTeeth Whitening\nVeneers\nDentures\nRoot Canal\nCrowns & Bridges\nBraces",
+        'staff'            => '',
+        'keywords'         => "gentle team\nno wait time\nclean and modern\neasy parking",
+        'bad_thanks_msg'   => 'Thank you for sharing your feedback. A member of our team will be in touch with you shortly.',
+        'ghl_sentiment'    => 'review_sentiment',
+        'ghl_review'       => 'review_text',
+        'ghl_treatments'   => 'review_treatments',
+        'ghl_staff'        => 'review_staff',
+        'ghl_feedback'     => 'review_feedback',
+        'ghl_stars'        => 'review_stars',
+        'page_top_padding' => '7',
+    ];
+}
+
+function cfg_review_sanitize( $in ) {
+    $out  = [];
+    $strs = [ 'clinic_name', 'bad_thanks_msg', 'ghl_sentiment', 'ghl_review', 'ghl_treatments', 'ghl_staff', 'ghl_feedback', 'ghl_stars', 'page_top_padding' ];
+    foreach ( $strs as $k ) $out[ $k ] = sanitize_text_field( $in[ $k ] ?? '' );
+    $urls = [ 'google_url', 'facebook_url', 'yelp_url' ];
+    foreach ( $urls as $k ) $out[ $k ] = esc_url_raw( $in[ $k ] ?? '' );
+    foreach ( [ 'treatments', 'staff', 'keywords' ] as $k ) $out[ $k ] = sanitize_textarea_field( $in[ $k ] ?? '' );
+    return $out;
+}
+
+function cfg_review_get() {
+    return (array) get_option( CFG_REVIEW_OPTION, [] ) + cfg_review_defaults();
+}
+
+add_action( 'admin_init', function () {
+    register_setting( CFG_SLUG, CFG_REVIEW_OPTION, [ 'sanitize_callback' => 'cfg_review_sanitize' ] );
+} );
+
+// ═══════════════════════════════════════════════════════════════
+//  REVIEW FORM — SHORTCODE [cfg_review_form]
+// ═══════════════════════════════════════════════════════════════
+add_shortcode( 'cfg_review_form', 'cfg_review_shortcode' );
+
+function cfg_review_shortcode( $atts = [] ) {
+    $rv     = cfg_review_get();
+    $tp     = floatval( $rv['page_top_padding'] ?: 7 ) . 'rem';
+    $uid    = 'rvf' . uniqid();
+    $bad_msg = esc_html( $rv['bad_thanks_msg'] );
+
+    $treats_arr = array_values( array_filter( array_map( 'trim', explode( "\n", $rv['treatments'] ) ) ) );
+    $staff_arr  = array_values( array_filter( array_map( 'trim', explode( "\n", $rv['staff'] ) ) ) );
+    $kw_arr     = array_values( array_filter( array_map( 'trim', explode( "\n", $rv['keywords'] ) ) ) );
+
+    $treats_html = '';
+    foreach ( $treats_arr as $t ) {
+        $treats_html .= '<button type="button" class="rvf-bubble" data-val="' . esc_attr( $t ) . '">' . esc_html( $t ) . '</button>';
+    }
+    $staff_html = '';
+    foreach ( $staff_arr as $st ) {
+        $staff_html .= '<button type="button" class="rvf-bubble" data-val="' . esc_attr( $st ) . '">' . esc_html( $st ) . '</button>';
+    }
+
+    $share_btns = '';
+    if ( $rv['google_url'] ) {
+        $share_btns .= '<a href="' . esc_url( $rv['google_url'] ) . '" target="_blank" rel="noopener" class="rvf-share-btn rvf-share-google" id="' . $uid . '-share-google"><i class="fa-brands fa-google"></i> Google</a>';
+    }
+    if ( $rv['facebook_url'] ) {
+        $share_btns .= '<a href="' . esc_url( $rv['facebook_url'] ) . '" target="_blank" rel="noopener" class="rvf-share-btn rvf-share-fb" id="' . $uid . '-share-fb"><i class="fa-brands fa-facebook-f"></i> Facebook</a>';
+    }
+    if ( $rv['yelp_url'] ) {
+        $share_btns .= '<a href="' . esc_url( $rv['yelp_url'] ) . '" target="_blank" rel="noopener" class="rvf-share-btn rvf-share-yelp" id="' . $uid . '-share-yelp"><i class="fa-brands fa-yelp"></i> Yelp</a>';
+    }
+
+    ob_start();
+    ?>
+<style>
+#<?= $uid ?>{padding-top:<?= $tp ?>;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;}
+#<?= $uid ?> *{box-sizing:border-box;}
+.rvf-progress-wrap{background:#e5e7eb;border-radius:9999px;height:6px;margin-bottom:8px;overflow:hidden;}
+.rvf-progress-bar{height:100%;border-radius:9999px;background:linear-gradient(90deg,#2563eb,#3b82f6);transition:width .4s ease;}
+.rvf-step-label{font-size:12px;color:#9ca3af;margin-bottom:24px;font-weight:500;}
+.rvf-panel{display:none;}
+.rvf-panel.rvf-active{display:block;}
+.rvf-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:2rem;box-shadow:0 4px 24px rgba(0,0,0,.06);}
+.rvf-card h2{margin:0 0 6px;font-size:1.35rem;color:#111827;font-weight:700;}
+.rvf-card .rvf-subtitle{color:#6b7280;font-size:.9rem;margin:0 0 1.5rem;}
+.rvf-field{margin-bottom:1rem;}
+.rvf-field label{display:block;font-size:.85rem;font-weight:600;color:#374151;margin-bottom:6px;}
+.rvf-field label span{font-weight:400;color:#9ca3af;}
+.rvf-field input[type=text],.rvf-field input[type=email],.rvf-field input[type=tel],.rvf-field textarea{width:100%;padding:.6rem .85rem;border:1px solid #d1d5db;border-radius:8px;font-size:.9rem;color:#111827;font-family:inherit;background:#fff;transition:border-color .15s,box-shadow .15s;}
+.rvf-field input:focus,.rvf-field textarea:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15);}
+.rvf-field textarea{resize:vertical;min-height:90px;}
+.rvf-field .rvf-err{font-size:.78rem;color:#dc2626;margin-top:4px;display:none;}
+.rvf-field.rvf-has-error input,.rvf-field.rvf-has-error textarea{border-color:#dc2626;}
+.rvf-field.rvf-has-error .rvf-err{display:block;}
+.rvf-stars-wrap{display:flex;gap:10px;justify-content:center;margin:1.2rem 0 .5rem;}
+.rvf-star{font-size:2.6rem;cursor:pointer;color:#d1d5db;transition:color .15s,transform .12s;line-height:1;user-select:none;}
+.rvf-star:hover,.rvf-star.rvf-lit{color:#f59e0b;}
+.rvf-star:hover{transform:scale(1.18);}
+.rvf-star-hint{text-align:center;font-size:.82rem;color:#9ca3af;min-height:1.2em;margin-bottom:1.2rem;transition:color .15s;}
+.rvf-section-label{font-size:.82rem;font-weight:600;color:#6b7280;margin:1.2rem 0 .6rem;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;}
+.rvf-bubbles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.5rem;}
+.rvf-bubble{background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:9999px;padding:.38rem .9rem;font-size:.82rem;color:#374151;cursor:pointer;transition:background .15s,border-color .15s,color .15s;}
+.rvf-bubble:hover{background:#eff6ff;border-color:#93c5fd;}
+.rvf-bubble.rvf-sel{background:#2563eb;border-color:#2563eb;color:#fff;}
+.rvf-toggle-row{display:flex;gap:12px;align-items:center;margin:.9rem 0;}
+.rvf-toggle-label{font-size:.82rem;font-weight:600;color:#6b7280;min-width:60px;}
+.rvf-toggle-btns{display:flex;gap:0;border:1px solid #d1d5db;border-radius:8px;overflow:hidden;}
+.rvf-toggle-btns button{background:#fff;border:none;padding:.4rem .85rem;font-size:.8rem;color:#374151;cursor:pointer;transition:background .12s,color .12s;font-family:inherit;}
+.rvf-toggle-btns button.rvf-sel{background:#2563eb;color:#fff;}
+.rvf-toggle-btns button:hover:not(.rvf-sel){background:#f3f4f6;}
+.rvf-review-box{width:100%;min-height:130px;padding:.8rem 1rem;border:1.5px solid #d1d5db;border-radius:10px;font-size:.9rem;color:#111827;line-height:1.6;resize:vertical;font-family:inherit;background:#f9fafb;}
+.rvf-review-box:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15);background:#fff;}
+.rvf-review-actions{display:flex;gap:8px;margin:10px 0;}
+.rvf-regen-btn,.rvf-copy-btn{flex:1;padding:.5rem .75rem;border-radius:8px;font-size:.84rem;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid;}
+.rvf-regen-btn{background:#f3f4f6;border-color:#d1d5db;color:#374151;}
+.rvf-regen-btn:hover{background:#e5e7eb;}
+.rvf-copy-btn{background:#ecfdf5;border-color:#a7f3d0;color:#047857;}
+.rvf-copy-btn:hover{background:#d1fae5;}
+.rvf-incentive{background:#fef9ec;border:1px solid #fde68a;border-radius:10px;padding:.85rem 1rem;font-size:.87rem;color:#92400e;margin:1rem 0;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;}
+.rvf-share-btns{display:flex;gap:10px;flex-wrap:wrap;}
+.rvf-share-btn{flex:1;min-width:110px;display:flex;align-items:center;justify-content:center;gap:7px;padding:.65rem 1rem;border-radius:10px;font-size:.88rem;font-weight:600;text-decoration:none;transition:filter .15s,transform .1s;}
+.rvf-share-btn:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.rvf-share-google{background:#fff;border:1.5px solid #e5e7eb;color:#374151;}
+.rvf-share-fb{background:#1877f2;color:#fff;border:1.5px solid #1877f2;}
+.rvf-share-yelp{background:#d32323;color:#fff;border:1.5px solid #d32323;}
+.rvf-btn{width:100%;padding:.8rem 1.5rem;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1.2rem;font-family:inherit;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.rvf-btn:hover{background:#1d4ed8;transform:translateY(-1px);}
+.rvf-btn:disabled{opacity:.65;cursor:not-allowed;transform:none;}
+.rvf-back-btn{background:none;border:none;color:#6b7280;font-size:.84rem;cursor:pointer;padding:0;margin-top:.5rem;font-family:inherit;display:flex;align-items:center;gap:5px;}
+.rvf-back-btn:hover{color:#374151;}
+.rvf-ty-icon{font-size:3.5rem;text-align:center;margin-bottom:1rem;}
+.rvf-ty-title{font-size:1.4rem;font-weight:700;color:#111827;margin:0 0 8px;text-align:center;}
+.rvf-ty-sub{color:#6b7280;text-align:center;font-size:.92rem;margin:0;}
+</style>
+
+<div id="<?= $uid ?>">
+  <div class="rvf-progress-wrap"><div class="rvf-progress-bar" id="<?= $uid ?>-prog" style="width:25%;"></div></div>
+  <div class="rvf-step-label" id="<?= $uid ?>-step">Step 1</div>
+
+  <!-- Panel 1: Name + Email + Stars -->
+  <div class="rvf-panel rvf-active rvf-card" id="<?= $uid ?>-s1">
+    <h2>How was your experience?</h2>
+    <p class="rvf-subtitle">Tell us a little about yourself to get started.</p>
+    <div class="rvf-field" id="<?= $uid ?>-f-name">
+      <label>Your Name *</label>
+      <input type="text" id="<?= $uid ?>-name" placeholder="Jane Smith"/>
+      <div class="rvf-err">Please enter your name.</div>
+    </div>
+    <div class="rvf-field" id="<?= $uid ?>-f-email">
+      <label>Email Address *</label>
+      <input type="email" id="<?= $uid ?>-email" placeholder="jane@example.com"/>
+      <div class="rvf-err">Please enter a valid email.</div>
+    </div>
+    <div class="rvf-stars-wrap" id="<?= $uid ?>-stars">
+      <span class="rvf-star" data-v="1"><i class="fa-solid fa-star"></i></span>
+      <span class="rvf-star" data-v="2"><i class="fa-solid fa-star"></i></span>
+      <span class="rvf-star" data-v="3"><i class="fa-solid fa-star"></i></span>
+      <span class="rvf-star" data-v="4"><i class="fa-solid fa-star"></i></span>
+      <span class="rvf-star" data-v="5"><i class="fa-solid fa-star"></i></span>
+    </div>
+    <div class="rvf-star-hint" id="<?= $uid ?>-star-hint">Tap a star to rate your experience</div>
+    <button type="button" class="rvf-btn" id="<?= $uid ?>-s1-next" style="display:none;"><i class="fa-solid fa-arrow-right"></i> Continue</button>
+  </div>
+
+  <!-- Panel 2 GOOD: Details + tone/length -->
+  <div class="rvf-panel rvf-card" id="<?= $uid ?>-s2g">
+    <h2>Tell us more!</h2>
+    <p class="rvf-subtitle">Your answers help us write a better review.</p>
+    <?php if ( $treats_html ): ?>
+    <div class="rvf-section-label"><i class="fa-solid fa-syringe"></i> Which treatments did you receive?</div>
+    <div class="rvf-bubbles" id="<?= $uid ?>-treat-wrap"><?= $treats_html ?></div>
+    <?php endif; ?>
+    <?php if ( $staff_html ): ?>
+    <div class="rvf-section-label"><i class="fa-solid fa-user-doctor"></i> Who did you see?</div>
+    <div class="rvf-bubbles" id="<?= $uid ?>-staff-wrap"><?= $staff_html ?></div>
+    <?php endif; ?>
+    <div class="rvf-field" id="<?= $uid ?>-f-liked">
+      <label>What did you like most? *</label>
+      <input type="text" id="<?= $uid ?>-liked" placeholder="e.g. How gentle the doctor was"/>
+      <div class="rvf-err">Please tell us what you liked.</div>
+    </div>
+    <div class="rvf-field">
+      <label>Anything else to mention? <span>(optional)</span></label>
+      <textarea id="<?= $uid ?>-extra" placeholder="Any other thoughts…" rows="2"></textarea>
+    </div>
+    <div class="rvf-toggle-row">
+      <span class="rvf-toggle-label">Length</span>
+      <div class="rvf-toggle-btns" id="<?= $uid ?>-len">
+        <button type="button" class="rvf-sel" data-v="short">Short</button>
+        <button type="button" data-v="detailed">Detailed</button>
+      </div>
+    </div>
+    <div class="rvf-toggle-row">
+      <span class="rvf-toggle-label">Tone</span>
+      <div class="rvf-toggle-btns" id="<?= $uid ?>-tone">
+        <button type="button" class="rvf-sel" data-v="casual">Casual</button>
+        <button type="button" data-v="professional">Professional</button>
+        <button type="button" data-v="enthusiastic">Enthusiastic</button>
+      </div>
+    </div>
+    <button type="button" class="rvf-btn" id="<?= $uid ?>-s2g-next"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate My Review</button>
+    <button type="button" class="rvf-back-btn" id="<?= $uid ?>-s2g-back"><i class="fa-solid fa-chevron-left"></i> Back</button>
+  </div>
+
+  <!-- Panel 3 GOOD: Generated review + share -->
+  <div class="rvf-panel rvf-card" id="<?= $uid ?>-s3g">
+    <h2>Your review is ready!</h2>
+    <p class="rvf-subtitle">Feel free to edit it below, then copy and share on your preferred platform.</p>
+    <textarea class="rvf-review-box" id="<?= $uid ?>-review-out" rows="5"></textarea>
+    <div class="rvf-review-actions">
+      <button type="button" class="rvf-regen-btn" id="<?= $uid ?>-regen"><i class="fa-solid fa-rotate"></i> Regenerate</button>
+      <button type="button" class="rvf-copy-btn" id="<?= $uid ?>-copy"><i class="fa-solid fa-copy"></i> Copy Text</button>
+    </div>
+    <div class="rvf-incentive"><i class="fa-solid fa-gift"></i> Paste your review on Google, Facebook, or Yelp — it helps others find us!</div>
+    <div class="rvf-share-btns"><?= $share_btns ?: '<p style="color:#9ca3af;font-size:.85rem;margin:0;">No review links configured yet — add them in the plugin settings.</p>' ?></div>
+    <button type="button" class="rvf-back-btn" id="<?= $uid ?>-s3g-back" style="margin-top:12px;"><i class="fa-solid fa-chevron-left"></i> Back</button>
+  </div>
+
+  <!-- Panel 2 BAD: Phone + Feedback -->
+  <div class="rvf-panel rvf-card" id="<?= $uid ?>-s2b">
+    <h2>We're sorry to hear that.</h2>
+    <p class="rvf-subtitle">Your feedback goes directly to our team and stays completely private.</p>
+    <div class="rvf-field">
+      <label>Phone Number <span>(optional — so we can follow up)</span></label>
+      <input type="tel" id="<?= $uid ?>-phone" placeholder="+1 (555) 000-0000"/>
+    </div>
+    <div class="rvf-field" id="<?= $uid ?>-f-fbk">
+      <label>What can we do better? *</label>
+      <textarea id="<?= $uid ?>-feedback" rows="4" placeholder="Please share what went wrong…"></textarea>
+      <div class="rvf-err">Please share your feedback before submitting.</div>
+    </div>
+    <button type="button" class="rvf-btn" id="<?= $uid ?>-s2b-next"><i class="fa-solid fa-paper-plane"></i> Submit Feedback</button>
+    <button type="button" class="rvf-back-btn" id="<?= $uid ?>-s2b-back"><i class="fa-solid fa-chevron-left"></i> Back</button>
+  </div>
+
+  <!-- Panel 3 BAD: Private thank you -->
+  <div class="rvf-panel rvf-card" id="<?= $uid ?>-s3b">
+    <div class="rvf-ty-icon" style="color:#16a34a;"><i class="fa-solid fa-circle-check"></i></div>
+    <p class="rvf-ty-title">Thank You</p>
+    <p class="rvf-ty-sub"><?= $bad_msg ?></p>
+  </div>
+
+  <!-- After share: Final thank you -->
+  <div class="rvf-panel rvf-card" id="<?= $uid ?>-done">
+    <div class="rvf-ty-icon" style="color:#dc2626;"><i class="fa-solid fa-heart"></i></div>
+    <p class="rvf-ty-title">Thank you so much!</p>
+    <p class="rvf-ty-sub">Your review means the world to us and helps future patients find their way here.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+var uid = '<?= $uid ?>';
+var clinic = <?= json_encode( $rv['clinic_name'] ?: get_bloginfo( 'name' ) ) ?>;
+var rvConfig = {
+  ajaxUrl:    <?= json_encode( admin_url( 'admin-ajax.php' ) ) ?>,
+  nonce:      <?= json_encode( wp_create_nonce( 'cfg_review_submit' ) ) ?>,
+  keywords:   <?= json_encode( $kw_arr ) ?>
+};
+
+var d = { name:'', email:'', stars:0, path:'',
+  treatments:[], staff:[], liked:'', extra:'',
+  tone:'casual', length:'short',
+  phone:'', feedback:'', review:'', submitted:false };
+
+function $i(s){ return document.getElementById(uid+'-'+s); }
+function show(id){ $i(id).classList.add('rvf-active'); }
+function hide(id){ $i(id).classList.remove('rvf-active'); }
+
+function setProgress(step, total){
+  document.getElementById(uid+'-prog').style.width = Math.round((step/total)*100)+'%';
+  document.getElementById(uid+'-step').textContent = 'Step '+step+' of '+total;
+}
+
+// ── Stars ──
+var starHints = ['','Poor — we can do better','Below average','It was okay','Great experience','Outstanding!'];
+var stars = document.querySelectorAll('#'+uid+'-stars .rvf-star');
+stars.forEach(function(s){
+  s.addEventListener('mouseenter', function(){
+    var v = +s.getAttribute('data-v');
+    stars.forEach(function(x){ x.classList.toggle('rvf-lit', +x.getAttribute('data-v')<=v); });
+    $i('star-hint').textContent = starHints[v];
+    $i('star-hint').style.color = v<=3 ? '#dc2626' : v===4 ? '#d97706' : '#16a34a';
+  });
+  s.addEventListener('mouseleave', function(){
+    stars.forEach(function(x){ x.classList.toggle('rvf-lit', +x.getAttribute('data-v')<=d.stars); });
+    $i('star-hint').textContent = d.stars ? starHints[d.stars] : 'Tap a star to rate your experience';
+    $i('star-hint').style.color = d.stars ? (d.stars<=3?'#dc2626':d.stars===4?'#d97706':'#16a34a') : '';
+  });
+  s.addEventListener('click', function(){
+    d.stars = +s.getAttribute('data-v');
+    stars.forEach(function(x){ x.classList.toggle('rvf-lit', +x.getAttribute('data-v')<=d.stars); });
+    $i('star-hint').textContent = starHints[d.stars];
+    $i('star-hint').style.color = d.stars<=3 ? '#dc2626' : d.stars===4 ? '#d97706' : '#16a34a';
+    $i('s1-next').style.display = '';
+    setProgress(1, d.stars>=4 ? 4 : 3);
+  });
+});
+
+// ── Bubbles ──
+function initBubbles(wrapId, arr){
+  var wrap = document.getElementById(uid+'-'+wrapId);
+  if (!wrap) return;
+  wrap.querySelectorAll('.rvf-bubble').forEach(function(b){
+    b.addEventListener('click', function(){
+      b.classList.toggle('rvf-sel');
+      var v = b.getAttribute('data-val'), idx = arr.indexOf(v);
+      if (idx>=0) arr.splice(idx,1); else arr.push(v);
+    });
+  });
+}
+initBubbles('treat-wrap', d.treatments);
+initBubbles('staff-wrap', d.staff);
+
+// ── Toggle buttons ──
+function initToggles(wrapId, key){
+  var wrap = $i(wrapId);
+  if (!wrap) return;
+  wrap.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){
+      wrap.querySelectorAll('button').forEach(function(x){ x.classList.remove('rvf-sel'); });
+      b.classList.add('rvf-sel');
+      d[key] = b.getAttribute('data-v');
+    });
+  });
+}
+initToggles('len', 'length');
+initToggles('tone', 'tone');
+
+// ── Validation ──
+function validateField(fId, inputId, testFn){
+  var f = document.getElementById(uid+'-f-'+fId);
+  var inp = document.getElementById(uid+'-'+inputId);
+  if (!f||!inp) return true;
+  var ok = testFn(inp.value.trim());
+  f.classList.toggle('rvf-has-error', !ok);
+  return ok;
+}
+
+// ── Review generator ──
+function rvPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function rvGenerate(){
+  var treats  = d.treatments.length ? d.treatments.join(' and ') : null;
+  var staffStr = d.staff.length ? d.staff.join(' and ') : null;
+  var kw = rvConfig.keywords.length ? rvPick(rvConfig.keywords) : null;
+  var det = d.length === 'detailed';
+
+  var T = {
+    casual:{
+      openers:[
+        'Really happy with my experience at '+clinic+'!',
+        'Just had a great visit to '+clinic+' and had to leave a review.',
+        'Been going to '+clinic+' for a while now — they never disappoint.',
+        'Honestly, '+clinic+' is one of the best dental offices I\'ve been to.',
+        'So glad I found '+clinic+' — highly recommend!',
+        'Cannot say enough good things about '+clinic+'.',
+        'Went to '+clinic+' for the first time and already planning my next visit.',
+      ],
+      treat_parts: treats ? [
+        'Had my '+treats+' done and it was quick and painless.',
+        'Got '+treats+' and was surprised at how smooth everything went.',
+        'They took care of my '+treats+' and the results are amazing.',
+        'Came in for '+treats+' and left feeling great about it.',
+      ] : [],
+      staff_parts: staffStr ? [
+        staffStr+' was super nice and made me feel comfortable the whole time.',
+        staffStr+' really took the time to explain everything clearly.',
+        'Shoutout to '+staffStr+' for being so patient and friendly!',
+        staffStr+' was incredibly kind — you can tell they genuinely care.',
+      ] : [],
+      liked_parts:[
+        d.liked+' — that was a big deal for me.',
+        'What stood out the most was '+d.liked+'.',
+        'I especially loved '+d.liked+'.',
+        'The thing that really got me was '+d.liked+'.',
+      ],
+      kw_parts: kw ? [
+        'The '+kw+' made a real difference.',
+        'Big fan of the '+kw+' — really appreciated that.',
+        'Worth mentioning: the '+kw+'. Loved it.',
+      ] : [],
+      detail_extras:[
+        'The office is super clean and modern, and the wait was minimal.',
+        'Booking was easy and they were right on time for my appointment.',
+        'Parking was a breeze and the whole visit was stress-free.',
+        'The whole team was friendly from the front desk to the doctor.',
+        'I usually dread dental visits but this one was genuinely easy.',
+      ],
+      closers:[
+        '10/10 would recommend to anyone!',
+        'Will definitely be coming back!',
+        'Highly recommend if you\'re looking for a great dentist.',
+        '5 stars, no question.',
+        'Already told my friends about this place!',
+        'Would not go anywhere else.',
+      ],
+    },
+    professional:{
+      openers:[
+        'I recently visited '+clinic+' and was thoroughly impressed.',
+        clinic+' delivered an exceptional standard of care from start to finish.',
+        'My experience at '+clinic+' exceeded my expectations in every regard.',
+        'I would like to commend '+clinic+' for their outstanding service.',
+        clinic+' sets the bar for what quality dental care should look like.',
+        'Having visited several dental practices over the years, '+clinic+' stands apart.',
+        'I am pleased to highly recommend '+clinic+' based on my recent experience.',
+      ],
+      treat_parts: treats ? [
+        'I received '+treats+', and the quality of care was exemplary.',
+        'The '+treats+' procedure was handled with great precision and professionalism.',
+        'I underwent '+treats+' and the results surpassed my expectations.',
+        'The team performed '+treats+' with skill and attentiveness I deeply appreciated.',
+      ] : [],
+      staff_parts: staffStr ? [
+        staffStr+' demonstrated exceptional expertise while ensuring my comfort throughout.',
+        'I was particularly impressed by '+staffStr+', who explained each step with clarity.',
+        staffStr+' was highly knowledgeable, attentive, and genuinely caring.',
+        'The professionalism of '+staffStr+' was evident in every interaction.',
+      ] : [],
+      liked_parts:[
+        d.liked+' truly set this practice apart from others I have visited.',
+        'Of particular note was '+d.liked+', which greatly enhanced my experience.',
+        'The aspect I valued most was '+d.liked+'.',
+        d.liked+' reflects the high standards this clinic holds itself to.',
+      ],
+      kw_parts: kw ? [
+        'I was also impressed by the '+kw+', which speaks to the quality of this practice.',
+        'Worth noting is the '+kw+', which contributed greatly to my overall satisfaction.',
+        'The '+kw+' made a lasting positive impression.',
+      ] : [],
+      detail_extras:[
+        'The facility is immaculately maintained and equipped with modern dental technology.',
+        'The front desk staff managed scheduling and communication with efficiency and warmth.',
+        'Wait times were minimal, and I felt my time was respected throughout.',
+        'The clinic\'s commitment to cleanliness and patient safety was evident at every stage.',
+        'The practice clearly prioritizes patient education and informed decision-making.',
+      ],
+      closers:[
+        'I would not hesitate to recommend '+clinic+' to family, friends, and colleagues.',
+        'I will certainly be returning for all my future dental needs.',
+        clinic+' has earned my full trust and highest recommendation.',
+        'Without reservation, I give '+clinic+' my highest rating.',
+        'I strongly encourage anyone seeking exceptional dental care to visit '+clinic+'.',
+      ],
+    },
+    enthusiastic:{
+      openers:[
+        'I absolutely LOVE '+clinic+' — best dental office I\'ve ever been to!!',
+        'OH WOW, '+clinic+' is incredible and I cannot recommend them enough!!',
+        clinic+' is AMAZING and you need to book an appointment like yesterday!!',
+        'Just had the most fantastic experience at '+clinic+' and I\'m still buzzing!!',
+        'If I could give '+clinic+' ten stars, I absolutely would — they are THAT good!!',
+        'I\'ve been to a lot of dentists but '+clinic+' is on a completely different level!!',
+        'Running to leave this review because '+clinic+' genuinely blew my mind!!',
+      ],
+      treat_parts: treats ? [
+        'I got '+treats+' done and OH MY GOODNESS the results are beyond stunning!!',
+        'They did my '+treats+' and I am completely blown away by how great it turned out!',
+        'My '+treats+' experience was beyond anything I could have hoped for — just WOW!!',
+        'Cannot stop talking about my '+treats+' results — absolutely perfect!!',
+      ] : [],
+      staff_parts: staffStr ? [
+        staffStr+' is an absolute ROCKSTAR — so kind, so talented, just the very best!!',
+        'I cannot rave enough about '+staffStr+' — truly world-class care!!',
+        'HUGE shoutout to '+staffStr+' for making me feel so welcome and cared for!!',
+        staffStr+' went above and beyond in every single way — truly exceptional!!',
+      ] : [],
+      liked_parts:[
+        d.liked+' completely blew my mind — what an amazing touch!!',
+        'The thing that WOWED me most was '+d.liked+'. Just incredible.',
+        'I\'m still raving about '+d.liked+' to absolutely everyone I know!!',
+        d.liked+' is something I\'ve never experienced anywhere else — loved it so much!!',
+      ],
+      kw_parts: kw ? [
+        'The '+kw+' was a total game-changer — loved every second of it!!',
+        'Also completely obsessed with the '+kw+' — such an amazing detail!!',
+        'The '+kw+' honestly made my whole day so much better!!',
+      ] : [],
+      detail_extras:[
+        'The office is GORGEOUS — clean, bright, modern, and so incredibly inviting!!',
+        'They run right on time which I never expected but absolutely LOVED!!',
+        'The whole vibe is so calm and welcoming — zero dental anxiety here!!',
+        'Parking was easy and everything from check-in to checkout was completely seamless!!',
+        'The entire team — front desk, assistants, doctors — ALL absolutely amazing!!',
+      ],
+      closers:[
+        'If you\'re even slightly on the fence — JUST GO. You will NOT regret it!!',
+        'Already booked my next appointment and I literally cannot wait to go back!!',
+        'HIGHLY HIGHLY HIGHLY recommend '+clinic+' to every single person I know!!',
+        '5 stars is not enough — this place deserves a million!!',
+        'Telling every single person I know to go here — YOU NEED THIS!!',
+      ],
+    },
+  };
+
+  var tpl = T[d.tone] || T.casual;
+  var parts = [];
+  parts.push(rvPick(tpl.openers));
+  if (tpl.treat_parts.length) parts.push(rvPick(tpl.treat_parts));
+  if (tpl.staff_parts.length) parts.push(rvPick(tpl.staff_parts));
+  if (d.liked) parts.push(rvPick(tpl.liked_parts));
+  if (det) {
+    parts.push(rvPick(tpl.detail_extras));
+    if (tpl.kw_parts.length) parts.push(rvPick(tpl.kw_parts));
+    if (d.extra) parts.push(d.extra);
+  } else {
+    if (tpl.kw_parts.length && Math.random()>0.45) parts.push(rvPick(tpl.kw_parts));
+  }
+  parts.push(rvPick(tpl.closers));
+  return parts.join(' ');
+}
+
+// ── Navigation ──
+$i('s1-next').addEventListener('click', function(){
+  var okName  = validateField('name',  'name',  function(v){ return v.length>=2; });
+  var okEmail = validateField('email', 'email', function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); });
+  if (!okName||!okEmail) return;
+  if (!d.stars){ $i('star-hint').textContent='Please tap a star to rate your experience.'; $i('star-hint').style.color='#dc2626'; return; }
+  d.name  = document.getElementById(uid+'-name').value.trim();
+  d.email = document.getElementById(uid+'-email').value.trim();
+  d.path  = d.stars>=4 ? 'good' : 'bad';
+  hide('s1');
+  if (d.path==='good'){ show('s2g'); setProgress(2,4); }
+  else                { show('s2b'); setProgress(2,3); }
+});
+
+$i('s2g-back').addEventListener('click', function(){ hide('s2g'); show('s1'); setProgress(1, d.stars>=4?4:3); });
+
+$i('s2g-next').addEventListener('click', function(){
+  if (!validateField('liked','liked',function(v){ return v.length>=2; })) return;
+  d.liked  = document.getElementById(uid+'-liked').value.trim();
+  d.extra  = document.getElementById(uid+'-extra').value.trim();
+  d.review = rvGenerate();
+  document.getElementById(uid+'-review-out').value = d.review;
+  hide('s2g'); show('s3g'); setProgress(3,4);
+  submitToServer('good');
+});
+
+$i('s3g-back').addEventListener('click', function(){ hide('s3g'); show('s2g'); setProgress(2,4); });
+
+$i('regen').addEventListener('click', function(){
+  d.review = rvGenerate();
+  document.getElementById(uid+'-review-out').value = d.review;
+});
+
+$i('copy').addEventListener('click', function(){
+  var ta = document.getElementById(uid+'-review-out');
+  d.review = ta.value;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(d.review);
+  } else {
+    ta.select(); document.execCommand('copy');
+  }
+  var btn = $i('copy');
+  btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+  setTimeout(function(){ btn.innerHTML='<i class="fa-solid fa-copy"></i> Copy Text'; }, 2200);
+});
+
+document.querySelectorAll('#<?= $uid ?> .rvf-share-btn').forEach(function(el){
+  el.addEventListener('click', function(){
+    setTimeout(function(){ hide('s3g'); show('done'); setProgress(4,4); }, 700);
+  });
+});
+
+$i('s2b-back').addEventListener('click', function(){ hide('s2b'); show('s1'); setProgress(1,3); });
+
+$i('s2b-next').addEventListener('click', function(){
+  if (!validateField('fbk','feedback',function(v){ return v.length>=5; })) return;
+  d.phone    = document.getElementById(uid+'-phone').value.trim();
+  d.feedback = document.getElementById(uid+'-feedback').value.trim();
+  var btn = $i('s2b-next');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+  submitToServer('bad', function(){
+    hide('s2b'); show('s3b'); setProgress(3,3);
+  });
+});
+
+// ── AJAX submit ──
+function submitToServer(path, cb){
+  if (d.submitted && path==='good') { if(cb) cb(); return; }
+  d.submitted = true;
+  d.review = (document.getElementById(uid+'-review-out')||{}).value || d.review;
+  var fd = new FormData();
+  fd.append('action',     'cfg_review_submit');
+  fd.append('nonce',      rvConfig.nonce);
+  fd.append('name',       d.name);
+  fd.append('email',      d.email);
+  fd.append('stars',      d.stars);
+  fd.append('path',       path);
+  fd.append('treatments', d.treatments.join(', '));
+  fd.append('staff',      d.staff.join(', '));
+  fd.append('liked',      d.liked);
+  fd.append('review',     d.review);
+  fd.append('phone',      d.phone);
+  fd.append('feedback',   d.feedback);
+  fd.append('tone',       d.tone);
+  fd.append('length',     d.length);
+  fetch(rvConfig.ajaxUrl, { method:'POST', body:fd })
+    .then(function(r){ return r.json(); })
+    .catch(function(){})
+    .finally(function(){ if(cb) cb(); });
+}
+})();
+</script>
+<?php
+    return ob_get_clean();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  REVIEW FORM — AJAX HANDLER
+// ═══════════════════════════════════════════════════════════════
+add_action( 'wp_ajax_cfg_review_submit',        'cfg_review_ajax_submit' );
+add_action( 'wp_ajax_nopriv_cfg_review_submit', 'cfg_review_ajax_submit' );
+
+function cfg_review_ajax_submit() {
+    check_ajax_referer( 'cfg_review_submit', 'nonce' );
+
+    $rv  = cfg_review_get();
+    $s   = cfg_get();
+
+    $name     = sanitize_text_field(    $_POST['name']       ?? '' );
+    $email    = sanitize_email(         $_POST['email']      ?? '' );
+    $path     = sanitize_text_field(    $_POST['path']       ?? '' );
+    $stars    = absint(                 $_POST['stars']      ?? 0 );
+    $treats   = sanitize_text_field(    $_POST['treatments'] ?? '' );
+    $staff    = sanitize_text_field(    $_POST['staff']      ?? '' );
+    $liked    = sanitize_text_field(    $_POST['liked']      ?? '' );
+    $review   = sanitize_textarea_field($_POST['review']     ?? '' );
+    $phone    = sanitize_text_field(    $_POST['phone']      ?? '' );
+    $feedback = sanitize_textarea_field($_POST['feedback']   ?? '' );
+    $tone     = sanitize_text_field(    $_POST['tone']       ?? '' );
+    $len      = sanitize_text_field(    $_POST['length']     ?? '' );
+
+    $names = explode( ' ', trim( $name ), 2 );
+    $first = $names[0] ?? $name;
+    $last  = isset( $names[1] ) ? $names[1] : '';
+
+    $meta = array_filter( [
+        'path'       => $path,
+        'stars'      => $stars,
+        'treatments' => $treats,
+        'staff'      => $staff,
+        'liked'      => $liked,
+        'review'     => $review,
+        'phone'      => $phone,
+        'feedback'   => $feedback,
+        'tone'       => $tone,
+        'length'     => $len,
+    ] );
+
+    $ghl_ok = false;
+    if ( ! empty( $s['ghl_api_key'] ) && ! empty( $s['ghl_location_id'] ) ) {
+        $sentiment = $path === 'good' ? 'positive' : 'negative';
+        $custom    = [];
+        $field_map = [
+            $rv['ghl_sentiment']  => $sentiment,
+            $rv['ghl_stars']      => (string) $stars,
+            $rv['ghl_review']     => $review,
+            $rv['ghl_treatments'] => $treats,
+            $rv['ghl_staff']      => $staff,
+            $rv['ghl_feedback']   => $feedback,
+        ];
+        foreach ( $field_map as $key => $val ) {
+            if ( $key !== '' && $val !== '' ) {
+                $key = preg_replace( '/^contact\./', '', $key );
+                $custom[] = [ 'key' => $key, 'field_value' => $val ];
+            }
+        }
+        $payload = [
+            'firstName'  => $first,
+            'lastName'   => $last,
+            'email'      => $email,
+            'phone'      => $phone,
+            'locationId' => $s['ghl_location_id'],
+            'source'     => 'Review Form',
+            'tags'       => [ 'review-form', $path === 'good' ? 'review-positive' : 'review-negative' ],
+        ];
+        if ( $custom ) $payload['customFields'] = $custom;
+
+        $response = wp_remote_post( 'https://services.leadconnectorhq.com/contacts/upsert', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $s['ghl_api_key'],
+                'Content-Type'  => 'application/json',
+                'Version'       => '2021-07-28',
+            ],
+            'body'    => wp_json_encode( $payload ),
+            'timeout' => 15,
+        ] );
+
+        if ( ! is_wp_error( $response ) ) {
+            $code   = wp_remote_retrieve_response_code( $response );
+            $body   = json_decode( wp_remote_retrieve_body( $response ), true );
+            $ghl_ok = ( $code === 200 || $code === 201 );
+            $meta['_ghl_http_code'] = $code;
+            $meta['_ghl_response']  = $body;
+        }
+    }
+
+    cfg_log_entry( 'review', $first, $last, $email, $phone, $meta, $ghl_ok ? 'ok' : 'error' );
+    wp_send_json_success( 'ok' );
 }
