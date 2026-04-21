@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.19
+ * Version:     2.5.20
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -184,6 +184,7 @@ function cfg_defaults() {
         // ── Aligner / Quiz Form ──────────────────────────────────────────
         'alg_accent_color'       => '#C9A84C',
         'alg_success_url'        => '',
+        'alg_show_header'        => '1',
 
         // ── Implant Cost Estimator ────────────────────────────────────────
         'imp_accent_color'     => '#1e3a5f',
@@ -1505,6 +1506,7 @@ function cfg_settings_page() {
             <div class="cfg-nav-group-body" id="cfg-grpb-ref" style="max-height:0;">
                 <div class="cfg-nav-item" onclick="cfgTab(this,'guide')" data-group="ref">Setup Guide</div>
                 <div class="cfg-nav-item" onclick="cfgTab(this,'ghl_fields')" data-group="ref">GHL Fields</div>
+                <div class="cfg-nav-item" onclick="cfgTab(this,'locations')" data-group="ref">Form Locations</div>
             </div>
         </div>
 
@@ -2132,6 +2134,15 @@ function cfg_settings_page() {
                 <label>Success Redirect URL</label>
                 <input type="text" name="<?= CFG_OPTION ?>[alg_success_url]" value="<?= esc_attr( $s['alg_success_url'] ?? '' ) ?>" placeholder="/thank-you"/>
                 <span class="cfg-desc">Where to go after form submit. Leave blank to show inline thank-you.</span>
+            </div>
+            <div class="cfg-field">
+                <label>Show Form Header</label>
+                <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="hidden" name="<?= CFG_OPTION ?>[alg_show_header]" value="0"/>
+                    <input type="checkbox" name="<?= CFG_OPTION ?>[alg_show_header]" value="1" <?= ! empty( $s['alg_show_header'] ) ? 'checked' : '' ?>/>
+                    <span>Show progress bar &amp; step counter at top of form</span>
+                </label>
+                <span class="cfg-desc">Uncheck to hide the header bar (progress bar + step counter) for a cleaner embed.</span>
             </div>
         </div>
 
@@ -4713,6 +4724,70 @@ function cfg_settings_page() {
     </div><!-- /cfg-an-grid -->
         </div><!-- /cfg-panel-body -->
     </div><!-- /cfg-analytics-wrap -->
+
+    <?php
+    // ── Form Locations panel ─────────────────────────────────────────
+    $cfg_shortcodes = [
+        'contact_form_ghl'    => 'Contact Form',
+        'implant_estimator_ghl' => 'Implant Estimator',
+        'aligner_form_ghl'    => 'Aligner / Invisalign Quiz',
+        'review_form_ghl'     => 'Review Form',
+    ];
+    $cfg_loc_results = [];
+    $cfg_posts = get_posts( [ 'post_type' => [ 'page', 'post' ], 'posts_per_page' => -1, 'post_status' => 'publish' ] );
+    foreach ( $cfg_posts as $cfg_post ) {
+        foreach ( $cfg_shortcodes as $sc => $sc_label ) {
+            if ( has_shortcode( $cfg_post->post_content, $sc ) ) {
+                $cfg_loc_results[ $sc ][] = [
+                    'id'    => $cfg_post->ID,
+                    'title' => $cfg_post->post_title,
+                    'url'   => get_permalink( $cfg_post->ID ),
+                    'edit'  => get_edit_post_link( $cfg_post->ID ),
+                ];
+            }
+        }
+    }
+    ?>
+    <div id="cfg-locations-wrap" style="display:none;background:#fff;border:1px solid #e2e4e9;border-left:none;border-radius:0 10px 10px 0;min-height:580px;overflow:hidden;">
+        <div style="padding:28px 32px;">
+            <h2 style="font-size:1.15rem;font-weight:600;margin:0 0 6px;color:#1e1e2d;">Form Locations</h2>
+            <p style="color:#6b7280;font-size:0.875rem;margin:0 0 24px;">All published pages/posts that contain each shortcode.</p>
+            <?php foreach ( $cfg_shortcodes as $sc => $sc_label ): ?>
+            <div style="margin-bottom:28px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <code style="font-size:0.8rem;background:#f3f4f6;padding:3px 8px;border-radius:4px;color:#374151;">[<?= esc_html( $sc ) ?>]</code>
+                    <span style="font-weight:600;font-size:0.9rem;color:#111827;"><?= esc_html( $sc_label ) ?></span>
+                </div>
+                <?php if ( empty( $cfg_loc_results[ $sc ] ) ): ?>
+                    <p style="color:#9ca3af;font-size:0.85rem;margin:0;padding:10px 12px;background:#fafafa;border:1px solid #f0f0f0;border-radius:6px;">Not used on any published page or post.</p>
+                <?php else: ?>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+                        <thead>
+                            <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+                                <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151;">Page / Post</th>
+                                <th style="text-align:left;padding:8px 12px;font-weight:600;color:#374151;">URL</th>
+                                <th style="text-align:center;padding:8px 12px;font-weight:600;color:#374151;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ( $cfg_loc_results[ $sc ] as $loc ): ?>
+                            <tr style="border-bottom:1px solid #f3f4f6;">
+                                <td style="padding:9px 12px;color:#111827;font-weight:500;"><?= esc_html( $loc['title'] ) ?></td>
+                                <td style="padding:9px 12px;"><a href="<?= esc_url( $loc['url'] ) ?>" target="_blank" style="color:#2563eb;text-decoration:none;font-size:0.8rem;"><?= esc_html( parse_url( $loc['url'], PHP_URL_PATH ) ?: '/' ) ?></a></td>
+                                <td style="padding:9px 12px;text-align:center;">
+                                    <a href="<?= esc_url( $loc['url'] ) ?>" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:0.78rem;color:#2563eb;text-decoration:none;margin-right:8px;"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.7rem;"></i> View</a>
+                                    <a href="<?= esc_url( $loc['edit'] ) ?>" style="display:inline-flex;align-items:center;gap:4px;font-size:0.78rem;color:#6b7280;text-decoration:none;"><i class="fa-solid fa-pencil" style="font-size:0.7rem;"></i> Edit</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div><!-- /cfg-locations-wrap -->
+
     </div><!-- /cfg-main -->
     </div><!-- /cfg-root -->
 
@@ -4764,13 +4839,15 @@ function cfg_settings_page() {
         // Auto-expand parent group if item is inside one
         var grp = el.getAttribute('data-group');
         if (grp) cfgOpenGroup(grp);
-        var isOuter = (id === 'entries' || id === 'analytics');
-        var saveBar      = document.getElementById('cfg-save-bar');
-        var entriesWrap  = document.getElementById('cfg-entries-wrap');
-        var analyticsWrap= document.getElementById('cfg-analytics-wrap');
-        if (saveBar)       saveBar.style.display       = isOuter ? 'none' : '';
-        if (entriesWrap)   entriesWrap.style.display   = id === 'entries'   ? 'block' : 'none';
-        if (analyticsWrap) analyticsWrap.style.display = id === 'analytics' ? 'block' : 'none';
+        var isOuter = (id === 'entries' || id === 'analytics' || id === 'locations');
+        var saveBar       = document.getElementById('cfg-save-bar');
+        var entriesWrap   = document.getElementById('cfg-entries-wrap');
+        var analyticsWrap = document.getElementById('cfg-analytics-wrap');
+        var locationsWrap = document.getElementById('cfg-locations-wrap');
+        if (saveBar)        saveBar.style.display        = isOuter ? 'none' : '';
+        if (entriesWrap)    entriesWrap.style.display    = id === 'entries'    ? 'block' : 'none';
+        if (analyticsWrap)  analyticsWrap.style.display  = id === 'analytics'  ? 'block' : 'none';
+        if (locationsWrap)  locationsWrap.style.display  = id === 'locations'  ? 'block' : 'none';
         if (!isOuter) document.getElementById('cfg-' + id).classList.add('active');
         try {
             var u = new URL(window.location.href);
@@ -5743,9 +5820,11 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-prog-wrap{height:3px;background:rgba(0,0,0,0.08);overflow:hidden;}
 #<?= $uid ?>-prog-bar{height:100%;background:<?= $tc ?>;transition:width 0.4s ease;width:0%;}
 /* Top bar */
-#<?= $uid ?>-topbar{display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;}
-#<?= $uid ?>-counter{font-size:0.78rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:<?= esc_attr($s['muted_color']) ?>;}
-#<?= $uid ?>-trust{font-size:0.78rem;color:<?= esc_attr($s['muted_color']) ?>;}
+#<?= $uid ?>-topbar{width:100%;padding:0.75rem 0;}
+#<?= $uid ?>-topbar-inner{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;}
+#<?= $uid ?>-counter{font-size:0.75rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:<?= esc_attr($s['muted_color']) ?>;}
+#<?= $uid ?>-trust{font-size:0.75rem;color:<?= esc_attr($s['muted_color']) ?>;letter-spacing:0.03em;}
+@media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1.25rem;}}
 /* Two-column page grid */
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:0 2rem 5rem;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
 @media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;}}
@@ -5795,11 +5874,15 @@ function cfg_aligner_shortcode() {
 </style>
 
 <div id="<?= $uid ?>-wrap">
+  <?php if ( ! empty( $s['alg_show_header'] ) ): ?>
   <div id="<?= $uid ?>-prog-wrap"><div id="<?= $uid ?>-prog-bar"></div></div>
   <div id="<?= $uid ?>-topbar">
-    <div id="<?= $uid ?>-counter"></div>
-    <div id="<?= $uid ?>-trust">Free &middot; No Obligation</div>
+    <div id="<?= $uid ?>-topbar-inner">
+      <div id="<?= $uid ?>-counter"></div>
+      <div id="<?= $uid ?>-trust">Free &middot; No Obligation</div>
+    </div>
   </div>
+  <?php endif; ?>
 
   <div id="<?= $uid ?>-grid">
     <div>
@@ -6110,24 +6193,24 @@ function cfg_aligner_shortcode() {
 function cfg_alg_choice_icon( $label ) {
     $l = strtolower( trim( $label ) );
     $map = [
-        'overbite'        => 'fa-chevron-up',
-        'underbite'       => 'fa-chevron-down',
-        'crossbite'       => 'fa-arrows-left-right',
-        'open bite'       => 'fa-circle-notch',
-        'openbite'        => 'fa-circle-notch',
+        'overbite'        => 'fa-teeth',
+        'underbite'       => 'fa-teeth-open',
+        'crossbite'       => 'fa-teeth',
+        'open bite'       => 'fa-teeth-open',
+        'openbite'        => 'fa-teeth-open',
         'none'            => 'fa-check',
-        'crowding'        => 'fa-compress',
-        'crowded'         => 'fa-compress',
-        'spacing'         => 'fa-expand',
-        'gaps'            => 'fa-expand',
-        'straight'        => 'fa-minus',
+        'crowding'        => 'fa-teeth',
+        'crowded'         => 'fa-teeth',
+        'spacing'         => 'fa-teeth-open',
+        'gaps'            => 'fa-teeth-open',
+        'straight'        => 'fa-teeth',
         'slightly'        => 'fa-tooth',
         'moderate'        => 'fa-tooth',
         'severe'          => 'fa-triangle-exclamation',
-        'upper'           => 'fa-arrow-up',
-        'lower'           => 'fa-arrow-down',
-        'front'           => 'fa-circle-dot',
-        'back'            => 'fa-circle',
+        'upper'           => 'fa-teeth',
+        'lower'           => 'fa-teeth-open',
+        'front'           => 'fa-tooth',
+        'back'            => 'fa-tooth',
         'yes'             => 'fa-check',
         'no'              => 'fa-xmark',
         'not sure'        => 'fa-circle-question',
