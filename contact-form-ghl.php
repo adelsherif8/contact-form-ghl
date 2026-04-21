@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.11
+ * Version:     2.5.12
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4223,6 +4223,7 @@ function cfg_settings_page() {
         <div class="cfg-card-section">
             <div class="cfg-grid">
                 <div class="cfg-field"><label>Page Top Padding (rem)</label><input type="number" step="0.5" name="<?= CFG_REVIEW_OPTION ?>[page_top_padding]" value="<?= esc_attr( $rv['page_top_padding'] ) ?>" placeholder="7"/></div>
+                <div class="cfg-field"><label>Page Bottom Padding (rem)</label><input type="number" step="0.5" name="<?= CFG_REVIEW_OPTION ?>[page_bottom_padding]" value="<?= esc_attr( $rv['page_bottom_padding'] ) ?>" placeholder="7"/></div>
             </div>
         </div>
 
@@ -7505,13 +7506,14 @@ function cfg_review_defaults() {
         'ghl_staff'        => 'review_staff',
         'ghl_feedback'     => 'review_feedback',
         'ghl_stars'        => 'review_stars',
-        'page_top_padding' => '7',
+        'page_top_padding'    => '7',
+        'page_bottom_padding' => '7',
     ];
 }
 
 function cfg_review_sanitize( $in ) {
     $out  = [];
-    $strs = [ 'clinic_name', 'bad_thanks_msg', 'ghl_sentiment', 'ghl_review', 'ghl_treatments', 'ghl_staff', 'ghl_feedback', 'ghl_stars', 'page_top_padding' ];
+    $strs = [ 'clinic_name', 'bad_thanks_msg', 'ghl_sentiment', 'ghl_review', 'ghl_treatments', 'ghl_staff', 'ghl_feedback', 'ghl_stars', 'page_top_padding', 'page_bottom_padding' ];
     foreach ( $strs as $k ) $out[ $k ] = sanitize_text_field( $in[ $k ] ?? '' );
     $urls = [ 'google_url', 'facebook_url', 'yelp_url' ];
     foreach ( $urls as $k ) $out[ $k ] = esc_url_raw( $in[ $k ] ?? '' );
@@ -7534,7 +7536,8 @@ add_shortcode( 'cfg_review_form', 'cfg_review_shortcode' );
 
 function cfg_review_shortcode( $atts = [] ) {
     $rv     = cfg_review_get();
-    $tp     = floatval( $rv['page_top_padding'] ?: 7 ) . 'rem';
+    $tp     = floatval( $rv['page_top_padding']    ?: 7 ) . 'rem';
+    $bp     = floatval( $rv['page_bottom_padding'] ?: 7 ) . 'rem';
     $uid    = 'rvf' . uniqid();
     $bad_msg = esc_html( $rv['bad_thanks_msg'] );
 
@@ -7565,7 +7568,7 @@ function cfg_review_shortcode( $atts = [] ) {
     ob_start();
     ?>
 <style>
-#<?= $uid ?>{padding-top:<?= $tp ?>;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;}
+#<?= $uid ?>{padding-top:<?= $tp ?>;padding-bottom:<?= $bp ?>;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;}
 #<?= $uid ?> *{box-sizing:border-box;}
 .rvf-progress-wrap{background:#e5e7eb;border-radius:9999px;height:6px;margin-bottom:8px;overflow:hidden;}
 .rvf-progress-bar{height:100%;border-radius:9999px;background:linear-gradient(90deg,#2563eb,#3b82f6);transition:width .4s ease;}
