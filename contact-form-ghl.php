@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.10
+ * Version:     2.5.11
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1575,6 +1575,7 @@ function cfg_settings_page() {
             <tr><td style="padding:8px 12px;font-family:monospace;font-size:13px;border:1px solid #e5e5e5;">[thank_you_ghl]</td><td style="padding:8px 12px;font-size:13px;border:1px solid #e5e5e5;">Post-submission thank you / confirmation page</td></tr>
             <tr style="background:#f9f9f9;"><td style="padding:8px 12px;font-family:monospace;font-size:13px;border:1px solid #e5e5e5;">[aligner_form_ghl]</td><td style="padding:8px 12px;font-size:13px;border:1px solid #e5e5e5;">Multi-step animated clear aligner estimate quiz</td></tr>
             <tr><td style="padding:8px 12px;font-family:monospace;font-size:13px;border:1px solid #e5e5e5;">[implant_estimator_ghl]</td><td style="padding:8px 12px;font-size:13px;border:1px solid #e5e5e5;">Multi-step dental implant cost estimator with dynamic price calculation</td></tr>
+            <tr style="background:#f9f9f9;"><td style="padding:8px 12px;font-family:monospace;font-size:13px;border:1px solid #e5e5e5;">[cfg_review_form]</td><td style="padding:8px 12px;font-size:13px;border:1px solid #e5e5e5;">Patient review collector — guides happy patients (4–5 stars) to Google/Facebook/Yelp, captures private feedback from unhappy ones (1–3 stars)</td></tr>
         </table>
         </div><!-- /cfg-panel-body -->
     </div>
