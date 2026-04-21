@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.16
+ * Version:     2.5.17
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5739,170 +5739,202 @@ function cfg_aligner_shortcode() {
 <style>
 #<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
+/* Slider — unchanged for JS */
 #<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;}
 #<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
-.<?= $uid ?>-step{flex:0 0 100%;min-width:100%;padding:2.25rem 2rem;}
-@media(max-width:560px){.<?= $uid ?>-step{padding:1.5rem 1.25rem;}}
-#<?= $uid ?>-prog-wrap{height:6px;background:<?= esc_attr($s['border_color']) ?>;border-radius:99px;overflow:hidden;}
-#<?= $uid ?>-prog-bar{height:100%;background:<?= $accent ?>;border-radius:99px;transition:width 0.4s ease;width:0%;}
-.<?= $uid ?>-card{cursor:pointer;border:1.5px solid <?= esc_attr($s['border_color']) ?>;border-radius:12px;padding:1.25rem 0.875rem;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:border-color 0.18s,background 0.18s,transform 0.15s,box-shadow 0.15s;background:<?= esc_attr($s['bg_color']) ?>;user-select:none;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
-.<?= $uid ?>-card:hover{border-color:<?= $accent ?>;transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.08);}
-.<?= $uid ?>-card.alg-sel{border-color:<?= $accent ?>;background:<?= $accent ?>15;transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.1);}
-.<?= $uid ?>-yn{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
-@media(max-width:380px){.<?= $uid ?>-yn{grid-template-columns:1fr;}}
+.<?= $uid ?>-step{flex:0 0 100%;min-width:100%;padding:2rem 2.25rem 2.25rem;}
+@media(max-width:560px){.<?= $uid ?>-step{padding:1.5rem 1.25rem 1.75rem;}}
+/* Progress bar — lives inside accent header */
+#<?= $uid ?>-prog-wrap{height:3px;background:rgba(255,255,255,0.25);overflow:hidden;}
+#<?= $uid ?>-prog-bar{height:100%;background:#fff;transition:width 0.4s ease;width:0%;}
+/* Answer cards — base style */
+.<?= $uid ?>-card{cursor:pointer;border:1.5px solid <?= esc_attr($s['border_color']) ?>;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;transition:border-color 0.18s,background 0.18s,transform 0.15s,box-shadow 0.15s;background:<?= esc_attr($s['bg_color']) ?>;user-select:none;}
+.<?= $uid ?>-card:hover{border-color:<?= $accent ?>;box-shadow:0 4px 16px rgba(0,0,0,0.07);}
+.<?= $uid ?>-card.alg-sel{border-color:<?= $accent ?>;background:<?= $accent ?>12;}
+/* Yes/No — stacked horizontal rows (not side-by-side) */
+.<?= $uid ?>-yn{display:flex;flex-direction:column;gap:0.625rem;}
+.<?= $uid ?>-yn .<?= $uid ?>-card{flex-direction:row;text-align:left;align-items:center;justify-content:flex-start;padding:1rem 1.25rem;gap:1rem;border-radius:12px;}
+.<?= $uid ?>-yn .<?= $uid ?>-card:hover,.<?= $uid ?>-yn .<?= $uid ?>-card.alg-sel{transform:translateX(4px);}
+.<?= $uid ?>-yn .<?= $uid ?>-card.alg-sel{border-left-width:3px;}
+/* Image grids */
 .<?= $uid ?>-img3{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;}
 .<?= $uid ?>-img2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+.<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{min-height:108px;padding:1.1rem 0.75rem;}
+.<?= $uid ?>-img2 .<?= $uid ?>-card:hover,.<?= $uid ?>-img3 .<?= $uid ?>-card:hover{transform:translateY(-3px);}
+.<?= $uid ?>-img2 .<?= $uid ?>-card.alg-sel,.<?= $uid ?>-img3 .<?= $uid ?>-card.alg-sel{transform:translateY(-3px);}
 @media(max-width:500px){.<?= $uid ?>-img3{grid-template-columns:1fr 1fr;}}
 @media(max-width:340px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr;}}
+/* CTA button */
 .<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
-.<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.08);' ?>}
+.<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:'.esc_attr($s['btn_hover_bg_color']).'!important;'.($s['btn_hover_text_color']?'color:'.esc_attr($s['btn_hover_text_color']).'!important;':''):'filter:brightness(1.08);'?>}
 .<?= $uid ?>-btn:active{transform:scale(0.97);}
-.<?= $uid ?>-ghost{background:none;border:1.5px solid <?= esc_attr($s['border_color']) ?>;border-radius:8px;color:<?= esc_attr($s['muted_color']) ?>;font-weight:500;cursor:pointer;font-family:inherit;transition:border-color 0.18s,color 0.18s;display:inline-flex;align-items:center;gap:0.4rem;}
-.<?= $uid ?>-ghost:hover{border-color:<?= $accent ?>;color:<?= $accent ?>;}
-.<?= $uid ?>-input{width:100%;padding:0.7rem 0.9rem;border:1.5px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= absint($s['input_radius']) ?>px;font-size:0.9rem;outline:none;font-family:inherit;color:<?= esc_attr($s['text_color']) ?>;background:<?= esc_attr($s['bg_color']) ?>;transition:border-color 0.2s,box-shadow 0.2s;}
+/* Ghost back button */
+.<?= $uid ?>-ghost{background:none;border:none;color:<?= esc_attr($s['muted_color']) ?>;font-weight:500;cursor:pointer;font-family:inherit;transition:color 0.15s;display:inline-flex;align-items:center;gap:0.35rem;padding:0;}
+.<?= $uid ?>-ghost:hover{color:<?= esc_attr($s['text_color']) ?>;}
+/* Inputs */
+.<?= $uid ?>-input{width:100%;padding:0.75rem 1rem;border:1.5px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= absint($s['input_radius']) ?>px;font-size:0.9rem;outline:none;font-family:inherit;color:<?= esc_attr($s['text_color']) ?>;background:<?= esc_attr($s['bg_color']) ?>;transition:border-color 0.2s,box-shadow 0.2s;}
 .<?= $uid ?>-input:focus{border-color:<?= $accent ?>;box-shadow:0 0 0 3px <?= $accent ?>22;}
+/* Form grid */
 .<?= $uid ?>-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;}
 @media(max-width:480px){.<?= $uid ?>-fgrid{grid-template-columns:1fr;}}
 </style>
+
 <div id="<?= $uid ?>-wrap" style="background:<?= $bg ?>;padding:3.5rem 1.5rem;">
-    <div style="max-width:660px;margin:0 auto;">
-        <div style="margin-bottom:1.25rem;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <div id="<?= $uid ?>-counter" style="font-size:0.76rem;font-weight:600;color:<?= esc_attr($s['muted_color']) ?>;letter-spacing:0.06em;text-transform:uppercase;min-height:1em;"></div>
-            </div>
-            <div id="<?= $uid ?>-prog-wrap"><div id="<?= $uid ?>-prog-bar"></div></div>
-        </div>
-        <div style="background:<?= esc_attr($s['bg_color']) ?>;border-radius:<?= absint($s['card_radius']) ?>px;overflow:hidden;<?= $s['card_border']==='1' ? 'border:1px solid '.esc_attr($s['border_color']).';' : '' ?><?= $s['card_shadow']==='1' ? 'box-shadow:0 4px 40px rgba(0,0,0,0.09);' : '' ?>">
-            <div id="<?= $uid ?>-outer">
-                <div id="<?= $uid ?>-slider">
-                <?php foreach ( $steps as $i => $step ):
-                    $type = $step['type'] ?? 'yesno';
-                    $fk   = esc_attr( $step['field_key'] ?? '' );
-                    echo '<div class="' . $uid . '-step" data-index="' . $i . '" data-type="' . esc_attr( $type ) . '" data-key="' . $fk . '">';
+<div style="max-width:600px;margin:0 auto;">
 
-                    // ── INTRO ──────────────────────────────────────
-                    if ( $type === 'intro' ) {
-                        $bullets = array_filter( array_map( 'trim', explode( "\n", $step['bullets'] ?? '' ) ) );
-                        echo '<div style="text-align:center;max-width:520px;margin:0 auto;padding:0.5rem 0;">';
-                        echo '<h1 style="font-size:clamp(1.5rem,4vw,2.1rem);font-weight:700;color:' . $accent . ';margin:0 0 0.875rem;line-height:1.25;">' . esc_html( $step['title'] ?? '' ) . '</h1>';
-                        if ( ! empty( $step['subtitle'] ) ) {
-                            echo '<p style="font-size:0.975rem;color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.5rem;line-height:1.7;">' . esc_html( $step['subtitle'] ) . '</p>';
-                        }
-                        if ( $bullets ) {
-                            echo '<ul style="text-align:left;list-style:none;padding:0;margin:0 0 2rem;display:inline-block;">';
-                            foreach ( $bullets as $b ) {
-                                echo '<li style="padding:0.4rem 0 0.4rem 1.75rem;position:relative;color:' . esc_attr($s['text_color']) . ';font-size:0.9rem;line-height:1.5;">';
-                                echo '<i class="fa-solid fa-circle-check" style="position:absolute;left:0;top:0.48rem;color:' . $accent . ';font-size:0.9rem;"></i>';
-                                echo esc_html( $b ) . '</li>';
-                            }
-                            echo '</ul>';
-                        }
-                        echo '<button class="' . $uid . '-btn" style="font-size:1rem;padding:0.9rem 2.5rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Start' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
-                        echo '</div>';
-                    }
+  <!-- Card shell -->
+  <div style="border-radius:<?= absint($s['card_radius']) ?>px;overflow:hidden;<?= $s['card_shadow']==='1'?'box-shadow:0 8px 40px rgba(0,0,0,0.11);':'' ?><?= $s['card_border']==='1'?'border:1px solid '.esc_attr($s['border_color']).';':'' ?>">
 
-                    // ── YES / NO ───────────────────────────────────
-                    elseif ( $type === 'yesno' ) {
-                        $has_hint = ! empty( $step['hint'] );
-                        echo '<h2 style="font-size:clamp(1.1rem,3vw,1.6rem);font-weight:700;color:' . esc_attr($s['text_color']) . ';margin:0 0 ' . ( $has_hint ? '0.4rem' : '1.5rem' ) . ';text-align:center;line-height:1.35;">' . esc_html( $step['question'] ?? '' ) . '</h2>';
-                        if ( $has_hint ) {
-                            echo '<p style="text-align:center;color:' . esc_attr($s['muted_color']) . ';font-size:0.85rem;margin:0 0 1.5rem;line-height:1.55;">' . esc_html( $step['hint'] ) . '</p>';
-                        }
-                        echo '<div class="' . $uid . '-yn" style="margin-bottom:1.5rem;">';
-                        echo '<div class="' . $uid . '-card" data-value="Yes" onclick="' . $uid . 'yn(this)">';
-                        echo '<i class="fa-solid fa-circle-check" style="font-size:2.25rem;color:#22c55e;margin-bottom:0.625rem;display:block;"></i>';
-                        echo '<div style="font-weight:600;font-size:0.95rem;color:' . esc_attr($s['text_color']) . ';">Yes</div></div>';
-                        echo '<div class="' . $uid . '-card" data-value="No" onclick="' . $uid . 'yn(this)">';
-                        echo '<i class="fa-solid fa-circle-xmark" style="font-size:2.25rem;color:#ef4444;margin-bottom:0.625rem;display:block;"></i>';
-                        echo '<div style="font-weight:600;font-size:0.95rem;color:' . esc_attr($s['text_color']) . ';">No</div></div>';
-                        echo '</div>';
-                        echo cfg_alg_nav( $uid, $i, $accent );
-                    }
-
-                    // ── IMAGE CHOICES ──────────────────────────────
-                    elseif ( $type === 'image' ) {
-                        $has_hint = ! empty( $step['hint'] );
-                        echo '<h2 style="font-size:clamp(1.1rem,3vw,1.6rem);font-weight:700;color:' . esc_attr($s['text_color']) . ';margin:0 0 ' . ( $has_hint ? '0.4rem' : '1.5rem' ) . ';text-align:center;line-height:1.35;">' . esc_html( $step['question'] ?? '' ) . '</h2>';
-                        if ( $has_hint ) {
-                            echo '<p style="text-align:center;color:' . esc_attr($s['muted_color']) . ';font-size:0.85rem;margin:0 0 1.5rem;line-height:1.55;">' . esc_html( $step['hint'] ) . '</p>';
-                        }
-                        $choices  = $step['choices'] ?? [];
-                        $g_class  = count( $choices ) >= 4 ? $uid . '-img3' : $uid . '-img2';
-                        echo '<div class="' . $g_class . '" style="margin-bottom:1.5rem;">';
-                        foreach ( $choices as $c ) {
-                            echo '<div class="' . $uid . '-card" data-value="' . esc_attr( $c['label'] ) . '" onclick="' . $uid . 'img(this)" style="min-height:110px;padding:1.1rem 0.75rem;">';
-                            if ( ! empty( $c['img'] ) ) {
-                                echo '<img src="' . esc_url( $c['img'] ) . '" alt="' . esc_attr( $c['label'] ) . '" style="width:60px;height:60px;object-fit:contain;margin-bottom:0.625rem;display:block;"/>';
-                            } else {
-                                echo '<div style="font-size:2.25rem;margin-bottom:0.625rem;line-height:1;">' . esc_html( $c['emoji'] ?? '🦷' ) . '</div>';
-                            }
-                            echo '<div style="font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';line-height:1.3;">' . esc_html( $c['label'] ) . '</div>';
-                            echo '</div>';
-                        }
-                        echo '</div>';
-                        echo cfg_alg_nav( $uid, $i, $accent );
-                    }
-
-                    // ── CONTENT / OFFER ────────────────────────────
-                    elseif ( $type === 'content' ) {
-                        $bullets = array_filter( array_map( 'trim', explode( "\n", $step['bullets'] ?? '' ) ) );
-                        echo '<div style="text-align:center;padding:0.5rem 0;">';
-                        echo '<h2 style="font-size:clamp(1.3rem,3.5vw,1.9rem);font-weight:700;color:' . $accent . ';margin:0 0 0.4rem;">' . esc_html( $step['title'] ?? '' ) . '</h2>';
-                        if ( ! empty( $step['subtitle'] ) ) {
-                            echo '<p style="color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.4rem;font-size:0.925rem;line-height:1.65;">' . esc_html( $step['subtitle'] ) . '</p>';
-                        }
-                        if ( $bullets ) {
-                            echo '<ul style="text-align:left;list-style:none;padding:0;margin:0 auto 1.75rem;max-width:400px;">';
-                            foreach ( $bullets as $b ) {
-                                echo '<li style="padding:0.55rem 0 0.55rem 1.75rem;position:relative;color:' . esc_attr($s['text_color']) . ';border-bottom:1px solid ' . esc_attr($s['border_color']) . ';font-size:0.9rem;line-height:1.5;">';
-                                echo '<i class="fa-solid fa-check" style="position:absolute;left:0;top:0.65rem;color:' . $accent . ';font-size:0.8rem;"></i>';
-                                echo esc_html( $b ) . '</li>';
-                            }
-                            echo '</ul>';
-                        }
-                        echo '<div style="display:flex;flex-direction:column;gap:0.5rem;align-items:center;">';
-                        echo '<button class="' . $uid . '-btn" style="font-size:0.975rem;padding:0.85rem 2.25rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Continue' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
-                        if ( $i > 0 ) {
-                            echo '<button class="' . $uid . '-ghost" style="font-size:0.85rem;padding:0.45rem 1.1rem;" onclick="' . $uid . 'go(' . ( $i - 1 ) . ')"><i class="fa-solid fa-chevron-left" style="font-size:0.75em;"></i> Back</button>';
-                        }
-                        echo '</div></div>';
-                    }
-
-                    // ── CONTACT FORM ───────────────────────────────
-                    elseif ( $type === 'contact' ) {
-                        echo '<h2 style="font-size:clamp(1.1rem,3vw,1.6rem);font-weight:700;color:' . esc_attr($s['text_color']) . ';margin:0 0 0.4rem;text-align:center;line-height:1.35;">' . esc_html( $step['title'] ?? 'Get Your Estimate' ) . '</h2>';
-                        if ( ! empty( $step['subtitle'] ) ) {
-                            echo '<p style="text-align:center;color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.5rem;font-size:0.9rem;line-height:1.65;">' . esc_html( $step['subtitle'] ) . '</p>';
-                        }
-                        echo '<form id="' . $uid . '-form" novalidate>';
-                        echo '<input type="hidden" name="action" value="cfg_aligner_submit"/>';
-                        echo '<input type="hidden" name="alg_nonce" value="' . $nonce . '"/>';
-                        echo '<input type="hidden" name="alg_answers" id="' . $uid . '-ans" value=""/>';
-                        if ( $honeypot ) {
-                            echo '<input type="text" name="alg_hp" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden;"/>';
-                        }
-                        echo '<div class="' . $uid . '-fgrid" style="margin-bottom:0.875rem;">';
-                        echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';">First Name <span style="color:' . $accent . '">*</span></label><input type="text" name="firstName" required placeholder="Jane" class="' . $uid . '-input"/></div>';
-                        echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';">Last Name <span style="color:' . $accent . '">*</span></label><input type="text" name="lastName" required placeholder="Smith" class="' . $uid . '-input"/></div>';
-                        echo '</div>';
-                        echo '<div class="' . $uid . '-fgrid" style="margin-bottom:1.25rem;">';
-                        echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';">Phone <span style="color:' . $accent . '">*</span></label><input type="tel" name="phone" required placeholder="Phone number" class="' . $uid . '-input"/></div>';
-                        echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';">Email <span style="color:' . $accent . '">*</span></label><input type="email" name="email" required placeholder="jane@example.com" class="' . $uid . '-input"/></div>';
-                        echo '</div>';
-                        echo '<div id="' . $uid . '-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.7rem 0.9rem;color:#dc2626;font-size:0.85rem;margin-bottom:1rem;"></div>';
-                        echo '<button type="submit" id="' . $uid . '-sbtn" class="' . $uid . '-btn" style="width:100%;font-size:0.975rem;padding:0.9rem;"><span id="' . $uid . '-slbl">' . esc_html( $step['btn_text'] ?? 'Submit' ) . '</span></button>';
-                        if ( $i > 0 ) {
-                            echo '<button type="button" onclick="' . $uid . 'go(' . ( $i - 1 ) . ')" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;background:none;border:none;color:' . esc_attr($s['muted_color']) . ';cursor:pointer;padding:0.7rem;margin-top:0.4rem;font-size:0.85rem;font-family:inherit;"><i class="fa-solid fa-chevron-left" style="font-size:0.75em;"></i> Go back</button>';
-                        }
-                        echo '</form>';
-                    }
-
-                    echo '</div>'; // close .step
-                endforeach; ?>
-                </div><!-- /slider -->
-            </div><!-- /outer -->
-        </div><!-- /card shell -->
+    <!-- Accent header: step counter + progress bar -->
+    <div style="background:<?= $accent ?>;padding:1rem 2.25rem 0.875rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div id="<?= $uid ?>-counter" style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.85);letter-spacing:0.1em;text-transform:uppercase;min-height:1em;"></div>
+      </div>
+      <div id="<?= $uid ?>-prog-wrap"><div id="<?= $uid ?>-prog-bar"></div></div>
     </div>
+
+    <!-- Sliding content -->
+    <div style="background:<?= esc_attr($s['bg_color']) ?>;">
+      <div id="<?= $uid ?>-outer">
+        <div id="<?= $uid ?>-slider">
+        <?php foreach ( $steps as $i => $step ):
+            $type = $step['type'] ?? 'yesno';
+            $fk   = esc_attr( $step['field_key'] ?? '' );
+            echo '<div class="' . $uid . '-step" data-index="' . $i . '" data-type="' . esc_attr( $type ) . '" data-key="' . $fk . '">';
+
+            // ── INTRO ──────────────────────────────────────────────
+            if ( $type === 'intro' ) {
+                $bullets = array_filter( array_map( 'trim', explode( "\n", $step['bullets'] ?? '' ) ) );
+                echo '<div style="max-width:480px;margin:0 auto;text-align:center;">';
+                echo '<h1 style="font-size:clamp(1.55rem,4.5vw,2.2rem);font-weight:800;color:' . esc_attr($s['text_color']) . ';margin:0 0 0.75rem;line-height:1.2;letter-spacing:-0.02em;">' . esc_html( $step['title'] ?? '' ) . '</h1>';
+                if ( ! empty( $step['subtitle'] ) ) {
+                    echo '<p style="font-size:1rem;color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.75rem;line-height:1.7;">' . esc_html( $step['subtitle'] ) . '</p>';
+                }
+                if ( $bullets ) {
+                    echo '<div style="text-align:left;display:inline-block;margin-bottom:1.75rem;">';
+                    foreach ( $bullets as $b ) {
+                        echo '<div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid ' . esc_attr($s['border_color']) . ';">';
+                        echo '<i class="fa-solid fa-circle-check" style="color:' . $accent . ';font-size:0.9rem;margin-top:0.2rem;flex-shrink:0;"></i>';
+                        echo '<span style="color:' . esc_attr($s['text_color']) . ';font-size:0.9rem;line-height:1.55;">' . esc_html( $b ) . '</span>';
+                        echo '</div>';
+                    }
+                    echo '</div>';
+                }
+                echo '<button class="' . $uid . '-btn" style="font-size:1rem;padding:0.9rem 2.75rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Start' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
+                echo '</div>';
+            }
+
+            // ── YES / NO ───────────────────────────────────────────
+            elseif ( $type === 'yesno' ) {
+                $has_hint = ! empty( $step['hint'] );
+                echo '<h2 style="font-size:clamp(1.15rem,3vw,1.65rem);font-weight:800;color:' . esc_attr($s['text_color']) . ';margin:0 0 ' . ( $has_hint ? '0.4rem' : '1.5rem' ) . ';line-height:1.3;letter-spacing:-0.01em;">' . esc_html( $step['question'] ?? '' ) . '</h2>';
+                if ( $has_hint ) {
+                    echo '<p style="color:' . esc_attr($s['muted_color']) . ';font-size:0.85rem;margin:0 0 1.5rem;line-height:1.55;">' . esc_html( $step['hint'] ) . '</p>';
+                }
+                echo '<div class="' . $uid . '-yn" style="margin-bottom:1.5rem;">';
+                // Yes row
+                echo '<div class="' . $uid . '-card" data-value="Yes" onclick="' . $uid . 'yn(this)">';
+                echo '<i class="fa-solid fa-circle-check" style="font-size:1.4rem;color:#22c55e;flex-shrink:0;"></i>';
+                echo '<span style="flex:1;font-weight:600;font-size:0.95rem;color:' . esc_attr($s['text_color']) . ';">Yes</span>';
+                echo '<i class="fa-solid fa-chevron-right" style="font-size:0.75rem;color:' . esc_attr($s['muted_color']) . ';flex-shrink:0;"></i>';
+                echo '</div>';
+                // No row
+                echo '<div class="' . $uid . '-card" data-value="No" onclick="' . $uid . 'yn(this)">';
+                echo '<i class="fa-solid fa-circle-xmark" style="font-size:1.4rem;color:#ef4444;flex-shrink:0;"></i>';
+                echo '<span style="flex:1;font-weight:600;font-size:0.95rem;color:' . esc_attr($s['text_color']) . ';">No</span>';
+                echo '<i class="fa-solid fa-chevron-right" style="font-size:0.75rem;color:' . esc_attr($s['muted_color']) . ';flex-shrink:0;"></i>';
+                echo '</div>';
+                echo '</div>';
+                echo cfg_alg_nav( $uid, $i, $accent );
+            }
+
+            // ── IMAGE CHOICES ──────────────────────────────────────
+            elseif ( $type === 'image' ) {
+                $has_hint = ! empty( $step['hint'] );
+                echo '<h2 style="font-size:clamp(1.15rem,3vw,1.65rem);font-weight:800;color:' . esc_attr($s['text_color']) . ';margin:0 0 ' . ( $has_hint ? '0.4rem' : '1.5rem' ) . ';line-height:1.3;letter-spacing:-0.01em;">' . esc_html( $step['question'] ?? '' ) . '</h2>';
+                if ( $has_hint ) {
+                    echo '<p style="color:' . esc_attr($s['muted_color']) . ';font-size:0.85rem;margin:0 0 1.5rem;line-height:1.55;">' . esc_html( $step['hint'] ) . '</p>';
+                }
+                $choices = $step['choices'] ?? [];
+                $g_class = count( $choices ) >= 4 ? $uid . '-img3' : $uid . '-img2';
+                echo '<div class="' . $g_class . '" style="margin-bottom:1.5rem;">';
+                foreach ( $choices as $c ) {
+                    echo '<div class="' . $uid . '-card" data-value="' . esc_attr( $c['label'] ) . '" onclick="' . $uid . 'img(this)">';
+                    if ( ! empty( $c['img'] ) ) {
+                        echo '<img src="' . esc_url( $c['img'] ) . '" alt="' . esc_attr( $c['label'] ) . '" style="width:56px;height:56px;object-fit:contain;margin-bottom:0.625rem;display:block;"/>';
+                    } else {
+                        echo '<div style="font-size:2rem;margin-bottom:0.625rem;line-height:1;">' . esc_html( $c['emoji'] ?? '🦷' ) . '</div>';
+                    }
+                    echo '<div style="font-size:0.8rem;font-weight:600;color:' . esc_attr($s['text_color']) . ';line-height:1.3;">' . esc_html( $c['label'] ) . '</div>';
+                    echo '</div>';
+                }
+                echo '</div>';
+                echo cfg_alg_nav( $uid, $i, $accent );
+            }
+
+            // ── CONTENT / OFFER ────────────────────────────────────
+            elseif ( $type === 'content' ) {
+                $bullets = array_filter( array_map( 'trim', explode( "\n", $step['bullets'] ?? '' ) ) );
+                echo '<div style="max-width:440px;margin:0 auto;text-align:center;">';
+                echo '<h2 style="font-size:clamp(1.4rem,4vw,2rem);font-weight:800;color:' . esc_attr($s['text_color']) . ';margin:0 0 0.5rem;letter-spacing:-0.02em;">' . esc_html( $step['title'] ?? '' ) . '</h2>';
+                if ( ! empty( $step['subtitle'] ) ) {
+                    echo '<p style="color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.5rem;font-size:0.925rem;line-height:1.65;">' . esc_html( $step['subtitle'] ) . '</p>';
+                }
+                if ( $bullets ) {
+                    echo '<div style="text-align:left;margin-bottom:1.75rem;">';
+                    foreach ( $bullets as $b ) {
+                        echo '<div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid ' . esc_attr($s['border_color']) . ';">';
+                        echo '<i class="fa-solid fa-check" style="color:' . $accent . ';font-size:0.8rem;margin-top:0.25rem;flex-shrink:0;"></i>';
+                        echo '<span style="color:' . esc_attr($s['text_color']) . ';font-size:0.9rem;line-height:1.5;">' . esc_html( $b ) . '</span>';
+                        echo '</div>';
+                    }
+                    echo '</div>';
+                }
+                echo '<div style="display:flex;flex-direction:column;gap:0.5rem;align-items:center;">';
+                echo '<button class="' . $uid . '-btn" style="font-size:0.975rem;padding:0.85rem 2.5rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Continue' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
+                if ( $i > 0 ) {
+                    echo '<button class="' . $uid . '-ghost" style="font-size:0.85rem;margin-top:0.25rem;" onclick="' . $uid . 'go(' . ( $i - 1 ) . ')"><i class="fa-solid fa-chevron-left" style="font-size:0.75em;"></i> Back</button>';
+                }
+                echo '</div></div>';
+            }
+
+            // ── CONTACT FORM ───────────────────────────────────────
+            elseif ( $type === 'contact' ) {
+                echo '<h2 style="font-size:clamp(1.15rem,3vw,1.65rem);font-weight:800;color:' . esc_attr($s['text_color']) . ';margin:0 0 0.4rem;line-height:1.3;letter-spacing:-0.01em;">' . esc_html( $step['title'] ?? 'Get Your Estimate' ) . '</h2>';
+                if ( ! empty( $step['subtitle'] ) ) {
+                    echo '<p style="color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.5rem;font-size:0.9rem;line-height:1.65;">' . esc_html( $step['subtitle'] ) . '</p>';
+                }
+                echo '<form id="' . $uid . '-form" novalidate>';
+                echo '<input type="hidden" name="action" value="cfg_aligner_submit"/>';
+                echo '<input type="hidden" name="alg_nonce" value="' . $nonce . '"/>';
+                echo '<input type="hidden" name="alg_answers" id="' . $uid . '-ans" value=""/>';
+                if ( $honeypot ) {
+                    echo '<input type="text" name="alg_hp" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden;"/>';
+                }
+                echo '<div class="' . $uid . '-fgrid" style="margin-bottom:0.875rem;">';
+                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.78rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.05em;text-transform:uppercase;">First Name <span style="color:' . $accent . '">*</span></label><input type="text" name="firstName" required placeholder="Jane" class="' . $uid . '-input"/></div>';
+                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.78rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.05em;text-transform:uppercase;">Last Name <span style="color:' . $accent . '">*</span></label><input type="text" name="lastName" required placeholder="Smith" class="' . $uid . '-input"/></div>';
+                echo '</div>';
+                echo '<div class="' . $uid . '-fgrid" style="margin-bottom:1.5rem;">';
+                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.78rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.05em;text-transform:uppercase;">Phone <span style="color:' . $accent . '">*</span></label><input type="tel" name="phone" required placeholder="Phone number" class="' . $uid . '-input"/></div>';
+                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.78rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.05em;text-transform:uppercase;">Email <span style="color:' . $accent . '">*</span></label><input type="email" name="email" required placeholder="jane@example.com" class="' . $uid . '-input"/></div>';
+                echo '</div>';
+                echo '<div id="' . $uid . '-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.7rem 0.9rem;color:#dc2626;font-size:0.85rem;margin-bottom:1rem;"></div>';
+                echo '<button type="submit" id="' . $uid . '-sbtn" class="' . $uid . '-btn" style="width:100%;font-size:1rem;padding:0.95rem;"><span id="' . $uid . '-slbl">' . esc_html( $step['btn_text'] ?? 'Submit' ) . '</span></button>';
+                if ( $i > 0 ) {
+                    echo '<button type="button" onclick="' . $uid . 'go(' . ( $i - 1 ) . ')" style="display:flex;align-items:center;justify-content:center;gap:5px;width:100%;background:none;border:none;color:' . esc_attr($s['muted_color']) . ';cursor:pointer;padding:0.65rem;margin-top:0.4rem;font-size:0.85rem;font-family:inherit;transition:color 0.15s;" onmouseover="this.style.color=\'' . esc_js($s['text_color']) . '\'" onmouseout="this.style.color=\'' . esc_js($s['muted_color']) . '\'"><i class="fa-solid fa-chevron-left" style="font-size:0.75em;"></i> Go back</button>';
+                }
+                echo '</form>';
+            }
+
+            echo '</div>'; // close .step
+        endforeach; ?>
+        </div><!-- /slider -->
+      </div><!-- /outer -->
+    </div><!-- /content zone -->
+
+  </div><!-- /card shell -->
+</div>
 </div>
 <script>
 (function(){
@@ -7592,7 +7624,7 @@ function cfg_review_shortcode( $atts = [] ) {
 .rvf-step-label{font-size:12px;color:<?= $mc ?>;margin-bottom:24px;font-weight:<?= $nw ?>;}
 .rvf-panel{display:none;}
 .rvf-panel.rvf-active{display:block;}
-.rvf-card{background:<?= $bg ?>;border-radius:<?= $cr ?>;padding:2rem;<?= $card_border ?><?= $card_shadow ?>}
+.rvf-card{background:<?= $bg ?>;border-radius:<?= $cr ?>;padding:2.5rem 2.25rem 3rem;<?= $card_border ?><?= $card_shadow ?>}
 .rvf-card h2{margin:0 0 6px;font-size:1.35rem;color:<?= $tc ?>;font-weight:<?= $bw ?>;}
 .rvf-card .rvf-subtitle{color:<?= $mc ?>;font-size:.9rem;margin:0 0 1.5rem;}
 .rvf-field{margin-bottom:1rem;}
