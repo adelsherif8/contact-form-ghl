@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.23
+ * Version:     2.5.24
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5783,14 +5783,13 @@ function cfg_aligner_shortcode() {
 <style>
 #<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
-/* Progress bar — full width at top */
-#<?= $uid ?>-prog-wrap{height:3px;background:rgba(0,0,0,0.08);overflow:hidden;}
-#<?= $uid ?>-prog-bar{height:100%;background:<?= $tc ?>;transition:width 0.4s ease;width:0%;}
-/* Top bar */
-#<?= $uid ?>-topbar{width:100%;padding:0.75rem 0;}
-#<?= $uid ?>-topbar-inner{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;}
-#<?= $uid ?>-counter{font-size:0.75rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:<?= esc_attr($s['muted_color']) ?>;}
-#<?= $uid ?>-trust{font-size:0.75rem;color:<?= esc_attr($s['muted_color']) ?>;letter-spacing:0.03em;}
+/* Top bar — single contained row: [STEP X OF Y] [====progress====] [Free · No Obligation] */
+#<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
+#<?= $uid ?>-topbar-inner{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;gap:1.25rem;}
+#<?= $uid ?>-counter{font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:<?= esc_attr($s['muted_color']) ?>;white-space:nowrap;flex-shrink:0;}
+#<?= $uid ?>-prog-wrap{flex:1;height:3px;background:rgba(0,0,0,0.08);border-radius:9999px;overflow:hidden;}
+#<?= $uid ?>-prog-bar{height:100%;background:<?= $accent ?>;border-radius:9999px;transition:width 0.4s ease;width:0%;}
+#<?= $uid ?>-trust{font-size:0.7rem;color:<?= esc_attr($s['muted_color']) ?>;white-space:nowrap;flex-shrink:0;}
 @media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1.25rem;}}
 /* Two-column page grid */
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:0 2rem 5rem;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
@@ -5841,10 +5840,10 @@ function cfg_aligner_shortcode() {
 </style>
 
 <div id="<?= $uid ?>-wrap">
-  <div id="<?= $uid ?>-prog-wrap"><div id="<?= $uid ?>-prog-bar"></div></div>
   <div id="<?= $uid ?>-topbar">
     <div id="<?= $uid ?>-topbar-inner">
       <div id="<?= $uid ?>-counter"></div>
+      <div id="<?= $uid ?>-prog-wrap"><div id="<?= $uid ?>-prog-bar"></div></div>
       <div id="<?= $uid ?>-trust">Free &middot; No Obligation</div>
     </div>
   </div>
