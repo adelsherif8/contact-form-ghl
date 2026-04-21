@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.25
+ * Version:     2.5.26
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -184,6 +184,7 @@ function cfg_defaults() {
         // ── Aligner / Quiz Form ──────────────────────────────────────────
         'alg_accent_color'       => '#C9A84C',
         'alg_success_url'        => '',
+        'alg_hide_page_header'   => '0',
 
         // ── Implant Cost Estimator ────────────────────────────────────────
         'imp_accent_color'     => '#1e3a5f',
@@ -1181,6 +1182,7 @@ function cfg_sanitize( $input ) {
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
         'imp_offer_enabled',
+        'alg_hide_page_header',
     ];
     $json_fields = ['imp_router_opts','imp_single_qs','imp_multi_qs','imp_arch_qs','imp_ins_q','imp_result_sections','imp_single_includes','imp_fullarch_includes'];
 
@@ -2133,6 +2135,15 @@ function cfg_settings_page() {
                 <label>Success Redirect URL</label>
                 <input type="text" name="<?= CFG_OPTION ?>[alg_success_url]" value="<?= esc_attr( $s['alg_success_url'] ?? '' ) ?>" placeholder="/thank-you"/>
                 <span class="cfg-desc">Where to go after form submit. Leave blank to show inline thank-you.</span>
+            </div>
+            <div class="cfg-field">
+                <label>Hide Page Header</label>
+                <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="hidden" name="<?= CFG_OPTION ?>[alg_hide_page_header]" value="0"/>
+                    <input type="checkbox" name="<?= CFG_OPTION ?>[alg_hide_page_header]" value="1" <?= ! empty( $s['alg_hide_page_header'] ) ? 'checked' : '' ?>/>
+                    <span>Hide the theme <code>&lt;header&gt;</code> on pages using this form</span>
+                </label>
+                <span class="cfg-desc">Hides the site navigation header for a full-page embed.</span>
             </div>
         </div>
 
@@ -5838,6 +5849,7 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-chip-v{color:<?= $tc ?>;font-weight:600;}
 @media(max-width:860px){#<?= $uid ?>-sidebar{display:none;}}
 </style>
+<?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?><style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style><?php endif; ?>
 
 <div id="<?= $uid ?>-wrap">
   <div id="<?= $uid ?>-topbar">
