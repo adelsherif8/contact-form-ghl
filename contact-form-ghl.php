@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.32
+ * Version:     2.5.33
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5806,7 +5806,7 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100vw!important;max-width:100vw!important;overflow-x:hidden!important;position:relative!important;left:50%!important;transform:translateX(-50%)!important;margin-left:0!important;margin-right:0!important;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;overflow-x:hidden;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
 /* Top bar — single contained row: [STEP X OF Y] [====progress====] [Free · No Obligation] */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
@@ -5818,8 +5818,8 @@ function cfg_aligner_shortcode() {
 @media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1rem;}#<?= $uid ?>-trust{display:none;}}
 /* Two-column page grid */
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;width:100%;}
-@media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;padding-right:1.5rem;padding-left:1.5rem;}}
-@media(max-width:560px){#<?= $uid ?>-grid{padding:1.25rem 1rem 3rem;width:100%;}}
+@media(max-width:860px){#<?= $uid ?>-grid{grid-template-columns:1fr;}}
+@media(max-width:560px){#<?= $uid ?>-grid{padding:1.25rem 1rem 3rem;}}
 /* Slider — IDs/classes used by JS must not change */
 #<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;max-width:100%;width:100%;}
 #<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;width:100%;}
