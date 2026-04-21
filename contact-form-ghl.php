@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.26
+ * Version:     2.5.27
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -182,9 +182,11 @@ function cfg_defaults() {
         'ty_bg_color'            => '#ffffff',
 
         // ── Aligner / Quiz Form ──────────────────────────────────────────
-        'alg_accent_color'       => '#C9A84C',
-        'alg_success_url'        => '',
-        'alg_hide_page_header'   => '0',
+        'alg_accent_color'        => '#C9A84C',
+        'alg_success_url'         => '',
+        'alg_hide_page_header'    => '0',
+        'alg_page_top_padding'    => '3',
+        'alg_page_bottom_padding' => '3',
 
         // ── Implant Cost Estimator ────────────────────────────────────────
         'imp_accent_color'     => '#1e3a5f',
@@ -2144,6 +2146,15 @@ function cfg_settings_page() {
                     <span>Hide the theme <code>&lt;header&gt;</code> on pages using this form</span>
                 </label>
                 <span class="cfg-desc">Hides the site navigation header for a full-page embed.</span>
+            </div>
+            <div class="cfg-field">
+                <label>Page Top Padding (rem)</label>
+                <input type="number" step="0.5" name="<?= CFG_OPTION ?>[alg_page_top_padding]" value="<?= esc_attr( $s['alg_page_top_padding'] ?? '3' ) ?>" placeholder="3" style="width:100px;"/>
+                <span class="cfg-desc">Space above the form content (below the progress bar).</span>
+            </div>
+            <div class="cfg-field">
+                <label>Page Bottom Padding (rem)</label>
+                <input type="number" step="0.5" name="<?= CFG_OPTION ?>[alg_page_bottom_padding]" value="<?= esc_attr( $s['alg_page_bottom_padding'] ?? '3' ) ?>" placeholder="3" style="width:100px;"/>
             </div>
         </div>
 
@@ -4709,7 +4720,7 @@ function cfg_settings_page() {
         'contact_form_ghl'    => 'Contact Form',
         'implant_estimator_ghl' => 'Implant Estimator',
         'aligner_form_ghl'    => 'Aligner / Invisalign Quiz',
-        'review_form_ghl'     => 'Review Form',
+        'cfg_review_form'     => 'Review Form',
     ];
     $cfg_loc_results = [];
     $cfg_posts = get_posts( [ 'post_type' => [ 'page', 'post' ], 'posts_per_page' => -1, 'post_status' => 'publish' ] );
@@ -5790,6 +5801,9 @@ function cfg_aligner_shortcode() {
         echo '<link rel="stylesheet" href="' . esc_url( $font['url'] ) . '">';
     }
 
+    $alg_tp = floatval( $s['alg_page_top_padding']    ?? 3 ) . 'rem';
+    $alg_bp = floatval( $s['alg_page_bottom_padding'] ?? 3 ) . 'rem';
+
     ob_start(); ?>
 <style>
 #<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;}
@@ -5803,7 +5817,7 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-trust{font-size:0.7rem;color:<?= esc_attr($s['muted_color']) ?>;white-space:nowrap;flex-shrink:0;}
 @media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1.25rem;}}
 /* Two-column page grid */
-#<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:0 2rem 5rem;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
+#<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
 @media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;}}
 @media(max-width:560px){#<?= $uid ?>-grid{padding:0 1.25rem 4rem;}}
 /* Slider — IDs/classes used by JS must not change */
