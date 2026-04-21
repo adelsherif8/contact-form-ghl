@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.15
+ * Version:     2.5.16
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7757,6 +7757,7 @@ function cfg_review_shortcode( $atts = [] ) {
     <div class="rvf-ty-icon" style="color:#dc2626;"><i class="fa-solid fa-heart"></i></div>
     <p class="rvf-ty-title">Thank you so much!</p>
     <p class="rvf-ty-sub">Your review means the world to us and helps future patients find their way here.</p>
+    <div id="<?= $uid ?>-done-review" style="display:none;margin-top:1.25rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:1rem 1.1rem;font-size:.875rem;line-height:1.65;color:#374151;text-align:left;font-style:italic;"></div>
   </div>
 </div>
 
@@ -8071,7 +8072,12 @@ $i('copy').addEventListener('click', function(){
 
 document.querySelectorAll('#<?= $uid ?> .rvf-share-btn').forEach(function(el){
   el.addEventListener('click', function(){
-    setTimeout(function(){ hide('s3g'); show('done'); setProgress(4,4); }, 700);
+    setTimeout(function(){
+      hide('s3g'); show('done'); setProgress(4,4);
+      var rev = (document.getElementById(uid+'-review-out')||{}).value || d.review;
+      var box = document.getElementById(uid+'-done-review');
+      if (box && rev) { box.textContent = rev; box.style.display = 'block'; }
+    }, 700);
   });
 });
 
