@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.31
+ * Version:     2.5.32
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5806,8 +5806,8 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;max-width:100%;overflow-x:hidden;}
-#<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;max-width:100%;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100vw!important;max-width:100vw!important;overflow-x:hidden!important;position:relative!important;left:50%!important;transform:translateX(-50%)!important;margin-left:0!important;margin-right:0!important;}
+#<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
 /* Top bar — single contained row: [STEP X OF Y] [====progress====] [Free · No Obligation] */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
 #<?= $uid ?>-topbar-inner{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;gap:1.25rem;}
