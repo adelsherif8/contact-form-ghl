@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.28
+ * Version:     2.5.29
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5806,7 +5806,7 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;overflow-x:hidden;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
 /* Top bar — single contained row: [STEP X OF Y] [====progress====] [Free · No Obligation] */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
@@ -5866,9 +5866,11 @@ function cfg_aligner_shortcode() {
   .<?= $uid ?>-card{font-size:0.9rem;padding:0.9rem 1rem;}
   .<?= $uid ?>-card i{font-size:1.1rem;}
   .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{min-height:80px;padding:0.75rem 0.5rem;}
-  .<?= $uid ?>-btn{width:100%;padding:0.75rem 1rem;font-size:0.875rem;}
+  .<?= $uid ?>-btn{width:100%!important;padding:0.85rem 1rem!important;font-size:0.9rem!important;box-sizing:border-box;}
   .<?= $uid ?>-fgrid{grid-template-columns:1fr;}
   .<?= $uid ?>-input{font-size:16px;}
+  .<?= $uid ?>-navrow{justify-content:stretch!important;}
+  .<?= $uid ?>-navrow .<?= $uid ?>-btn{width:100%!important;}
 }
 </style>
 <?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?><style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style><?php endif; ?>
@@ -6232,7 +6234,7 @@ function cfg_alg_choice_icon( $label ) {
 
 // Helper: Next button only — Back is rendered inline above each question
 function cfg_alg_nav( $uid, $i, $accent ) {
-    $html = '<div style="display:flex;justify-content:flex-end;">';
+    $html = '<div class="' . $uid . '-navrow" style="display:flex;justify-content:flex-end;">';
     $html .= '<button class="' . $uid . '-btn" style="padding:0.625rem 1.5rem;font-size:0.875rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">Next <i class="fa-solid fa-arrow-right" style="font-size:0.75em;"></i></button>';
     $html .= '</div>';
     return $html;
