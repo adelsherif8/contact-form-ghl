@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.27
+ * Version:     2.5.28
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5815,13 +5815,13 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-prog-wrap{flex:1;height:3px;background:rgba(0,0,0,0.08);border-radius:9999px;overflow:hidden;}
 #<?= $uid ?>-prog-bar{height:100%;background:<?= $accent ?>;border-radius:9999px;transition:width 0.4s ease;width:0%;}
 #<?= $uid ?>-trust{font-size:0.7rem;color:<?= esc_attr($s['muted_color']) ?>;white-space:nowrap;flex-shrink:0;}
-@media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1.25rem;}}
+@media(max-width:560px){#<?= $uid ?>-topbar-inner{padding:0 1rem;}#<?= $uid ?>-trust{display:none;}}
 /* Two-column page grid */
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
-@media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;}}
-@media(max-width:560px){#<?= $uid ?>-grid{padding:0 1.25rem 4rem;}}
+@media(max-width:820px){#<?= $uid ?>-grid{grid-template-columns:1fr;padding-right:1.5rem;padding-left:1.5rem;}}
+@media(max-width:560px){#<?= $uid ?>-grid{padding:1.5rem 1rem 3rem;}}
 /* Slider — IDs/classes used by JS must not change */
-#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;max-width:640px;}
+#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;max-width:640px;width:100%;}
 #<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
 .<?= $uid ?>-step{flex:0 0 100%;min-width:100%;padding:0.5rem 0 2rem;}
 /* Back link row */
@@ -5862,6 +5862,14 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-chip-k{color:<?= esc_attr($s['muted_color']) ?>;flex-shrink:0;font-size:0.75rem;}
 .<?= $uid ?>-chip-v{color:<?= $tc ?>;font-weight:600;}
 @media(max-width:860px){#<?= $uid ?>-sidebar{display:none;}}
+@media(max-width:560px){
+  .<?= $uid ?>-card{font-size:0.9rem;padding:0.9rem 1rem;}
+  .<?= $uid ?>-card i{font-size:1.1rem;}
+  .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{min-height:80px;padding:0.75rem 0.5rem;}
+  .<?= $uid ?>-btn{width:100%;padding:0.75rem 1rem;font-size:0.875rem;}
+  .<?= $uid ?>-fgrid{grid-template-columns:1fr;}
+  .<?= $uid ?>-input{font-size:16px;}
+}
 </style>
 <?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?><style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style><?php endif; ?>
 
@@ -7844,6 +7852,20 @@ function cfg_review_shortcode( $atts = [] ) {
 .rvf-ty-icon{font-size:3.5rem;text-align:center;margin-bottom:1rem;}
 .rvf-ty-title{font-size:1.4rem;font-weight:<?= $bw ?>;color:<?= $tc ?>;margin:0 0 8px;text-align:center;}
 .rvf-ty-sub{color:<?= $mc ?>;text-align:center;font-size:.92rem;margin:0;}
+@media(max-width:600px){
+  #<?= $uid ?>{padding-left:1rem;padding-right:1rem;padding-top:1.5rem;padding-bottom:2rem;}
+  .rvf-card{padding:1.5rem 1.25rem 2rem;border-radius:<?= $cr ?>;}
+  .rvf-card h2{font-size:1.2rem;}
+  .rvf-star{font-size:2.1rem;}
+  .rvf-toggle-row{flex-direction:column;align-items:flex-start;gap:6px;}
+  .rvf-toggle-label{min-width:unset;}
+  .rvf-toggle-btns{flex-wrap:wrap;}
+  .rvf-toggle-btns button{flex:1;min-width:0;}
+  .rvf-share-btns{flex-direction:column;}
+  .rvf-share-btn{min-width:unset;width:100%;}
+  .rvf-review-actions{flex-direction:column;}
+  .rvf-regen-btn,.rvf-copy-btn{width:100%;}
+}
 </style>
 
 <div id="<?= $uid ?>">
