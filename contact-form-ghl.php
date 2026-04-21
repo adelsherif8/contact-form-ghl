@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.22
+ * Version:     2.5.23
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -184,7 +184,6 @@ function cfg_defaults() {
         // ── Aligner / Quiz Form ──────────────────────────────────────────
         'alg_accent_color'       => '#C9A84C',
         'alg_success_url'        => '',
-        'alg_hide_page_header'   => '0',
 
         // ── Implant Cost Estimator ────────────────────────────────────────
         'imp_accent_color'     => '#1e3a5f',
@@ -1182,7 +1181,6 @@ function cfg_sanitize( $input ) {
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
         'imp_offer_enabled',
-        'alg_hide_page_header',
     ];
     $json_fields = ['imp_router_opts','imp_single_qs','imp_multi_qs','imp_arch_qs','imp_ins_q','imp_result_sections','imp_single_includes','imp_fullarch_includes'];
 
@@ -2135,15 +2133,6 @@ function cfg_settings_page() {
                 <label>Success Redirect URL</label>
                 <input type="text" name="<?= CFG_OPTION ?>[alg_success_url]" value="<?= esc_attr( $s['alg_success_url'] ?? '' ) ?>" placeholder="/thank-you"/>
                 <span class="cfg-desc">Where to go after form submit. Leave blank to show inline thank-you.</span>
-            </div>
-            <div class="cfg-field">
-                <label>Hide Page Header</label>
-                <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="hidden" name="<?= CFG_OPTION ?>[alg_hide_page_header]" value="0"/>
-                    <input type="checkbox" name="<?= CFG_OPTION ?>[alg_hide_page_header]" value="1" <?= ! empty( $s['alg_hide_page_header'] ) ? 'checked' : '' ?>/>
-                    <span>Hide the theme <code>&lt;header&gt;</code> on pages using this form</span>
-                </label>
-                <span class="cfg-desc">Useful for full-page embed — hides the site navigation header so the form takes the full page.</span>
             </div>
         </div>
 
@@ -3596,9 +3585,6 @@ function cfg_settings_page() {
                 <ul>
                     <li><span class="og-tag">implant-estimator</span> — every implant lead</li>
                     <li><span class="og-tag">website-lead</span> — applied on every submission</li>
-                    <li><span class="og-tag">implant-single</span> / <span class="og-tag">implant-multiple</span> / <span class="og-tag">implant-fullarch</span> — the path they took</li>
-                    <li><span class="og-tag">bone-graft-yes</span> / <span class="og-tag">bone-graft-no</span> / <span class="og-tag">bone-graft-not-sure</span> — their bone graft answer</li>
-                    <li><span class="og-tag">has-insurance</span> / <span class="og-tag">no-insurance</span> — their insurance answer (if enabled)</li>
                 </ul>
                 <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> as your workflow trigger (not <em>Contact Created</em>). This fires even when an existing patient re-submits — and <span class="og-tag">aligner-quiz</span> is the cleanest trigger for the aligner workflow.</div>
             </div>
@@ -3630,34 +3616,7 @@ function cfg_settings_page() {
         <div class="og-step">
             <div class="og-num">9</div>
             <div class="og-body">
-                <h3>Workflow 2 — Full-Arch Leads (high-value segment)</h3>
-                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-fullarch</span></p>
-                <p>These are your highest-value leads. Route them differently:</p>
-                <ul>
-                    <li>Immediate internal SMS notification to a designated team member</li>
-                    <li>Higher-priority pipeline stage (e.g. <em>High Value — Call Now</em>)</li>
-                    <li>Different email sequence focused on All-on-4 / All-on-6 treatment</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="og-step">
-            <div class="og-num">10</div>
-            <div class="og-body">
-                <h3>Workflow 3 — Bone Graft Segment</h3>
-                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">bone-graft-yes</span> <em>or</em> <span class="og-tag">bone-graft-not-sure</span></p>
-                <p>These patients may need an additional procedure. Tailor your messaging:</p>
-                <ul>
-                    <li>Add a note to their contact: <em>"Patient indicated possible bone grafting need"</em></li>
-                    <li>Include bone graft context in the follow-up email (the <code class="og-code">implant_range</code> field already reflects the graft add-on price if the estimator is set to <em>addon</em> mode)</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="og-step">
-            <div class="og-num">11</div>
-            <div class="og-body">
-                <h3>Workflow 4 — Contact Form Enquiries</h3>
+                <h3>Workflow 2 — Contact Form Enquiries</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">website-contact-form</span></p>
                 <ul>
                     <li>Send confirmation email: <em>"Thanks for reaching out, we'll be in touch within [X] hours."</em></li>
@@ -3668,14 +3627,13 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">12</div>
+            <div class="og-num">10</div>
             <div class="og-body">
                 <h3>Add Contacts to Your Pipeline on Every Workflow</h3>
                 <p>Every workflow above should include an <strong>Add to Pipeline / Stage</strong> action so new leads don't fall through the cracks. Suggested pipeline stages:</p>
                 <table class="og-table">
                     <tr><th>Stage</th><th>Who goes here</th></tr>
                     <tr><td>Estimator Completed</td><td>All implant estimator leads</td></tr>
-                    <tr><td>High Value — Call Now</td><td>Full-arch leads</td></tr>
                     <tr><td>Consultation Booked</td><td>Moved here manually or via booking trigger</td></tr>
                     <tr><td>New Enquiry</td><td>Contact form submissions</td></tr>
                 </table>
@@ -3689,7 +3647,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">13</div>
+            <div class="og-num">11</div>
             <div class="og-body">
                 <h3>Submit a Test Implant Lead</h3>
                 <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL:</p>
@@ -3698,7 +3656,6 @@ function cfg_settings_page() {
                 <ul class="og-checklist">
                     <li>Contact was created with correct name, email, and phone</li>
                     <li>Tag <span class="og-tag">implant-estimator</span> was applied</li>
-                    <li>Path tag (<span class="og-tag">implant-single</span>, <span class="og-tag">implant-multiple</span>, or <span class="og-tag">implant-fullarch</span>) was applied</li>
                     <li>Custom field <span class="og-field">implant_range</span> shows the correct price range</li>
                     <li>Custom field <span class="og-field">utm_campaign</span> shows <em>test-campaign</em></li>
                     <li>Custom field <span class="og-field">gclid</span> shows <em>test123</em></li>
@@ -3710,7 +3667,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">14</div>
+            <div class="og-num">12</div>
             <div class="og-body">
                 <h3>Submit a Test Contact Form Lead</h3>
                 <p>Fill out the main contact form (not the estimator) with a test email and verify:</p>
@@ -4236,6 +4193,15 @@ function cfg_settings_page() {
             <div class="cfg-grid">
                 <div class="cfg-field"><label>Page Top Padding (rem)</label><input type="number" step="0.5" name="<?= CFG_REVIEW_OPTION ?>[page_top_padding]" value="<?= esc_attr( $rv['page_top_padding'] ) ?>" placeholder="7"/></div>
                 <div class="cfg-field"><label>Page Bottom Padding (rem)</label><input type="number" step="0.5" name="<?= CFG_REVIEW_OPTION ?>[page_bottom_padding]" value="<?= esc_attr( $rv['page_bottom_padding'] ) ?>" placeholder="7"/></div>
+                <div class="cfg-field cfg-full">
+                    <label>Hide Page Header</label>
+                    <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="hidden" name="<?= CFG_REVIEW_OPTION ?>[hide_page_header]" value="0"/>
+                        <input type="checkbox" name="<?= CFG_REVIEW_OPTION ?>[hide_page_header]" value="1" <?= ! empty( $rv['hide_page_header'] ) ? 'checked' : '' ?>/>
+                        <span>Hide the theme <code>&lt;header&gt;</code> on pages using this form</span>
+                    </label>
+                    <span class="cfg-desc">Useful for full-page embed — hides the site navigation header so the form takes the full page.</span>
+                </div>
             </div>
         </div>
 
@@ -5874,9 +5840,6 @@ function cfg_aligner_shortcode() {
 @media(max-width:860px){#<?= $uid ?>-sidebar{display:none;}}
 </style>
 
-<?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?>
-<style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style>
-<?php endif; ?>
 <div id="<?= $uid ?>-wrap">
   <div id="<?= $uid ?>-prog-wrap"><div id="<?= $uid ?>-prog-bar"></div></div>
   <div id="<?= $uid ?>-topbar">
@@ -6195,28 +6158,34 @@ function cfg_aligner_shortcode() {
 function cfg_alg_choice_icon( $label ) {
     $l = strtolower( trim( $label ) );
     $map = [
-        'overbite'        => 'fa-teeth',
-        'underbite'       => 'fa-teeth-open',
-        'crossbite'       => 'fa-teeth',
-        'open bite'       => 'fa-teeth-open',
-        'openbite'        => 'fa-teeth-open',
-        'none'            => 'fa-check',
-        'crowding'        => 'fa-teeth',
-        'crowded'         => 'fa-teeth',
-        'spacing'         => 'fa-teeth-open',
-        'gaps'            => 'fa-teeth-open',
-        'straight'        => 'fa-teeth',
-        'slightly'        => 'fa-tooth',
-        'moderate'        => 'fa-tooth',
+        // Bite issues — icons that describe the direction/nature of the problem
+        'overbite'        => 'fa-arrow-down',        // upper teeth push down over lower
+        'underbite'       => 'fa-arrow-up',           // lower jaw protrudes upward/forward
+        'crossbite'       => 'fa-right-left',         // lateral misalignment, teeth cross sides
+        'open bite'       => 'fa-arrows-up-down',     // gap between upper and lower teeth
+        'openbite'        => 'fa-arrows-up-down',
+        // Alignment conditions
+        'crowding'        => 'fa-compress',           // teeth compressed/squished together
+        'crowded'         => 'fa-compress',
+        'spacing'         => 'fa-expand',             // gaps/space between teeth
+        'gaps'            => 'fa-expand',
+        'straight'        => 'fa-minus',              // already straight/aligned
+        // Severity
+        'slightly'        => 'fa-circle-half-stroke',
+        'moderate'        => 'fa-circle-three-quarters-stroke',
         'severe'          => 'fa-triangle-exclamation',
-        'upper'           => 'fa-teeth',
-        'lower'           => 'fa-teeth-open',
-        'front'           => 'fa-tooth',
-        'back'            => 'fa-tooth',
+        // Arch / position
+        'upper'           => 'fa-arrow-up',
+        'lower'           => 'fa-arrow-down',
+        'front'           => 'fa-angles-right',
+        'back'            => 'fa-angles-left',
+        // Yes / No / Unsure
         'yes'             => 'fa-check',
         'no'              => 'fa-xmark',
         'not sure'        => 'fa-circle-question',
+        // Other
         'insurance'       => 'fa-shield-halved',
+        'none'            => 'fa-check',
         'implant'         => 'fa-tooth',
         'crown'           => 'fa-tooth',
         'bridge'          => 'fa-tooth',
@@ -7711,6 +7680,7 @@ function cfg_review_defaults() {
         'ghl_stars'        => 'review_stars',
         'page_top_padding'    => '7',
         'page_bottom_padding' => '7',
+        'hide_page_header'    => '0',
     ];
 }
 
@@ -7721,6 +7691,7 @@ function cfg_review_sanitize( $in ) {
     $urls = [ 'google_url', 'facebook_url', 'yelp_url' ];
     foreach ( $urls as $k ) $out[ $k ] = esc_url_raw( $in[ $k ] ?? '' );
     foreach ( [ 'treatments', 'staff', 'keywords' ] as $k ) $out[ $k ] = sanitize_textarea_field( $in[ $k ] ?? '' );
+    $out['hide_page_header'] = ! empty( $in['hide_page_header'] ) ? '1' : '0';
     return $out;
 }
 
@@ -7786,6 +7757,7 @@ function cfg_review_shortcode( $atts = [] ) {
 
     ob_start();
     if ( $font['url'] ) echo '<link rel="stylesheet" href="' . esc_url( $font['url'] ) . '"/>';
+    if ( ! empty( $rv['hide_page_header'] ) ) echo '<style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style>';
     ?>
 <style>
 #<?= $uid ?>{padding-top:<?= $tp ?>;padding-bottom:<?= $bp ?>;font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;max-width:560px;margin:0 auto;}
