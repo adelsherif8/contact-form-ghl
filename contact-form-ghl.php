@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.14
+ * Version:     2.5.15
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7612,13 +7612,13 @@ function cfg_review_shortcode( $atts = [] ) {
 .rvf-section-label{font-size:.82rem;font-weight:<?= $bw ?>;color:<?= $mc ?>;margin:1.2rem 0 .6rem;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px;}
 .rvf-bubbles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.5rem;}
 .rvf-bubble{background:<?= $bg ?>;border:1.5px solid <?= $bc ?>;border-radius:9999px;padding:.38rem .9rem;font-size:.82rem;color:<?= $tc ?>;cursor:pointer;transition:background .15s,border-color .15s,color .15s;}
-.rvf-bubble:hover{border-color:<?= $pri ?>;}
-.rvf-bubble.rvf-sel{background:<?= $pri ?>;border-color:<?= $pri ?>;color:#fff;}
+.rvf-bubble:hover{border-color:<?= $pri ?>;color:<?= $pri ?>;}
+.rvf-bubble.rvf-sel{background:<?= $pri ?>18;border-color:<?= $pri ?>;color:<?= $pri ?>;font-weight:600;}
 .rvf-toggle-row{display:flex;gap:12px;align-items:center;margin:.9rem 0;}
 .rvf-toggle-label{font-size:.82rem;font-weight:<?= $bw ?>;color:<?= $mc ?>;min-width:60px;}
 .rvf-toggle-btns{display:flex;gap:0;border:1px solid <?= $bc ?>;border-radius:<?= $ir ?>;overflow:hidden;}
 .rvf-toggle-btns button{background:<?= $bg ?>;border:none;padding:.4rem .85rem;font-size:.8rem;color:<?= $tc ?>;cursor:pointer;transition:background .12s,color .12s;font-family:inherit;}
-.rvf-toggle-btns button.rvf-sel{background:<?= $pri ?>;color:#fff;}
+.rvf-toggle-btns button.rvf-sel{background:<?= $pri ?>18;color:<?= $pri ?>;font-weight:700;border-bottom:2px solid <?= $pri ?>;}
 .rvf-toggle-btns button:hover:not(.rvf-sel){filter:brightness(0.96);}
 .rvf-review-box{width:100%;min-height:130px;padding:.8rem 1rem;border:1.5px solid <?= $bc ?>;border-radius:<?= $ir ?>;font-size:.9rem;color:<?= $tc ?>;line-height:1.6;resize:vertical;font-family:inherit;background:<?= $bg ?>;}
 .rvf-review-box:focus{outline:none;border-color:<?= $pri ?>;box-shadow:0 0 0 3px <?= $pri ?>33;}
