@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.39
+ * Version:     2.5.40
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3507,6 +3507,11 @@ function cfg_settings_page() {
         .og-checklist li{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:#3c434a;line-height:1.6;margin-bottom:5px;}
         .og-checklist li::before{content:"☐";font-size:15px;line-height:1.2;color:#9ca3af;flex-shrink:0;}
         .og-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af;margin:16px 0 6px;}
+        .og-code-block{position:relative;background:#1e1e2e;border-radius:6px;padding:14px 16px;margin:10px 0 4px;overflow-x:auto;}
+        .og-code-block pre{margin:0;font-family:monospace;font-size:11.5px;color:#cdd6f4;line-height:1.65;white-space:pre;tab-size:2;}
+        .og-copy-btn{position:absolute;top:8px;right:8px;background:#313244;border:none;color:#cdd6f4;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;cursor:pointer;transition:background .15s;}
+        .og-copy-btn:hover{background:#45475a;}
+        .og-copy-btn.copied{background:#a6e3a1;color:#1e1e2e;}
         </style>
         <div class="cfg-panel-body">
         <div class="og-wrap">
@@ -3570,6 +3575,99 @@ function cfg_settings_page() {
         <div class="og-step">
             <div class="og-num">4</div>
             <div class="og-body">
+                <h3>Install the UTM Tracking Script</h3>
+                <p>This script captures UTM parameters and click IDs from the URL, stores them in <code class="og-code">sessionStorage</code>, and automatically appends them to all internal links on the page — including Elementor buttons. Paste it into <strong>Appearance → Theme File Editor → footer.php</strong> just before <code class="og-code">&lt;/body&gt;</code>, or use a plugin like <em>Insert Headers and Footers</em> to add it to the footer.</p>
+                <div class="og-code-block">
+                    <button class="og-copy-btn" onclick="(function(b){var t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(function(){b.textContent='Copied!';b.classList.add('copied');setTimeout(function(){b.textContent='Copy';b.classList.remove('copied');},2000);})})(this)">Copy</button>
+                    <pre>&lt;script&gt;
+(function () {
+  var TRACKED_PARAMS = [
+    'gclid', 'gbraid', 'wbraid',
+    'fbclid', 'msclkid', 'ttclid',
+    'utm_source', 'utm_medium',
+    'utm_campaign', 'utm_term',
+    'utm_keyword',
+    'utm_content', 'utm_id'
+  ];
+  var STORAGE_KEY = 'scad_tracking_params';
+
+  var currentParams = {};
+  var search = window.location.search;
+  if (search) {
+    search.slice(1).split('&amp;').forEach(function (pair) {
+      var kv = pair.split('=');
+      var key = decodeURIComponent(kv[0] || '');
+      var val = decodeURIComponent(kv[1] || '');
+      if (key &amp;&amp; TRACKED_PARAMS.indexOf(key) !== -1) currentParams[key] = val;
+    });
+  }
+
+  var stored = {};
+  try { stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
+  var merged = Object.assign({}, stored, currentParams);
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
+
+  function buildQS(params) {
+    var parts = Object.keys(params)
+      .filter(function (k) { return params[k]; })
+      .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); });
+    return parts.length ? '?' + parts.join('&amp;') : '';
+  }
+
+  var qs = buildQS(merged);
+  if (!qs) return;
+
+  function isSameDomain(href) {
+    try { return new URL(href).hostname === window.location.hostname; }
+    catch (e) { return false; }
+  }
+
+  function decorateLink(a) {
+    if (a._scadDone) return;
+    var href = a.getAttribute('href');
+    if (!href) return;
+    if (/^(#|tel:|mailto:|javascript:|\/\/)/.test(href)) return;
+    if (/^https?:\/\//.test(href) &amp;&amp; !isSameDomain(href)) return;
+    for (var i = 0; i &lt; TRACKED_PARAMS.length; i++) {
+      if (href.indexOf(encodeURIComponent(TRACKED_PARAMS[i]) + '=') !== -1
+       || href.indexOf(TRACKED_PARAMS[i] + '=') !== -1) return;
+    }
+    a.setAttribute('href', href + (href.indexOf('?') !== -1 ? '&amp;' + qs.slice(1) : qs));
+    a._scadDone = true;
+  }
+
+  function decorateAll() {
+    document.querySelectorAll('a[href]').forEach(decorateLink);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', decorateAll);
+  } else {
+    decorateAll();
+  }
+  window.addEventListener('load', decorateAll);
+
+  if (window.MutationObserver &amp;&amp; document.body) {
+    new MutationObserver(function (mutations) {
+      mutations.forEach(function (m) {
+        m.addedNodes.forEach(function (node) {
+          if (node.nodeType !== 1) return;
+          if (node.tagName === 'A') { decorateLink(node); }
+          else if (node.querySelectorAll) { node.querySelectorAll('a[href]').forEach(decorateLink); }
+        });
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+})();
+&lt;/script&gt;</pre>
+                </div>
+                <div class="og-tip"><strong>How it works:</strong> When a visitor lands on any page with UTM params (e.g. from a Google Ad), the script saves those params to <code class="og-code">sessionStorage</code>. Every internal link they click — including Elementor buttons — will automatically carry those params to the destination page, where the forms will pick them up and send them to GHL.</div>
+            </div>
+        </div>
+
+        <div class="og-step">
+            <div class="og-num">5</div>
+            <div class="og-body">
                 <h3>Contact Form Fields</h3>
                 <p>Sent on every contact form submission. Create these as Text fields in GHL.</p>
                 <table class="og-table">
@@ -3581,7 +3679,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">5</div>
+            <div class="og-num">6</div>
             <div class="og-body">
                 <h3>Aligner / Invisalign Form Fields</h3>
                 <p>Sent on every aligner quiz submission. These capture the patient's quiz answers and treatment type.</p>
@@ -3598,7 +3696,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">6</div>
+            <div class="og-num">7</div>
             <div class="og-body">
                 <h3>Implant Estimator Answer Fields</h3>
                 <p>These capture what the patient selected during the quiz. Each answer is stored in its own field so you can filter and segment in GHL.</p>
@@ -3623,7 +3721,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">7</div>
+            <div class="og-num">8</div>
             <div class="og-body">
                 <h3>Tags Applied per Form</h3>
                 <p>Every submission adds tags to the contact in GHL. No setup needed — they are applied automatically. Here is the full list:</p>
@@ -3650,7 +3748,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">8</div>
+            <div class="og-num">9</div>
             <div class="og-body">
                 <h3>Workflow 1 — Implant Lead Follow-Up</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-estimate</span></p>
@@ -3667,7 +3765,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">9</div>
+            <div class="og-num">10</div>
             <div class="og-body">
                 <h3>Workflow 2 — Contact Form Enquiries</h3>
                 <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">website-contact-form</span></p>
@@ -3680,7 +3778,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">10</div>
+            <div class="og-num">11</div>
             <div class="og-body">
                 <h3>Add Contacts to Your Pipeline on Every Workflow</h3>
                 <p>Every workflow above should include an <strong>Add to Pipeline / Stage</strong> action so new leads don't fall through the cracks. Suggested pipeline stages:</p>
@@ -3700,7 +3798,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">11</div>
+            <div class="og-num">12</div>
             <div class="og-body">
                 <h3>Submit a Test Implant Lead</h3>
                 <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL:</p>
@@ -3720,7 +3818,7 @@ function cfg_settings_page() {
         </div>
 
         <div class="og-step">
-            <div class="og-num">12</div>
+            <div class="og-num">13</div>
             <div class="og-body">
                 <h3>Submit a Test Contact Form Lead</h3>
                 <p>Fill out the main contact form (not the estimator) with a test email and verify:</p>
