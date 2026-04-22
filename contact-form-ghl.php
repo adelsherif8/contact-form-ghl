@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.34
+ * Version:     2.5.35
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3596,19 +3596,16 @@ function cfg_settings_page() {
                 <div class="og-section-label">Contact Form</div>
                 <ul>
                     <li><span class="og-tag">website-contact-form</span> — every contact form submission</li>
-                    <li><span class="og-tag">website-lead</span> — applied on every submission</li>
                 </ul>
                 <div class="og-section-label">Aligner / Invisalign Form</div>
                 <ul>
-                    <li><span class="og-tag">aligner-quiz</span> — every aligner submission</li>
-                    <li><span class="og-tag">website-lead</span> — applied on every submission</li>
+                    <li><span class="og-tag">invisalign-estimate</span> — every aligner submission</li>
                 </ul>
                 <div class="og-section-label">Implant Estimator</div>
                 <ul>
-                    <li><span class="og-tag">implant-estimator</span> — every implant lead</li>
-                    <li><span class="og-tag">website-lead</span> — applied on every submission</li>
+                    <li><span class="og-tag">implant-estimate</span> — every implant lead</li>
                 </ul>
-                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> as your workflow trigger (not <em>Contact Created</em>). This fires even when an existing patient re-submits — and <span class="og-tag">aligner-quiz</span> is the cleanest trigger for the aligner workflow.</div>
+                <div class="og-tip"><strong>Tip:</strong> Use <em>Contact Tag Added</em> as your workflow trigger (not <em>Contact Created</em>). This fires even when an existing patient re-submits — and <span class="og-tag">invisalign-estimate</span> is the cleanest trigger for the aligner workflow.</div>
             </div>
         </div>
 
@@ -3622,7 +3619,7 @@ function cfg_settings_page() {
             <div class="og-num">8</div>
             <div class="og-body">
                 <h3>Workflow 1 — Implant Lead Follow-Up</h3>
-                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-estimator</span></p>
+                <p><strong>Trigger:</strong> Contact Tag Added → tag equals <span class="og-tag">implant-estimate</span></p>
                 <p>Recommended actions in order:</p>
                 <ul>
                     <li><strong>Wait 0 min</strong> → Send SMS: <em>"Hi [First Name], thanks for using our implant cost estimator! Your estimated range is [Custom Value: implant_range]. We'd love to get you in for a free consultation — reply YES to book."</em></li>
@@ -3677,7 +3674,7 @@ function cfg_settings_page() {
                 <p>Complete the full quiz and submit your details. Then in GHL <strong>Contacts</strong>, find your test contact and verify:</p>
                 <ul class="og-checklist">
                     <li>Contact was created with correct name, email, and phone</li>
-                    <li>Tag <span class="og-tag">implant-estimator</span> was applied</li>
+                    <li>Tag <span class="og-tag">implant-estimate</span> was applied</li>
                     <li>Custom field <span class="og-field">implant_range</span> shows the correct price range</li>
                     <li>Custom field <span class="og-field">utm_campaign</span> shows <em>test-campaign</em></li>
                     <li>Custom field <span class="og-field">gclid</span> shows <em>test123</em></li>
@@ -5632,7 +5629,7 @@ function cfg_ajax_submit() {
         'phone'      => $phone,
         'locationId' => $s['ghl_location_id'],
         'source'     => 'Website Contact Form',
-        'tags'       => [ 'website-contact-form', 'website-lead' ],
+        'tags'       => [ 'website-contact-form' ],
     ];
     if ( $custom_fields ) $payload['customFields'] = $custom_fields;
 
@@ -6283,7 +6280,7 @@ function cfg_aligner_ajax_submit() {
     $ans_raw = sanitize_text_field( $_POST['alg_answers'] ?? '' );
     $answers = json_decode( wp_unslash( $ans_raw ), true ) ?: [];
 
-    $tags = [ 'aligner-quiz', 'website-lead' ];
+    $tags = [ 'invisalign-estimate' ];
 
     // Custom fields
     $custom = [];
@@ -7605,7 +7602,7 @@ function cfg_implant_ajax_submit() {
     if ( $ins_q ) $all_qs[] = $ins_q;
 
     // Tags
-    $tags = [ 'implant-estimator', 'website-lead' ];
+    $tags = [ 'implant-estimate' ];
 
     // Custom fields — dynamic
     $answers  = $_POST['answer']  ?? [];
