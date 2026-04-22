@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.36
+ * Version:     2.5.37
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5803,7 +5803,7 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;overflow-x:hidden;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);overflow-x:hidden;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
 /* Top bar */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
@@ -5816,6 +5816,7 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
 /* ── RESPONSIVE ── */
 @media(max-width:860px){
+  #<?= $uid ?>-wrap{width:100%;max-width:100%;margin-left:0;}
   #<?= $uid ?>-topbar-inner{padding:0 1.5rem;}
   #<?= $uid ?>-grid{grid-template-columns:1fr!important;padding-left:1.5rem;padding-right:1.5rem;}
 }
@@ -5865,7 +5866,6 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-chip:last-child{border-bottom:none;}
 .<?= $uid ?>-chip-k{color:<?= esc_attr($s['muted_color']) ?>;flex-shrink:0;font-size:0.75rem;}
 .<?= $uid ?>-chip-v{color:<?= $tc ?>;font-weight:600;}
-@media(max-width:860px){#<?= $uid ?>-sidebar{display:none;}}
 @media(max-width:560px){
   .<?= $uid ?>-card{font-size:0.9rem;padding:0.9rem 1rem;}
   .<?= $uid ?>-card i{font-size:1.1rem;}
