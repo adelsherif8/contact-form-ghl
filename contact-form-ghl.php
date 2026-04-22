@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.35
+ * Version:     2.5.36
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5803,7 +5803,7 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);overflow-x:hidden;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;overflow-x:hidden;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
 /* Top bar */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
@@ -5843,7 +5843,7 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-img2{display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;margin-bottom:1.75rem;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:100px;padding:1rem 0.75rem;gap:0.5rem;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card:hover,.<?= $uid ?>-img3 .<?= $uid ?>-card:hover,.<?= $uid ?>-img2 .<?= $uid ?>-card.alg-sel,.<?= $uid ?>-img3 .<?= $uid ?>-card.alg-sel{transform:translateY(-2px);}
-@media(max-width:560px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
+@media(max-width:480px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}}
 /* CTA button */
 .<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:<?= absint($s['input_radius']) ?>px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
@@ -6071,10 +6071,34 @@ function cfg_aligner_shortcode() {
 
     function setH(){ outer.style.height = steps[cur].offsetHeight+'px'; }
     slider.addEventListener('transitionend', function(e){ if(e.target===slider) setH(); });
+    function fixLayout(){
+        var ow = outer ? outer.offsetWidth : 0;
+        if(!ow) return;
+        var narrow = ow < 420;
+        // Image choice grids: force 1-col on narrow containers regardless of media query
+        wrap.querySelectorAll('.'+uid+'-img2,.'+uid+'-img3').forEach(function(g){
+            g.style.gridTemplateColumns = narrow ? '1fr' : '';
+            g.querySelectorAll('.'+uid+'-card').forEach(function(c){
+                c.style.flexDirection   = narrow ? 'row'         : '';
+                c.style.justifyContent  = narrow ? 'flex-start'  : '';
+                c.style.textAlign       = narrow ? 'left'        : '';
+                c.style.minHeight       = narrow ? 'unset'       : '';
+                c.style.padding         = narrow ? '0.85rem 1rem': '';
+                c.style.gap             = narrow ? '0.75rem'     : '';
+            });
+        });
+        // Nav buttons: full-width on narrow containers
+        wrap.querySelectorAll('.'+uid+'-navrow').forEach(function(r){
+            r.style.justifyContent = narrow ? 'stretch' : '';
+            r.querySelectorAll('.'+uid+'-btn').forEach(function(b){
+                b.style.width = narrow ? '100%' : '';
+            });
+        });
+    }
     window.addEventListener('resize', function(){
         slider.style.transition='none';
         slider.style.transform='translateX(-'+(cur*100)+'%)';
-        setTimeout(function(){ slider.style.transition=''; setH(); }, 10);
+        setTimeout(function(){ slider.style.transition=''; setH(); fixLayout(); }, 10);
     });
 
     function goTo(n){
@@ -6184,6 +6208,7 @@ function cfg_aligner_shortcode() {
     }
 
     setH();
+    fixLayout();
     updateProg();
     updateSidebar();
 })();
