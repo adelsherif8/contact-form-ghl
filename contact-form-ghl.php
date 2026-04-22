@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.37
+ * Version:     2.5.38
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5818,7 +5818,7 @@ function cfg_aligner_shortcode() {
 @media(max-width:860px){
   #<?= $uid ?>-wrap{width:100%;max-width:100%;margin-left:0;}
   #<?= $uid ?>-topbar-inner{padding:0 1.5rem;}
-  #<?= $uid ?>-grid{grid-template-columns:1fr!important;padding-left:1.5rem;padding-right:1.5rem;}
+  #<?= $uid ?>-grid{grid-template-columns:1fr!important;gap:1rem;padding-left:1.5rem;padding-right:1.5rem;}
 }
 @media(max-width:560px){
   #<?= $uid ?>-topbar-inner{padding:0 1rem;}
@@ -6094,6 +6094,8 @@ function cfg_aligner_shortcode() {
                 b.style.width = narrow ? '100%' : '';
             });
         });
+        // Re-measure outer height after layout changes
+        setH();
     }
     window.addEventListener('resize', function(){
         slider.style.transition='none';
@@ -6108,6 +6110,7 @@ function cfg_aligner_shortcode() {
         updateProg();
         updateSidebar();
         wrap.scrollIntoView({behavior:'smooth',block:'start'});
+        setTimeout(setH, 450); // fallback: update outer height if transitionend doesn't fire
     }
 
     function updateProg(){
