@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.38
+ * Version:     2.5.39
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -103,6 +103,8 @@ function cfg_defaults() {
         'hero_heading'           => 'Request an Appointment',
         'hero_subheading'        => 'Fill out the form below and our team will reach out to confirm your appointment by text.',
         'hero_bg_color'          => '#f4f4f5',
+        'hero_heading_color'     => '',
+        'hero_subtext_color'     => '',
         'req_first_name'         => '1',
         'req_last_name'          => '1',
         'req_email'              => '1',
@@ -126,6 +128,8 @@ function cfg_defaults() {
         'bm_hero_heading'        => 'We Are Here to Help',
         'bm_hero_subheading'     => "Choose the most convenient way to reach us and we'll get you scheduled as quickly as possible.",
         'bm_hero_bg_color'       => '#f4f4f5',
+        'bm_hero_heading_color'  => '',
+        'bm_hero_subtext_color'  => '',
         // Card 1 – Call
         'bm_card1_eyebrow'       => 'Call Us',
         'bm_card1_heading'       => 'Speak With Our Team',
@@ -1163,9 +1167,11 @@ function cfg_sanitize( $input ) {
         'imp_intro_btn_url','imp_contact_btn_url','imp_contact_btn2_url',
     ];
     $color_fields = [
-        'hero_bg_color','primary_color','bg_color','text_color','muted_color','border_color',
+        'hero_bg_color','hero_heading_color','hero_subtext_color',
+        'primary_color','bg_color','text_color','muted_color','border_color',
         'btn_hover_bg_color','btn_hover_text_color',
-        'bm_hero_bg_color','bm_cta_bg_color','ty_bg_color','alg_accent_color','imp_accent_color',
+        'bm_hero_bg_color','bm_hero_heading_color','bm_hero_subtext_color',
+        'bm_cta_bg_color','ty_bg_color','alg_accent_color','imp_accent_color',
         // imp extra color fields (none currently, placeholder for future)
     ];
     $textarea_fields = [
@@ -1734,6 +1740,20 @@ function cfg_settings_page() {
                     <input type="text" id="hero_bg_color" name="<?= CFG_OPTION ?>[hero_bg_color]" value="<?= esc_attr( $s['hero_bg_color'] ) ?>" maxlength="7" oninput="syncPicker('c_hero_bg_color',this.value)"/>
                 </div>
             </div>
+            <div class="cfg-field">
+                <label>Hero Heading Color <span style="font-weight:400;color:#9ca3af;">(leave blank = global text color)</span></label>
+                <div class="cfg-color-row">
+                    <input type="color" id="c_hero_heading_color" value="<?= esc_attr( $s['hero_heading_color'] ?: '#000000' ) ?>" oninput="syncColor('hero_heading_color',this.value)"/>
+                    <input type="text" id="hero_heading_color" name="<?= CFG_OPTION ?>[hero_heading_color]" value="<?= esc_attr( $s['hero_heading_color'] ) ?>" maxlength="7" placeholder="e.g. #1a1a2e" oninput="syncPicker('c_hero_heading_color',this.value)"/>
+                </div>
+            </div>
+            <div class="cfg-field">
+                <label>Hero Subtext Color <span style="font-weight:400;color:#9ca3af;">(eyebrow + subtitle — leave blank = global muted color)</span></label>
+                <div class="cfg-color-row">
+                    <input type="color" id="c_hero_subtext_color" value="<?= esc_attr( $s['hero_subtext_color'] ?: '#6b7280' ) ?>" oninput="syncColor('hero_subtext_color',this.value)"/>
+                    <input type="text" id="hero_subtext_color" name="<?= CFG_OPTION ?>[hero_subtext_color]" value="<?= esc_attr( $s['hero_subtext_color'] ) ?>" maxlength="7" placeholder="e.g. #6b7280" oninput="syncPicker('c_hero_subtext_color',this.value)"/>
+                </div>
+            </div>
         </div>
 
         <div class="cfg-section-title">Field Settings</div>
@@ -1834,6 +1854,20 @@ function cfg_settings_page() {
                 <div class="cfg-color-row">
                     <input type="color" id="c_bm_hero_bg_color" value="<?= esc_attr( $s['bm_hero_bg_color'] ) ?>" oninput="syncColor('bm_hero_bg_color',this.value)"/>
                     <input type="text" id="bm_hero_bg_color" name="<?= CFG_OPTION ?>[bm_hero_bg_color]" value="<?= esc_attr( $s['bm_hero_bg_color'] ) ?>" maxlength="7" oninput="syncPicker('c_bm_hero_bg_color',this.value)"/>
+                </div>
+            </div>
+            <div class="cfg-field">
+                <label>Hero Heading Color <span style="font-weight:400;color:#9ca3af;">(leave blank = global text color)</span></label>
+                <div class="cfg-color-row">
+                    <input type="color" id="c_bm_hero_heading_color" value="<?= esc_attr( $s['bm_hero_heading_color'] ?: '#000000' ) ?>" oninput="syncColor('bm_hero_heading_color',this.value)"/>
+                    <input type="text" id="bm_hero_heading_color" name="<?= CFG_OPTION ?>[bm_hero_heading_color]" value="<?= esc_attr( $s['bm_hero_heading_color'] ) ?>" maxlength="7" placeholder="e.g. #1a1a2e" oninput="syncPicker('c_bm_hero_heading_color',this.value)"/>
+                </div>
+            </div>
+            <div class="cfg-field">
+                <label>Hero Subtext Color <span style="font-weight:400;color:#9ca3af;">(eyebrow + subtitle — leave blank = global muted color)</span></label>
+                <div class="cfg-color-row">
+                    <input type="color" id="c_bm_hero_subtext_color" value="<?= esc_attr( $s['bm_hero_subtext_color'] ?: '#6b7280' ) ?>" oninput="syncColor('bm_hero_subtext_color',this.value)"/>
+                    <input type="text" id="bm_hero_subtext_color" name="<?= CFG_OPTION ?>[bm_hero_subtext_color]" value="<?= esc_attr( $s['bm_hero_subtext_color'] ) ?>" maxlength="7" placeholder="e.g. #6b7280" oninput="syncPicker('c_bm_hero_subtext_color',this.value)"/>
                 </div>
             </div>
         </div>
@@ -4954,12 +4988,15 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
     <div id="cfg-wrap" style="font-family:<?= esc_attr( $font['stack'] ) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;line-height:1.6;">
 
-    <?php if ( $s['show_hero'] === '1' ): ?>
+    <?php if ( $s['show_hero'] === '1' ):
+        $h_hc = esc_attr( $s['hero_heading_color'] ?: $tc );
+        $h_sc = esc_attr( $s['hero_subtext_color']  ?: $mc );
+    ?>
     <section style="background:<?= esc_attr( $s['hero_bg_color'] ) ?>;padding:<?= $tp ?> 1.5rem 3.5rem;text-align:center;">
         <div style="max-width:800px;margin:0 auto;">
-            <?php if ( $s['hero_eyebrow'] ): ?><p style="margin:0 0 1rem;font-weight:<?= $bw ?>;color:<?= $mc ?>;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;"><?= esc_html( $s['hero_eyebrow'] ) ?></p><?php endif; ?>
-            <?php if ( $s['hero_heading'] ): ?><h1 style="margin:0 0 1.25rem;font-size:clamp(1.75rem,5vw,3rem);font-weight:<?= $bw ?>;line-height:1.15;color:<?= $tc ?>;"><?= esc_html( $s['hero_heading'] ) ?></h1><?php endif; ?>
-            <?php if ( $s['hero_subheading'] ): ?><p style="max-width:42rem;margin:0 auto;font-size:1.1rem;color:<?= $mc ?>;"><?= esc_html( $s['hero_subheading'] ) ?></p><?php endif; ?>
+            <?php if ( $s['hero_eyebrow'] ): ?><p style="margin:0 0 1rem;font-weight:<?= $bw ?>;color:<?= $h_sc ?>;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;"><?= esc_html( $s['hero_eyebrow'] ) ?></p><?php endif; ?>
+            <?php if ( $s['hero_heading'] ): ?><h1 style="margin:0 0 1.25rem;font-size:clamp(1.75rem,5vw,3rem);font-weight:<?= $bw ?>;line-height:1.15;color:<?= $h_hc ?>;"><?= esc_html( $s['hero_heading'] ) ?></h1><?php endif; ?>
+            <?php if ( $s['hero_subheading'] ): ?><p style="max-width:42rem;margin:0 auto;font-size:1.1rem;color:<?= $h_sc ?>;"><?= esc_html( $s['hero_subheading'] ) ?></p><?php endif; ?>
         </div>
     </section>
     <?php endif; ?>
@@ -5342,12 +5379,15 @@ function cfg_booking_method_shortcode() {
 
     <div id="cfg-bm-wrap" style="font-family:<?= esc_attr( $font['stack'] ) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;line-height:1.6;">
 
-    <?php if ( $s['bm_show_hero'] === '1' ): ?>
+    <?php if ( $s['bm_show_hero'] === '1' ):
+        $bm_hc = esc_attr( $s['bm_hero_heading_color'] ?: $tc );
+        $bm_sc = esc_attr( $s['bm_hero_subtext_color']  ?: $mc );
+    ?>
     <section style="background:<?= esc_attr( $s['bm_hero_bg_color'] ) ?>;padding:<?= $tp ?> 1.5rem 3.5rem;text-align:center;">
         <div style="max-width:800px;margin:0 auto;">
-            <?php if ( $s['bm_hero_eyebrow'] ): ?><p style="margin:0 0 1rem;font-weight:<?= $bw ?>;color:<?= $mc ?>;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;"><?= esc_html( $s['bm_hero_eyebrow'] ) ?></p><?php endif; ?>
-            <?php if ( $s['bm_hero_heading'] ): ?><h1 style="margin:0 0 1.25rem;font-size:clamp(1.75rem,5vw,3rem);font-weight:<?= $bw ?>;line-height:1.15;color:<?= $tc ?>;"><?= esc_html( $s['bm_hero_heading'] ) ?></h1><?php endif; ?>
-            <?php if ( $s['bm_hero_subheading'] ): ?><p style="max-width:42rem;margin:0 auto;font-size:1.1rem;color:<?= $mc ?>;"><?= esc_html( $s['bm_hero_subheading'] ) ?></p><?php endif; ?>
+            <?php if ( $s['bm_hero_eyebrow'] ): ?><p style="margin:0 0 1rem;font-weight:<?= $bw ?>;color:<?= $bm_sc ?>;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;"><?= esc_html( $s['bm_hero_eyebrow'] ) ?></p><?php endif; ?>
+            <?php if ( $s['bm_hero_heading'] ): ?><h1 style="margin:0 0 1.25rem;font-size:clamp(1.75rem,5vw,3rem);font-weight:<?= $bw ?>;line-height:1.15;color:<?= $bm_hc ?>;"><?= esc_html( $s['bm_hero_heading'] ) ?></h1><?php endif; ?>
+            <?php if ( $s['bm_hero_subheading'] ): ?><p style="max-width:42rem;margin:0 auto;font-size:1.1rem;color:<?= $bm_sc ?>;"><?= esc_html( $s['bm_hero_subheading'] ) ?></p><?php endif; ?>
         </div>
     </section>
     <?php endif; ?>
