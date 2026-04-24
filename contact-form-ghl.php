@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.47
+ * Version:     2.5.48
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1057,11 +1057,17 @@ add_action( 'wp_head', function () {
     echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/css/intlTelInput.min.css"/>';
     echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>';
     echo '<style>
-        .iti{display:block!important;width:100%!important;}
-        .iti__flag-container{z-index:10;}
+        .iti{display:block!important;width:100%!important;position:relative!important;}
         .iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;}
-        .iti__selected-dial-code{font-size:.875rem;}
-        .iti__dropdown-content{border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);}
+        .iti__flag-container{position:absolute!important;top:0!important;bottom:0!important;left:0!important;right:auto!important;padding:1px!important;z-index:10!important;background:transparent!important;}
+        .iti__selected-flag{display:flex!important;align-items:center!important;height:100%!important;padding:0 6px 0 8px!important;background:transparent!important;border-radius:0!important;cursor:pointer!important;outline:none!important;border:none!important;box-shadow:none!important;}
+        .iti__flag{display:inline-block!important;background-image:url("https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/img/flags.webp")!important;background-color:transparent!important;border-radius:0!important;box-shadow:1px 1px 3px rgba(0,0,0,.25)!important;}
+        .iti__arrow{display:inline-block!important;width:0!important;height:0!important;border-top:4px solid #555!important;border-left:3px solid transparent!important;border-right:3px solid transparent!important;background:transparent!important;margin-left:6px!important;}
+        .iti__selected-dial-code{font-size:.875rem!important;color:inherit!important;background:transparent!important;border:none!important;}
+        .iti__dropdown-content{border-radius:8px!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;background:#fff!important;}
+        .iti__country-list{background:#fff!important;}
+        .iti--separate-dial-code .iti__selected-flag{background-color:transparent!important;}
+        .iti--separate-dial-code input[type="tel"]{padding-left:90px!important;}
     </style>';
 } );
 
