@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.42
+ * Version:     2.5.43
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1109,10 +1109,33 @@ add_action( 'wp_footer', function () {
             // Format on blur
             el.addEventListener('blur', function(){ cfgFmtNational(el, iti); });
 
-            // Strip non-numeric characters as the user types
+            // Strip non-numeric characters and enforce country max length as the user types
             el.addEventListener('input', function() {
-                var cur = el.value, clean = cur.replace(/[^\d\s\+\-\(\)]/g, '');
-                if (clean !== cur) { el.value = clean; }
+                var cur = el.value;
+
+                // Strip anything that isn't a digit, space, dash, or parenthesis
+                var clean = cur.replace(/[^\d\s\-\(\)]/g, '');
+                if (clean !== cur) { el.value = clean; cur = clean; }
+
+                // Enforce max length based on the country's example number
+                if (window.intlTelInputUtils) {
+                    var iso = iti.getSelectedCountryData().iso2;
+                    var example = intlTelInputUtils.getExampleNumber(iso, true, intlTelInputUtils.numberType.MOBILE);
+                    var maxDigits = example ? example.replace(/\D/g, '').length : 15;
+                    var digits = cur.replace(/\D/g, '');
+                    if (digits.length > maxDigits) {
+                        // Trim excess digits from the end
+                        var trimmed = '', count = 0;
+                        for (var i = 0; i < cur.length; i++) {
+                            if (/\d/.test(cur[i])) {
+                                if (count < maxDigits) { trimmed += cur[i]; count++; }
+                            } else {
+                                trimmed += cur[i];
+                            }
+                        }
+                        el.value = trimmed.trimEnd();
+                    }
+                }
             });
 
             // Strip duplicate country code on paste (e.g. user pastes "+1 778…" but +1 is already selected)
