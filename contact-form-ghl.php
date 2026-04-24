@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.52
+ * Version:     2.5.53
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1054,32 +1054,28 @@ function cfg_render_dashboard_widget() {
 //  INTL-TEL-INPUT — country code phone picker (all forms)
 // ═══════════════════════════════════════════════════════════════
 add_action( 'wp_head', function () {
-    echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/css/intlTelInput.min.css"/>';
+    echo '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18/build/css/intlTelInput.min.css"/>';
     echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>';
     echo '<style>
-        /* Scoped to .cfg-iti — only applied to plugin phone fields, not site-wide */
-        .cfg-iti{display:block!important;width:100%!important;position:relative!important;}
-        .cfg-iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;padding-left:90px!important;}
-        /* v23: country selector is a <button> — must neutralize Elementor button overrides */
-        .cfg-iti .iti__selected-country{display:flex!important;align-items:center!important;gap:4px!important;background:transparent!important;background-color:transparent!important;border:none!important;border-right:1px solid #d1d5db!important;border-radius:0!important;box-shadow:none!important;padding:0 10px 0 8px!important;color:inherit!important;cursor:pointer!important;height:100%!important;font-size:.875rem!important;font-weight:normal!important;text-transform:none!important;letter-spacing:normal!important;width:auto!important;margin:0!important;min-height:0!important;}
-        .cfg-iti .iti__selected-country:hover,.cfg-iti .iti__selected-country:focus{background:rgba(0,0,0,.05)!important;outline:none!important;box-shadow:none!important;}
-        .cfg-iti .iti__selected-country-primary{display:flex!important;align-items:center!important;gap:6px!important;}
-        .cfg-iti .iti__country-container{position:absolute!important;top:0!important;bottom:0!important;left:0!important;padding:1px!important;z-index:10!important;background:transparent!important;}
-        .cfg-iti .iti__flag{display:inline-block!important;background-color:transparent!important;border-radius:0!important;box-shadow:1px 1px 3px rgba(0,0,0,.25)!important;}
-        .cfg-iti .iti__arrow{display:inline-block!important;width:0!important;height:0!important;border-top:4px solid #555!important;border-left:3px solid transparent!important;border-right:3px solid transparent!important;background:transparent!important;font-size:0!important;line-height:0!important;}
-        .cfg-iti .iti__selected-dial-code{font-size:.875rem!important;color:inherit!important;background:transparent!important;}
-        .cfg-iti .iti__dropdown-content{border-radius:8px!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;background:#fff!important;z-index:9999!important;}
-        .cfg-iti .iti__country-list{background:#fff!important;}
-        .cfg-iti .iti__search-input{box-sizing:border-box!important;width:100%!important;}
+        /* Scoped to .cfg-iti — only applies to plugin phone fields */
+        .cfg-iti{display:block!important;width:100%!important;}
+        .cfg-iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;}
+        /* v18 separateDialCode: flag-container is a div (not a button) so Elementor cannot interfere */
+        .cfg-iti .iti__flag-container{z-index:10!important;}
+        .cfg-iti .iti__selected-flag{background:transparent!important;border-radius:0!important;outline:none!important;box-shadow:none!important;}
+        .cfg-iti .iti__flag{border-radius:0!important;box-shadow:1px 1px 3px rgba(0,0,0,.2)!important;}
+        .cfg-iti .iti__arrow{border-top-color:#555!important;}
+        .cfg-iti .iti__selected-dial-code{font-size:.875rem!important;border-right:1px solid #d1d5db!important;padding-right:8px!important;}
+        .cfg-iti .iti-mobile .iti__country-list,.cfg-iti .iti__country-list{border-radius:8px!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;background:#fff!important;z-index:9999!important;}
     </style>';
 } );
 
 add_action( 'wp_footer', function () {
     ?>
-    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/js/intlTelInput.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18/build/js/intlTelInput.min.js"></script>
     <script>
     (function(){
-        var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/js/utils.js';
+        var ITI_UTILS = 'https://cdn.jsdelivr.net/npm/intl-tel-input@18/build/js/utils.js';
 
         function cfgFmtNational(el, iti) {
             if (!window.intlTelInputUtils || !el.value.trim()) return;
@@ -1109,22 +1105,16 @@ add_action( 'wp_footer', function () {
                         .then(function(d){ cb(d.country_code || 'us'); })
                         .catch(function(){ cb('us'); });
                 },
-                separateDialCode:  true,
+                separateDialCode: true,
                 autoPlaceholder:  'polite',
-                formatOnDisplay:   true,
-                loadUtilsOnInit:   ITI_UTILS,
+                formatOnDisplay:  true,
+                utilsScript:      ITI_UTILS,
             });
             el._cfgIti = iti;
 
-            // Mark wrapper so scoped CSS applies, then fix padding dynamically
+            // Mark wrapper so scoped CSS applies only to plugin phone fields
             var itiWrap = el.closest('.iti');
             if (itiWrap) itiWrap.classList.add('cfg-iti');
-
-            function fixPad() {
-                var cc = itiWrap && itiWrap.querySelector('.iti__country-container');
-                if (cc && cc.offsetWidth > 0) el.style.setProperty('padding-left', (cc.offsetWidth + 8) + 'px', 'important');
-            }
-            setTimeout(fixPad, 200);
 
             // Format on blur
             el.addEventListener('blur', function(){ cfgFmtNational(el, iti); });
@@ -1167,10 +1157,9 @@ add_action( 'wp_footer', function () {
                 }
             });
 
-            // Re-format and fix padding when country changes (dial code width can change)
-            el.closest('.iti') && el.closest('.iti').addEventListener('countrychange', function(){
+            // Re-format when country changes
+            itiWrap && itiWrap.addEventListener('countrychange', function(){
                 cfgFmtNational(el, iti);
-                setTimeout(fixPad, 50);
             });
         }
 
