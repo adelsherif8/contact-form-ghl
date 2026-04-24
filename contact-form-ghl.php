@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.60
+ * Version:     2.5.61
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6062,48 +6062,41 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 #<?= $uid ?>-prog-wrap{flex:1;height:3px;background:rgba(0,0,0,0.08);border-radius:9999px;overflow:hidden;}
 #<?= $uid ?>-prog-bar{height:100%;background:<?= $accent ?>;border-radius:9999px;transition:width 0.4s ease;width:0%;}
 #<?= $uid ?>-trust{font-size:0.7rem;color:<?= esc_attr($s['muted_color']) ?>;white-space:nowrap;flex-shrink:0;}
-/* Two-column grid: questions LEFT, summary sidebar RIGHT */
+/* Grid */
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
-/* ── RESPONSIVE ── */
-@media(max-width:860px){
-  #<?= $uid ?>-topbar-inner{padding:0 1.5rem;}
-  #<?= $uid ?>-grid{grid-template-columns:1fr!important;gap:1rem;padding-left:1.5rem;padding-right:1.5rem;}
-}
-@media(max-width:560px){
-  #<?= $uid ?>-topbar-inner{padding:0 1rem;}
-  #<?= $uid ?>-trust{display:none;}
-  #<?= $uid ?>-grid{padding:1.25rem 1rem 3rem;}
-}
-/* Slider — IDs/classes used by JS must not change */
-#<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;width:100%;}
-#<?= $uid ?>-slider{display:flex;width:100%;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
-.<?= $uid ?>-step{flex:0 0 100%;min-width:0;padding:0.5rem 0 2rem;overflow-wrap:break-word;word-break:break-word;}
-/* Back link row */
+/* The anonymous first-child div that wraps the slider must not overflow */
+#<?= $uid ?>-grid > div:first-child{min-width:0;width:100%;max-width:100%;overflow:hidden;}
+/* ── Slider — IDs/classes used by JS must not change ── */
+#<?= $uid ?>-outer{width:100%;overflow:hidden;position:relative;transition:height 0.38s ease;}
+#<?= $uid ?>-slider{display:flex;width:100%;min-width:0;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
+/* Each step = exactly the outer width. flex-basis 100% resolves against the slider's explicit width. */
+.<?= $uid ?>-step{flex:0 0 100%;width:100%;min-width:0;max-width:100%;box-sizing:border-box;padding:0.5rem 0 2rem;overflow:hidden;overflow-wrap:break-word;word-break:break-word;}
+/* Back row */
 .<?= $uid ?>-backrow{padding:0.25rem 0 1.25rem;}
-.<?= $uid ?>-ghost{background:none;border:none;color:<?= esc_attr($s['muted_color']) ?>;font-size:0.875rem;font-weight:500;cursor:pointer;font-family:inherit;transition:color 0.15s;display:inline-flex;align-items:center;gap:0.45rem;padding:0;}
-.<?= $uid ?>-ghost:hover{color:<?= $tc ?>;}
-/* Answer cards — clean bordered rows like implant form */
-.<?= $uid ?>-card{cursor:pointer;border:1px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= $br ?>;padding:1.05rem 1.25rem;font-size:0.95rem;font-weight:500;color:<?= $tc ?>;background:<?= $bg ?>;transition:border-color 0.17s,background 0.17s;user-select:none;display:flex;align-items:center;text-align:left;}
+/* Ghost "Go back" — heavy !important shield against Elementor/theme button resets */
+.<?= $uid ?>-ghost{background:none!important;background-color:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;color:<?= esc_attr($s['muted_color']) ?>!important;font-size:0.875rem!important;font-weight:500!important;cursor:pointer!important;font-family:inherit!important;display:inline-flex!important;align-items:center!important;gap:0.45rem!important;padding:0!important;margin:0!important;width:auto!important;height:auto!important;min-height:0!important;min-width:0!important;line-height:1.4!important;text-decoration:none!important;text-transform:none!important;letter-spacing:normal!important;transition:color 0.15s!important;}
+.<?= $uid ?>-ghost:hover{color:<?= $tc ?>!important;}
+/* Answer cards */
+.<?= $uid ?>-card{cursor:pointer;border:1px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= $br ?>;padding:1.05rem 1.25rem;font-size:0.95rem;font-weight:500;color:<?= $tc ?>;background:<?= $bg ?>;transition:border-color 0.17s,background 0.17s;user-select:none;display:flex;align-items:center;text-align:left;width:100%;box-sizing:border-box;}
 .<?= $uid ?>-card:hover{border-color:<?= $tc ?>;background:rgba(0,0,0,0.02);}
 .<?= $uid ?>-card.alg-sel{border-color:<?= $tc ?>;border-width:2px;background:rgba(0,0,0,0.025);font-weight:600;}
-/* Choice column */
+/* Choices list */
 .<?= $uid ?>-choices{display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.75rem;}
 /* Image grids */
 .<?= $uid ?>-img3{display:grid;grid-template-columns:repeat(3,1fr);gap:0.625rem;margin-bottom:1.75rem;}
 .<?= $uid ?>-img2{display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;margin-bottom:1.75rem;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:100px;padding:1rem 0.75rem;gap:0.5rem;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card:hover,.<?= $uid ?>-img3 .<?= $uid ?>-card:hover,.<?= $uid ?>-img2 .<?= $uid ?>-card.alg-sel,.<?= $uid ?>-img3 .<?= $uid ?>-card.alg-sel{transform:translateY(-2px);}
-@media(max-width:480px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
-.<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}}
-/* CTA button — !important overrides Elementor kit selectors */
-.<?= $uid ?>-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:0.5rem!important;background:<?= $accent ?>!important;color:#fff!important;border:none!important;border-radius:<?= $br ?>!important;font-weight:600!important;cursor:pointer!important;font-family:inherit!important;transition:filter 0.18s,transform 0.12s!important;letter-spacing:0.01em!important;padding:revert;}
+/* CTA button — full !important shield against Elementor */
+.<?= $uid ?>-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:0.5rem!important;background:<?= $accent ?>!important;color:#fff!important;border:none!important;border-radius:<?= $br ?>!important;font-weight:600!important;cursor:pointer!important;font-family:inherit!important;transition:filter 0.18s,transform 0.12s!important;letter-spacing:0.01em!important;padding:0.75rem 1.5rem!important;font-size:0.9rem!important;box-sizing:border-box!important;text-decoration:none!important;text-transform:none!important;box-shadow:none!important;outline:none!important;}
 .<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:'.esc_attr($s['btn_hover_bg_color']).'!important;'.($s['btn_hover_text_color']?'color:'.esc_attr($s['btn_hover_text_color']).'!important;':''):'filter:brightness(1.08)!important;'?>}
 .<?= $uid ?>-btn:active{transform:scale(0.97)!important;}
+/* Nav row */
+.<?= $uid ?>-navrow{display:flex;justify-content:flex-end;margin-top:1.25rem;}
 /* Inputs */
-.<?= $uid ?>-input{width:100%!important;padding:0.75rem 1rem!important;border:1px solid <?= esc_attr($s['border_color']) ?>!important;border-radius:<?= $ir ?>!important;font-size:0.9rem!important;outline:none!important;font-family:inherit!important;color:<?= $tc ?>!important;background:<?= $bg ?>!important;transition:border-color 0.2s,box-shadow 0.2s!important;}
-.<?= $uid ?>-input:focus{border-color:<?= $accent ?>;box-shadow:0 0 0 3px <?= $accent ?>22;}
+.<?= $uid ?>-input{width:100%!important;padding:0.75rem 1rem!important;border:1px solid <?= esc_attr($s['border_color']) ?>!important;border-radius:<?= $ir ?>!important;font-size:0.9rem!important;outline:none!important;font-family:inherit!important;color:<?= $tc ?>!important;background:<?= $bg ?>!important;transition:border-color 0.2s,box-shadow 0.2s!important;box-sizing:border-box!important;}
+.<?= $uid ?>-input:focus{border-color:<?= $accent ?>!important;box-shadow:0 0 0 3px <?= $accent ?>22!important;}
 .<?= $uid ?>-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;}
-@media(max-width:480px){.<?= $uid ?>-fgrid{grid-template-columns:1fr;}}
 /* Sidebar */
 #<?= $uid ?>-sidebar{position:sticky;top:2rem;}
 .<?= $uid ?>-scard{border:1px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= absint($s['card_radius']) ?>px;overflow:hidden;background:<?= $bg ?>;}
@@ -6115,14 +6108,25 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 .<?= $uid ?>-chip:last-child{border-bottom:none;}
 .<?= $uid ?>-chip-k{color:<?= esc_attr($s['muted_color']) ?>;flex-shrink:0;font-size:0.75rem;}
 .<?= $uid ?>-chip-v{color:<?= $tc ?>;font-weight:600;}
+/* ── RESPONSIVE ── */
+@media(max-width:860px){
+  #<?= $uid ?>-topbar-inner{padding:0 1.5rem;}
+  #<?= $uid ?>-grid{grid-template-columns:1fr!important;gap:1rem;padding-left:1.5rem;padding-right:1.5rem;}
+  #<?= $uid ?>-sidebar{position:static;}
+}
 @media(max-width:560px){
+  #<?= $uid ?>-topbar-inner{padding:0 1rem;}
+  #<?= $uid ?>-trust{display:none;}
+  #<?= $uid ?>-grid{padding:1.25rem 1rem 3rem;}
   .<?= $uid ?>-card{font-size:0.9rem;padding:0.9rem 1rem;}
   .<?= $uid ?>-card i{font-size:1.1rem;}
-  .<?= $uid ?>-btn{width:100%!important;padding:0.85rem 1rem!important;font-size:0.9rem!important;box-sizing:border-box;}
-  .<?= $uid ?>-fgrid{grid-template-columns:1fr;}
-  .<?= $uid ?>-input{font-size:16px;}
+  .<?= $uid ?>-fgrid{grid-template-columns:1fr!important;}
+  .<?= $uid ?>-input{font-size:16px!important;}
+  .<?= $uid ?>-btn{width:100%!important;padding:0.85rem 1rem!important;font-size:0.9rem!important;}
   .<?= $uid ?>-navrow{justify-content:stretch!important;}
   .<?= $uid ?>-navrow .<?= $uid ?>-btn{width:100%!important;}
+  .<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
+  .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}
 }
 </style>
 <?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?><style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style><?php endif; ?>
@@ -6520,8 +6524,8 @@ function cfg_alg_choice_icon( $label ) {
 
 // Helper: Next button only — Back is rendered inline above each question
 function cfg_alg_nav( $uid, $i, $accent ) {
-    $html = '<div class="' . $uid . '-navrow" style="display:flex;justify-content:flex-end;">';
-    $html .= '<button class="' . $uid . '-btn" style="padding:0.625rem 1.5rem;font-size:0.875rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">Next <i class="fa-solid fa-arrow-right" style="font-size:0.75em;"></i></button>';
+    $html = '<div class="' . $uid . '-navrow">';
+    $html .= '<button class="' . $uid . '-btn" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">Next <i class="fa-solid fa-arrow-right" style="font-size:0.75em;"></i></button>';
     $html .= '</div>';
     return $html;
 }
