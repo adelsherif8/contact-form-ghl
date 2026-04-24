@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.58
+ * Version:     2.5.59
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1116,14 +1116,16 @@ add_action( 'wp_footer', function () {
             var itiWrap = el.closest('.iti');
             if (itiWrap) itiWrap.classList.add('cfg-iti');
 
-            // ITI v18 separateDialCode sets padding-left via inline style, but any
-            // stylesheet rule with !important on the input overrides it. Re-apply
-            // with !important so the flag+dialcode area is never covered by input text.
+            // ITI v18 separateDialCode sets padding-left via inline style (no !important),
+            // but stylesheet rules with !important override it. Use a MutationObserver to
+            // detect every time ITI updates padding-left and immediately re-apply with !important.
             function cfgFixItiPadding() {
+                if (el.style.getPropertyPriority('padding-left') === 'important') return;
                 var pl = el.style.paddingLeft;
                 if (pl) el.style.setProperty('padding-left', pl, 'important');
             }
             cfgFixItiPadding();
+            new MutationObserver(cfgFixItiPadding).observe(el, { attributes: true, attributeFilter: ['style'] });
 
             // Format on blur
             el.addEventListener('blur', function(){ cfgFmtNational(el, iti); });
@@ -1166,10 +1168,9 @@ add_action( 'wp_footer', function () {
                 }
             });
 
-            // Re-format when country changes; also re-fix padding (dial code width changes per country)
+            // Re-format when country changes (padding is handled by MutationObserver above)
             itiWrap && itiWrap.addEventListener('countrychange', function(){
                 cfgFmtNational(el, iti);
-                cfgFixItiPadding();
             });
         }
 
