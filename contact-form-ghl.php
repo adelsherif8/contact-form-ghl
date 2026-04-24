@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.48
+ * Version:     2.5.49
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1059,15 +1059,17 @@ add_action( 'wp_head', function () {
     echo '<style>
         .iti{display:block!important;width:100%!important;position:relative!important;}
         .iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;}
-        .iti__flag-container{position:absolute!important;top:0!important;bottom:0!important;left:0!important;right:auto!important;padding:1px!important;z-index:10!important;background:transparent!important;}
-        .iti__selected-flag{display:flex!important;align-items:center!important;height:100%!important;padding:0 6px 0 8px!important;background:transparent!important;border-radius:0!important;cursor:pointer!important;outline:none!important;border:none!important;box-shadow:none!important;}
-        .iti__flag{display:inline-block!important;background-image:url("https://cdn.jsdelivr.net/npm/intl-tel-input@23/build/img/flags.webp")!important;background-color:transparent!important;border-radius:0!important;box-shadow:1px 1px 3px rgba(0,0,0,.25)!important;}
-        .iti__arrow{display:inline-block!important;width:0!important;height:0!important;border-top:4px solid #555!important;border-left:3px solid transparent!important;border-right:3px solid transparent!important;background:transparent!important;margin-left:6px!important;}
-        .iti__selected-dial-code{font-size:.875rem!important;color:inherit!important;background:transparent!important;border:none!important;}
-        .iti__dropdown-content{border-radius:8px!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;background:#fff!important;}
+        /* v23: country selector is a <button> — must neutralize Elementor button overrides */
+        .iti__selected-country{display:flex!important;align-items:center!important;gap:4px!important;background:transparent!important;background-color:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0 8px!important;color:inherit!important;cursor:pointer!important;height:100%!important;font-size:.875rem!important;font-weight:normal!important;text-transform:none!important;letter-spacing:normal!important;width:auto!important;margin:0!important;min-height:0!important;}
+        .iti__selected-country:hover,.iti__selected-country:focus{background:rgba(0,0,0,.05)!important;outline:none!important;box-shadow:none!important;}
+        .iti__selected-country-primary{display:flex!important;align-items:center!important;gap:6px!important;}
+        .iti__country-container{position:absolute!important;top:0!important;bottom:0!important;left:0!important;padding:1px!important;z-index:10!important;background:transparent!important;}
+        .iti__flag{display:inline-block!important;background-color:transparent!important;border-radius:0!important;box-shadow:1px 1px 3px rgba(0,0,0,.25)!important;}
+        .iti__arrow{display:inline-block!important;width:0!important;height:0!important;border-top:4px solid #555!important;border-left:3px solid transparent!important;border-right:3px solid transparent!important;background:transparent!important;font-size:0!important;line-height:0!important;}
+        .iti__selected-dial-code{font-size:.875rem!important;color:inherit!important;background:transparent!important;}
+        .iti__dropdown-content{border-radius:8px!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;background:#fff!important;z-index:9999!important;}
         .iti__country-list{background:#fff!important;}
-        .iti--separate-dial-code .iti__selected-flag{background-color:transparent!important;}
-        .iti--separate-dial-code input[type="tel"]{padding-left:90px!important;}
+        .iti__search-input{box-sizing:border-box!important;width:100%!important;}
     </style>';
 } );
 
