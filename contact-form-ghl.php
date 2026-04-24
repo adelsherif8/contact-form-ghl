@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.57
+ * Version:     2.5.58
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1116,6 +1116,15 @@ add_action( 'wp_footer', function () {
             var itiWrap = el.closest('.iti');
             if (itiWrap) itiWrap.classList.add('cfg-iti');
 
+            // ITI v18 separateDialCode sets padding-left via inline style, but any
+            // stylesheet rule with !important on the input overrides it. Re-apply
+            // with !important so the flag+dialcode area is never covered by input text.
+            function cfgFixItiPadding() {
+                var pl = el.style.paddingLeft;
+                if (pl) el.style.setProperty('padding-left', pl, 'important');
+            }
+            cfgFixItiPadding();
+
             // Format on blur
             el.addEventListener('blur', function(){ cfgFmtNational(el, iti); });
 
@@ -1157,9 +1166,10 @@ add_action( 'wp_footer', function () {
                 }
             });
 
-            // Re-format when country changes
+            // Re-format when country changes; also re-fix padding (dial code width changes per country)
             itiWrap && itiWrap.addEventListener('countrychange', function(){
                 cfgFmtNational(el, iti);
+                cfgFixItiPadding();
             });
         }
 
