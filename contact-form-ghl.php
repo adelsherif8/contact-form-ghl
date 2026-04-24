@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.53
+ * Version:     2.5.54
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1298,6 +1298,11 @@ add_action( 'admin_menu', function () {
     add_submenu_page( CFG_SLUG, 'Settings — Contact Form GHL', 'Settings', 'manage_options', CFG_SLUG, 'cfg_settings_page' );
 } );
 
+add_action( 'admin_enqueue_scripts', function ( $hook ) {
+    if ( strpos( $hook, CFG_SLUG ) === false ) return;
+    wp_enqueue_media();
+} );
+
 // ═══════════════════════════════════════════════════════════════
 //  SETTINGS PAGE
 // ═══════════════════════════════════════════════════════════════
@@ -2434,14 +2439,40 @@ function cfg_settings_page() {
                 });
             }
 
+            window.algChooseImg = function(btn) {
+                var wrapper = btn.closest('.alg-img-cell');
+                var urlInput = wrapper.querySelector('input.alg-img-url');
+                var frame = wp.media({ title: 'Choose Image', button: { text: 'Use this image' }, multiple: false });
+                frame.on('select', function() {
+                    var att = frame.state().get('selection').first().toJSON();
+                    urlInput.value = att.url;
+                    var prev = wrapper.querySelector('.alg-img-prev');
+                    prev.innerHTML = '<img src="'+att.url+'" style="width:36px;height:36px;object-fit:cover;border-radius:3px;border:1px solid #ddd;">';
+                });
+                frame.open();
+            };
+            window.algRemoveImg = function(btn) {
+                var wrapper = btn.closest('.alg-img-cell');
+                wrapper.querySelector('input.alg-img-url').value = '';
+                wrapper.querySelector('.alg-img-prev').innerHTML = '<span style="width:36px;height:36px;background:#f0f0f1;border-radius:3px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:16px;color:#bbb;">+</span>';
+            };
+
             function mkChoice(label, emoji, img) {
                 var div = document.createElement('div');
-                div.style.cssText = 'display:grid;grid-template-columns:2fr 52px 3fr 28px;gap:4px;align-items:center;';
+                div.style.cssText = 'display:grid;grid-template-columns:2fr 52px auto 28px;gap:4px;align-items:center;';
                 var hq = function(s){ return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); };
+                var prevHtml = img
+                    ? '<img src="'+hq(img)+'" style="width:36px;height:36px;object-fit:cover;border-radius:3px;border:1px solid #ddd;">'
+                    : '<span style="width:36px;height:36px;background:#f0f0f1;border-radius:3px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:16px;color:#bbb;">+</span>';
                 div.innerHTML =
                     '<input type="text" placeholder="Label" value="'+hq(label)+'" style="padding:5px 8px;border:1px solid #8c8f94;border-radius:3px;font-size:13px;width:100%;"/>' +
                     '<input type="text" placeholder="😬" value="'+hq(emoji)+'" style="padding:5px 4px;border:1px solid #8c8f94;border-radius:3px;font-size:1.15rem;text-align:center;width:100%;"/>' +
-                    '<input type="text" placeholder="https://... (optional)" value="'+hq(img)+'" style="padding:5px 8px;border:1px solid #8c8f94;border-radius:3px;font-size:13px;width:100%;"/>' +
+                    '<div class="alg-img-cell" style="display:flex;align-items:center;gap:4px;">' +
+                      '<div class="alg-img-prev" style="flex-shrink:0;">'+prevHtml+'</div>' +
+                      '<button type="button" class="button" style="font-size:11px;padding:2px 6px;height:auto;white-space:nowrap;" onclick="algChooseImg(this)">Choose Image</button>' +
+                      '<button type="button" title="Remove image" onclick="algRemoveImg(this)" style="background:none;border:none;cursor:pointer;color:#999;font-size:11px;padding:0;line-height:1;">✕</button>' +
+                      '<input type="hidden" class="alg-img-url" value="'+hq(img)+'"/>' +
+                    '</div>' +
                     '<button type="button" title="Remove choice" onclick="this.closest(\'div\').remove()" style="background:none;border:none;cursor:pointer;color:#b32d2e;font-size:1rem;padding:0;line-height:1;">✕</button>';
                 return div;
             }
@@ -2489,8 +2520,9 @@ function cfg_settings_page() {
                         step.field_key = gf('.alg-f-key');
                         step.choices   = [];
                         card.querySelectorAll('.alg-choices-container > div').forEach(function(row){
-                            var ins = row.querySelectorAll('input');
-                            step.choices.push({label:ins[0]?ins[0].value:'', emoji:ins[1]?ins[1].value:'', img:ins[2]?ins[2].value:''});
+                            var texts = row.querySelectorAll('input[type=text]');
+                            var imgEl = row.querySelector('input.alg-img-url');
+                            step.choices.push({label:texts[0]?texts[0].value:'', emoji:texts[1]?texts[1].value:'', img:imgEl?imgEl.value:''});
                         });
                     } else if (type === 'contact') {
                         step.title    = gf('.alg-f-title');
@@ -5989,7 +6021,8 @@ function cfg_aligner_shortcode() {
 
     ob_start(); ?>
 <style>
-#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100vw;max-width:100vw;margin-left:calc(50% - 50vw);overflow-x:hidden;}
+html,body{overflow-x:hidden!important;max-width:100%!important;}
+#<?= $uid ?>-wrap{font-family:<?= esc_attr($font['stack']) ?>;color:<?= $tc ?>;box-sizing:border-box;background:<?= $bg ?>;min-height:100vh;width:100%;max-width:100%;overflow-x:hidden;}
 #<?= $uid ?>-wrap *,#<?= $uid ?>-wrap *::before,#<?= $uid ?>-wrap *::after{box-sizing:border-box;}
 /* Top bar */
 #<?= $uid ?>-topbar{width:100%;padding:0.85rem 0;border-bottom:1px solid <?= esc_attr($s['border_color']) ?>;}
@@ -6002,7 +6035,6 @@ function cfg_aligner_shortcode() {
 #<?= $uid ?>-grid{max-width:960px;margin:0 auto;padding:<?= $alg_tp ?> 2rem <?= $alg_bp ?>;display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:2.5rem;align-items:start;}
 /* ── RESPONSIVE ── */
 @media(max-width:860px){
-  #<?= $uid ?>-wrap{width:100%;max-width:100%;margin-left:0;}
   #<?= $uid ?>-topbar-inner{padding:0 1.5rem;}
   #<?= $uid ?>-grid{grid-template-columns:1fr!important;gap:1rem;padding-left:1.5rem;padding-right:1.5rem;}
 }
@@ -6149,19 +6181,25 @@ function cfg_aligner_shortcode() {
             elseif ( $type === 'content' ) {
                 if ( $i > 0 ) echo '<div class="' . $uid . '-backrow"><button class="' . $uid . '-ghost" onclick="' . $uid . 'go(' . ( $i - 1 ) . ')"><i class="fa-solid fa-arrow-left" style="font-size:0.8em;"></i> Go back</button></div>';
                 $bullets = array_filter( array_map( 'trim', explode( "\n", $step['bullets'] ?? '' ) ) );
-                echo '<h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:700;color:' . esc_attr($s['text_color']) . ';margin:0 0 0.6rem;letter-spacing:-0.025em;line-height:1.2;">' . esc_html( $step['title'] ?? '' ) . '</h2>';
-                if ( ! empty( $step['subtitle'] ) ) echo '<p style="color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.75rem;font-size:0.95rem;line-height:1.7;">' . esc_html( $step['subtitle'] ) . '</p>';
+                // Pill badge label above heading (re-uses title if bullets exist to frame it as a benefit screen)
                 if ( $bullets ) {
-                    echo '<div style="margin-bottom:2rem;">';
+                    echo '<div style="display:inline-flex;align-items:center;gap:0.35rem;background:' . $accent . '1a;border:1px solid ' . $accent . '33;border-radius:9999px;padding:0.3rem 0.85rem;font-size:0.72rem;font-weight:700;color:' . $accent . ';text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.875rem;">';
+                    echo '<i class="fa-solid fa-gift" style="font-size:0.65rem;"></i> ' . esc_html( $step['title'] ?? 'Special Offer' ) . '</div>';
+                    // Bullets as the hero — big, clear, each on its own line
+                    echo '<div style="margin-bottom:1.75rem;">';
                     foreach ( $bullets as $b ) {
-                        echo '<div style="display:flex;align-items:flex-start;gap:0.85rem;padding:0.65rem 0;border-bottom:1px solid ' . esc_attr($s['border_color']) . ';">';
-                        echo '<i class="fa-solid fa-check" style="color:' . $accent . ';font-size:0.8rem;margin-top:0.3rem;flex-shrink:0;"></i>';
-                        echo '<span style="color:' . esc_attr($s['text_color']) . ';font-size:0.9rem;line-height:1.55;">' . esc_html( $b ) . '</span>';
+                        echo '<div style="display:flex;align-items:flex-start;gap:0.875rem;padding:0.8rem 0;border-bottom:1px solid ' . esc_attr($s['border_color']) . ';">';
+                        echo '<div style="flex-shrink:0;width:1.6rem;height:1.6rem;background:' . $accent . '1a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:0.1rem;">';
+                        echo '<i class="fa-solid fa-check" style="color:' . $accent . ';font-size:0.7rem;"></i></div>';
+                        echo '<span style="color:' . esc_attr($s['text_color']) . ';font-size:1rem;font-weight:500;line-height:1.5;">' . esc_html( $b ) . '</span>';
                         echo '</div>';
                     }
                     echo '</div>';
+                } else {
+                    echo '<h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:700;color:' . esc_attr($s['text_color']) . ';margin:0 0 0.6rem;letter-spacing:-0.025em;line-height:1.2;">' . esc_html( $step['title'] ?? '' ) . '</h2>';
+                    if ( ! empty( $step['subtitle'] ) ) echo '<p style="color:' . esc_attr($s['muted_color']) . ';margin:0 0 1.75rem;font-size:0.95rem;line-height:1.7;">' . esc_html( $step['subtitle'] ) . '</p>';
                 }
-                echo '<button class="' . $uid . '-btn" style="font-size:0.975rem;padding:0.875rem 2.25rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Continue' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
+                echo '<button class="' . $uid . '-btn" style="font-size:0.975rem;padding:0.875rem 2.25rem;width:100%;box-sizing:border-box;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Continue' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
             }
 
             // ── CONTACT FORM ───────────────────────────────────────
