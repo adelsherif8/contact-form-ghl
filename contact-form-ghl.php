@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.44
+ * Version:     2.5.45
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5956,6 +5956,7 @@ function cfg_aligner_shortcode() {
     $accent = sanitize_hex_color( $s['alg_accent_color'] ?? '#C9A84C' ) ?: '#C9A84C';
     $bg     = sanitize_hex_color( $s['bg_color'] ) ?: '#ffffff';
     $tc     = sanitize_hex_color( $s['text_color'] ) ?: '#111827';
+    $br     = absint( $s['btn_radius']   ) . 'px';
     $uid    = 'alg' . wp_rand( 1000, 9999 );
     $nonce  = wp_create_nonce( 'cfg_aligner_submit' );
     $ajax   = admin_url( 'admin-ajax.php' );
@@ -6612,6 +6613,7 @@ add_shortcode( 'implant_estimator_ghl', 'cfg_implant_shortcode' );
 function cfg_implant_shortcode() {
     $s           = cfg_get();
     $accent      = sanitize_hex_color( $s['imp_accent_color'] ?? '#1e3a5f' ) ?: '#1e3a5f';
+    $br          = absint( $s['btn_radius'] ) . 'px';
     $uid         = 'imp' . wp_rand( 1000, 9999 );
     $nonce       = wp_create_nonce( 'cfg_implant_submit' );
     $ajax_url    = esc_url( admin_url( 'admin-ajax.php' ) );
