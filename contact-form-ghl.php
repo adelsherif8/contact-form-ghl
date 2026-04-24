@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.43
+ * Version:     2.5.44
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -91,6 +91,7 @@ function cfg_defaults() {
         'font_weight_bold'       => '600',
         'card_radius'            => '6',
         'input_radius'           => '4',
+        'btn_radius'             => '4',
         'card_border'            => '1',
         'card_shadow'            => '1',
         'btn_hover_bg_color'     => '',
@@ -1717,8 +1718,12 @@ function cfg_settings_page() {
                 <input type="text" name="<?= CFG_OPTION ?>[card_radius]" value="<?= esc_attr( $s['card_radius'] ) ?>" maxlength="4"/>
             </div>
             <div class="cfg-field">
-                <label>Input / Button Border Radius (px)</label>
+                <label>Input Border Radius (px)</label>
                 <input type="text" name="<?= CFG_OPTION ?>[input_radius]" value="<?= esc_attr( $s['input_radius'] ) ?>" maxlength="4"/>
+            </div>
+            <div class="cfg-field">
+                <label>Button Border Radius (px)</label>
+                <input type="text" name="<?= CFG_OPTION ?>[btn_radius]" value="<?= esc_attr( $s['btn_radius'] ) ?>" maxlength="4"/>
             </div>
             <div class="cfg-field">
                 <label>Page Top Padding (rem) <span class="cfg-badge">all shortcode pages</span></label>
@@ -5082,6 +5087,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
     $cr  = absint( $s['card_radius'] )  . 'px';
     $ir  = absint( $s['input_radius'] ) . 'px';
+    $br  = absint( $s['btn_radius']   ) . 'px';
     $pri = esc_attr( $s['primary_color'] );
     $bg  = esc_attr( $s['bg_color'] );
     $tc  = esc_attr( $s['text_color'] );
@@ -5177,7 +5183,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                     <div id="cfg-success" style="display:none;padding:0.75rem 1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:<?= $ir ?>;color:#15803d;font-size:0.875rem;margin-bottom:1rem;"><?= esc_html( $s['success_msg'] ) ?></div>
 
                     <div style="display:flex;flex-direction:column;gap:0.875rem;">
-                        <button type="submit" id="cfg-submit-btn" style="width:100%;padding:0.875rem 1.5rem;background:<?= $pri ?>;color:#fff;border:none;border-radius:<?= $ir ?>;font-size:0.9rem;font-weight:<?= $bw ?>;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;font-family:inherit;transition:filter 0.15s;">
+                        <button type="submit" id="cfg-submit-btn" style="width:100%;padding:0.875rem 1.5rem;background:<?= $pri ?>;color:#fff;border:none;border-radius:<?= $br ?>;font-size:0.9rem;font-weight:<?= $bw ?>;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;font-family:inherit;transition:filter 0.15s;">
                             <?= cfg_icon( 'message', 16 ) ?>
                             <span id="cfg-submit-label"><?= esc_html( $s['btn_text'] ) ?></span>
                         </button>
@@ -5301,6 +5307,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
 
     $cr  = absint( $s['card_radius'] )  . 'px';
     $ir  = absint( $s['input_radius'] ) . 'px';
+    $br  = absint( $s['btn_radius']   ) . 'px';
     $pri = esc_attr( $s['primary_color'] );
     $bg  = esc_attr( $s['bg_color'] );
     $tc  = esc_attr( $s['text_color'] );
@@ -5379,7 +5386,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
                 <div id="cfge-success" style="display:none;padding:0.75rem 1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:<?= $ir ?>;color:#15803d;font-size:0.875rem;margin-bottom:1rem;"><?= esc_html( $s['success_msg'] ) ?></div>
 
                 <div style="display:flex;flex-direction:column;gap:0.875rem;">
-                    <button type="submit" id="cfge-submit-btn" style="width:100%;padding:0.875rem 1.5rem;background:<?= $pri ?>;color:#fff;border:none;border-radius:<?= $ir ?>;font-size:0.9rem;font-weight:<?= $bw ?>;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;font-family:inherit;transition:filter 0.15s;">
+                    <button type="submit" id="cfge-submit-btn" style="width:100%;padding:0.875rem 1.5rem;background:<?= $pri ?>;color:#fff;border:none;border-radius:<?= $br ?>;font-size:0.9rem;font-weight:<?= $bw ?>;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;font-family:inherit;transition:filter 0.15s;">
                         <?= cfg_icon( 'message', 16 ) ?>
                         <span id="cfge-submit-label"><?= esc_html( $s['btn_text'] ) ?></span>
                     </button>
@@ -5480,6 +5487,7 @@ function cfg_booking_method_shortcode() {
 
     $cr  = absint( $s['card_radius'] )  . 'px';
     $ir  = absint( $s['input_radius'] ) . 'px';
+    $br  = absint( $s['btn_radius']   ) . 'px';
     $pri = esc_attr( $s['primary_color'] );
     $bg  = esc_attr( $s['bg_color'] );
     $tc  = esc_attr( $s['text_color'] );
@@ -5538,7 +5546,7 @@ function cfg_booking_method_shortcode() {
                     <?php endif; ?>
                     <h2 style="margin:0 0 0.75rem;font-size:1.375rem;font-weight:<?= $bw ?>;color:<?= $tc ?>;"><?= esc_html( $s['bm_card1_heading'] ) ?></h2>
                     <p style="margin:0 0 2rem;font-size:0.9rem;color:<?= $mc ?>;flex:1;"><?= esc_html( $s['bm_card1_body'] ) ?></p>
-                    <a href="<?= esc_attr( $s['bm_card1_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $ir ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+                    <a href="<?= esc_attr( $s['bm_card1_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $br ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
                         <?= cfg_icon( esc_attr( $s['bm_card1_icon'] ), 16 ) ?>
                         <?= esc_html( $s['bm_card1_btn_text'] ) ?>
                     </a>
@@ -5554,7 +5562,7 @@ function cfg_booking_method_shortcode() {
                     <?php endif; ?>
                     <h2 style="margin:0 0 0.75rem;font-size:1.375rem;font-weight:<?= $bw ?>;color:<?= $tc ?>;"><?= esc_html( $s['bm_card2_heading'] ) ?></h2>
                     <p style="margin:0 0 2rem;font-size:0.9rem;color:<?= $mc ?>;flex:1;"><?= esc_html( $s['bm_card2_body'] ) ?></p>
-                    <a href="<?= esc_url( $s['bm_card2_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $ir ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+                    <a href="<?= esc_url( $s['bm_card2_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $br ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
                         <?= cfg_icon( esc_attr( $s['bm_card2_icon'] ), 16 ) ?>
                         <?= esc_html( $s['bm_card2_btn_text'] ) ?>
                     </a>
@@ -5572,7 +5580,7 @@ function cfg_booking_method_shortcode() {
                     <h2 style="margin:0 0 0.75rem;font-size:1.375rem;font-weight:<?= $bw ?>;color:<?= $tc ?>;"><?= esc_html( $s['bm_card3_heading'] ) ?></h2>
                     <p style="margin:0 0 2rem;font-size:0.9rem;color:<?= $mc ?>;flex:1;"><?= esc_html( $s['bm_card3_body'] ) ?></p>
                     <?php if ( $s['bm_card3_btn_url'] ): ?>
-                    <a href="<?= esc_url( $s['bm_card3_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $ir ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+                    <a href="<?= esc_url( $s['bm_card3_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $br ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
                         <?= cfg_icon( esc_attr( $s['bm_card3_icon'] ), 16 ) ?>
                         <?= esc_html( $s['bm_card3_btn_text'] ) ?>
                     </a>
@@ -5592,7 +5600,7 @@ function cfg_booking_method_shortcode() {
                     <h2 style="margin:0 0 0.75rem;font-size:1.375rem;font-weight:<?= $bw ?>;color:<?= $tc ?>;"><?= esc_html( $s['bm_card4_heading'] ) ?></h2>
                     <p style="margin:0 0 2rem;font-size:0.9rem;color:<?= $mc ?>;flex:1;"><?= esc_html( $s['bm_card4_body'] ) ?></p>
                     <?php if ( $s['bm_card4_btn_url'] ): ?>
-                    <a href="<?= esc_url( $s['bm_card4_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $ir ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
+                    <a href="<?= esc_url( $s['bm_card4_btn_url'] ) ?>" style="display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;width:100%;padding:0.875rem 1rem;background:<?= $pri ?>;color:#fff;border-radius:<?= $br ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:filter 0.15s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">
                         <?= cfg_icon( esc_attr( $s['bm_card4_icon'] ), 16 ) ?>
                         <?= esc_html( $s['bm_card4_btn_text'] ) ?>
                     </a>
@@ -5611,12 +5619,12 @@ function cfg_booking_method_shortcode() {
             <p style="margin:0 0 2.5rem;font-size:1.05rem;color:rgba(255,255,255,0.8);"><?= esc_html( $s['bm_cta_body'] ) ?></p>
             <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;">
                 <?php if ( $s['bm_cta_btn1_text'] && $s['bm_cta_btn1_url'] ): ?>
-                <a href="<?= esc_url( $s['bm_cta_btn1_url'] ) ?>" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;background:#fff;color:<?= esc_attr( $s['bm_cta_bg_color'] ) ?>;border-radius:<?= $ir ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                <a href="<?= esc_url( $s['bm_cta_btn1_url'] ) ?>" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;background:#fff;color:<?= esc_attr( $s['bm_cta_bg_color'] ) ?>;border-radius:<?= $br ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                     <?= esc_html( $s['bm_cta_btn1_text'] ) ?> <?= cfg_icon( 'arrow', 16 ) ?>
                 </a>
                 <?php endif; ?>
                 <?php if ( $s['bm_cta_btn2_text'] && $s['bm_cta_btn2_url'] ): ?>
-                <a href="<?= esc_attr( $s['bm_cta_btn2_url'] ) ?>" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;color:rgba(255,255,255,0.75);border-radius:<?= $ir ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;border:1px solid rgba(255,255,255,0.3);transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.75)'">
+                <a href="<?= esc_attr( $s['bm_cta_btn2_url'] ) ?>" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.875rem 2rem;color:rgba(255,255,255,0.75);border-radius:<?= $br ?>;font-size:0.875rem;font-weight:<?= $bw ?>;text-decoration:none;border:1px solid rgba(255,255,255,0.3);transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.75)'">
                     <?= cfg_icon( 'phone', 16 ) ?>
                     <?= esc_html( $s['bm_cta_btn2_text'] ) ?>
                 </a>
@@ -6001,7 +6009,7 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-ghost{background:none;border:none;color:<?= esc_attr($s['muted_color']) ?>;font-size:0.875rem;font-weight:500;cursor:pointer;font-family:inherit;transition:color 0.15s;display:inline-flex;align-items:center;gap:0.45rem;padding:0;}
 .<?= $uid ?>-ghost:hover{color:<?= $tc ?>;}
 /* Answer cards — clean bordered rows like implant form */
-.<?= $uid ?>-card{cursor:pointer;border:1px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= absint($s['input_radius']) ?>px;padding:1.05rem 1.25rem;font-size:0.95rem;font-weight:500;color:<?= $tc ?>;background:<?= $bg ?>;transition:border-color 0.17s,background 0.17s;user-select:none;display:flex;align-items:center;text-align:left;}
+.<?= $uid ?>-card{cursor:pointer;border:1px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= $br ?>;padding:1.05rem 1.25rem;font-size:0.95rem;font-weight:500;color:<?= $tc ?>;background:<?= $bg ?>;transition:border-color 0.17s,background 0.17s;user-select:none;display:flex;align-items:center;text-align:left;}
 .<?= $uid ?>-card:hover{border-color:<?= $tc ?>;background:rgba(0,0,0,0.02);}
 .<?= $uid ?>-card.alg-sel{border-color:<?= $tc ?>;border-width:2px;background:rgba(0,0,0,0.025);font-weight:600;}
 /* Choice column */
@@ -6014,7 +6022,7 @@ function cfg_aligner_shortcode() {
 @media(max-width:480px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}}
 /* CTA button */
-.<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:<?= absint($s['input_radius']) ?>px;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
+.<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:<?= $br ?>;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
 .<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:'.esc_attr($s['btn_hover_bg_color']).'!important;'.($s['btn_hover_text_color']?'color:'.esc_attr($s['btn_hover_text_color']).'!important;':''):'filter:brightness(1.08);'?>}
 .<?= $uid ?>-btn:active{transform:scale(0.97);}
 /* Inputs */
@@ -7956,6 +7964,7 @@ function cfg_review_shortcode( $atts = [] ) {
     $nw  = esc_attr( $s['font_weight_normal'] );
     $cr  = absint( $s['card_radius'] )  . 'px';
     $ir  = absint( $s['input_radius'] ) . 'px';
+    $br  = absint( $s['btn_radius']   ) . 'px';
 
     $card_shadow = $s['card_shadow'] === '1' ? 'box-shadow:0 4px 24px rgba(0,0,0,0.08);' : '';
     $card_border = $s['card_border'] === '1' ? "border:1px solid {$bc};" : '';
@@ -8032,7 +8041,7 @@ function cfg_review_shortcode( $atts = [] ) {
 .rvf-review-box{width:100%;min-height:130px;padding:.8rem 1rem;border:1.5px solid <?= $bc ?>;border-radius:<?= $ir ?>;font-size:.9rem;color:<?= $tc ?>;line-height:1.6;resize:vertical;font-family:inherit;background:<?= $bg ?>;}
 .rvf-review-box:focus{outline:none;border-color:<?= $pri ?>;box-shadow:0 0 0 3px <?= $pri ?>33;}
 .rvf-review-actions{display:flex;gap:8px;margin:10px 0;}
-.rvf-regen-btn,.rvf-copy-btn{flex:1;padding:.5rem .75rem;border-radius:<?= $ir ?>;font-size:.84rem;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid;}
+.rvf-regen-btn,.rvf-copy-btn{flex:1;padding:.5rem .75rem;border-radius:<?= $br ?>;font-size:.84rem;cursor:pointer;font-family:inherit;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid;}
 .rvf-regen-btn{background:<?= $bg ?>;border-color:<?= $bc ?>;color:<?= $tc ?>;}
 .rvf-regen-btn:hover{filter:brightness(0.96);}
 .rvf-copy-btn{background:#ecfdf5;border-color:#a7f3d0;color:#047857;}
