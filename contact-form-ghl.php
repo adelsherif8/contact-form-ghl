@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.56
+ * Version:     2.5.57
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5974,6 +5974,24 @@ function cfg_aligner_get() {
 
 add_action( 'admin_init', function () {
     register_setting( CFG_SLUG, CFG_ALG_OPTION, [ 'sanitize_callback' => 'cfg_aligner_sanitize' ] );
+
+    // One-time migration: fix bullets corrupted by double wp_unslash (literal n instead of newlines).
+    // Pattern: a word char / closing paren followed by 'n' then an uppercase letter = corrupted \n.
+    $data = get_option( CFG_ALG_OPTION );
+    if ( is_array( $data ) ) {
+        $changed = false;
+        foreach ( $data as &$step ) {
+            if ( ! empty( $step['bullets'] ) && strpos( $step['bullets'], "\n" ) === false ) {
+                $fixed = preg_replace( '/([a-z0-9$)])n([A-Z])/', "$1\n$2", $step['bullets'] );
+                if ( $fixed !== $step['bullets'] ) {
+                    $step['bullets'] = $fixed;
+                    $changed = true;
+                }
+            }
+        }
+        unset( $step );
+        if ( $changed ) update_option( CFG_ALG_OPTION, $data );
+    }
 } );
 
 function cfg_aligner_sanitize( $input ) {
