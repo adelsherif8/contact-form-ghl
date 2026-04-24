@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.46
+ * Version:     2.5.47
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5956,6 +5956,7 @@ function cfg_aligner_shortcode() {
     $accent = sanitize_hex_color( $s['alg_accent_color'] ?? '#C9A84C' ) ?: '#C9A84C';
     $bg     = sanitize_hex_color( $s['bg_color'] ) ?: '#ffffff';
     $tc     = sanitize_hex_color( $s['text_color'] ) ?: '#111827';
+    $ir     = absint( $s['input_radius'] ) . 'px';
     $br     = absint( $s['btn_radius']   ) . 'px';
     $uid    = 'alg' . wp_rand( 1000, 9999 );
     $nonce  = wp_create_nonce( 'cfg_aligner_submit' );
@@ -6022,12 +6023,12 @@ function cfg_aligner_shortcode() {
 .<?= $uid ?>-img2 .<?= $uid ?>-card:hover,.<?= $uid ?>-img3 .<?= $uid ?>-card:hover,.<?= $uid ?>-img2 .<?= $uid ?>-card.alg-sel,.<?= $uid ?>-img3 .<?= $uid ?>-card.alg-sel{transform:translateY(-2px);}
 @media(max-width:480px){.<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
 .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}}
-/* CTA button */
-.<?= $uid ?>-btn{display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:<?= $accent ?>;color:#fff;border:none;border-radius:<?= $br ?>;font-weight:600;cursor:pointer;font-family:inherit;transition:filter 0.18s,transform 0.12s;letter-spacing:0.01em;}
-.<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:'.esc_attr($s['btn_hover_bg_color']).'!important;'.($s['btn_hover_text_color']?'color:'.esc_attr($s['btn_hover_text_color']).'!important;':''):'filter:brightness(1.08);'?>}
-.<?= $uid ?>-btn:active{transform:scale(0.97);}
+/* CTA button — !important overrides Elementor kit selectors */
+.<?= $uid ?>-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:0.5rem!important;background:<?= $accent ?>!important;color:#fff!important;border:none!important;border-radius:<?= $br ?>!important;font-weight:600!important;cursor:pointer!important;font-family:inherit!important;transition:filter 0.18s,transform 0.12s!important;letter-spacing:0.01em!important;padding:revert;}
+.<?= $uid ?>-btn:hover{<?= $s['btn_hover_bg_color'] ? 'background:'.esc_attr($s['btn_hover_bg_color']).'!important;'.($s['btn_hover_text_color']?'color:'.esc_attr($s['btn_hover_text_color']).'!important;':''):'filter:brightness(1.08)!important;'?>}
+.<?= $uid ?>-btn:active{transform:scale(0.97)!important;}
 /* Inputs */
-.<?= $uid ?>-input{width:100%;padding:0.75rem 1rem;border:1px solid <?= esc_attr($s['border_color']) ?>;border-radius:<?= absint($s['input_radius']) ?>px;font-size:0.9rem;outline:none;font-family:inherit;color:<?= $tc ?>;background:<?= $bg ?>;transition:border-color 0.2s,box-shadow 0.2s;}
+.<?= $uid ?>-input{width:100%!important;padding:0.75rem 1rem!important;border:1px solid <?= esc_attr($s['border_color']) ?>!important;border-radius:<?= $ir ?>!important;font-size:0.9rem!important;outline:none!important;font-family:inherit!important;color:<?= $tc ?>!important;background:<?= $bg ?>!important;transition:border-color 0.2s,box-shadow 0.2s!important;}
 .<?= $uid ?>-input:focus{border-color:<?= $accent ?>;box-shadow:0 0 0 3px <?= $accent ?>22;}
 .<?= $uid ?>-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;}
 @media(max-width:480px){.<?= $uid ?>-fgrid{grid-template-columns:1fr;}}
