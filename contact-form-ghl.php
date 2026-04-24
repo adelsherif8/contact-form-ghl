@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.59
+ * Version:     2.5.60
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6076,7 +6076,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 }
 /* Slider — IDs/classes used by JS must not change */
 #<?= $uid ?>-outer{overflow:hidden;position:relative;transition:height 0.38s ease;width:100%;}
-#<?= $uid ?>-slider{display:flex;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
+#<?= $uid ?>-slider{display:flex;width:100%;transition:transform 0.42s cubic-bezier(0.4,0,0.2,1);will-change:transform;}
 .<?= $uid ?>-step{flex:0 0 100%;min-width:0;padding:0.5rem 0 2rem;overflow-wrap:break-word;word-break:break-word;}
 /* Back link row */
 .<?= $uid ?>-backrow{padding:0.25rem 0 1.25rem;}
