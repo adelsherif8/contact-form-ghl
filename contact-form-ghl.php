@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.49
+ * Version:     2.5.50
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1058,7 +1058,7 @@ add_action( 'wp_head', function () {
     echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>';
     echo '<style>
         .iti{display:block!important;width:100%!important;position:relative!important;}
-        .iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;}
+        .iti input[type="tel"]{width:100%!important;box-sizing:border-box!important;padding-left:90px!important;}
         /* v23: country selector is a <button> — must neutralize Elementor button overrides */
         .iti__selected-country{display:flex!important;align-items:center!important;gap:4px!important;background:transparent!important;background-color:transparent!important;border:none!important;border-radius:0!important;box-shadow:none!important;padding:0 8px!important;color:inherit!important;cursor:pointer!important;height:100%!important;font-size:.875rem!important;font-weight:normal!important;text-transform:none!important;letter-spacing:normal!important;width:auto!important;margin:0!important;min-height:0!important;}
         .iti__selected-country:hover,.iti__selected-country:focus{background:rgba(0,0,0,.05)!important;outline:none!important;box-shadow:none!important;}
