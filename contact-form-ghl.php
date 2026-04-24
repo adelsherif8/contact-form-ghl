@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.45
+ * Version:     2.5.46
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6654,7 +6654,7 @@ function cfg_implant_shortcode() {
         $sub_html = $sub
             ? '<span style="display:block;margin-top:.125rem;font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;">' . esc_html($sub) . '</span>'
             : '';
-        return '<button class="option-btn" style="background:hsl(var(--card));padding:1.1rem 1.5rem;border:2px solid hsl(var(--border));border-radius:.75rem;width:100%;text-align:left;cursor:pointer;"'
+        return '<button class="option-btn" style="background:hsl(var(--card));padding:1.1rem 1.5rem;border:2px solid hsl(var(--border));border-radius:var(--br);width:100%;text-align:left;cursor:pointer;"'
              . ' onclick="' . esc_attr($uid) . 'Sel(this,\'' . esc_js($key) . '\',\'' . esc_js($val) . '\',\'' . esc_js($label) . '\',\'' . esc_js($next) . '\')">'
              . '<span style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.875rem;">' . esc_html($label) . '</span>'
              . $sub_html . '</button>';
@@ -6672,7 +6672,7 @@ function cfg_implant_shortcode() {
              . $back_btn
              . '<div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;">'
              . '<div style="flex:1;min-width:0;">'
-             . '<div class="die-question-card" style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);position:relative;">'
+             . '<div class="die-question-card" style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:2rem 2rem 2.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);position:relative;">'
              . '<h2 style="font-family:\'Cormorant Garamond\',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,3vw,2rem);line-height:1.3;margin:0 0 .625rem;">' . esc_html($q) . '</h2>'
              . '<p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;margin:0 0 2rem;">' . esc_html($sub) . '</p>'
              . '<div style="display:flex;flex-direction:column;gap:.75rem;">' . $opts_html . '</div>'
@@ -6690,7 +6690,7 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 #page-header,.page-header,.header-wrapper,.site-header-wrapper,
 .header-container,.top-header{display:none!important;}
 <?php endif; ?>
-#<?= $uid ?>-app{--background:40 20% 97%;--foreground:200 10% 20%;--card:0 0% 100%;--card-foreground:200 10% 20%;--primary:<?= esc_attr($primary_hsl) ?>;--primary-foreground:<?= esc_attr($pfg_hsl) ?>;--secondary:40 18% 93%;--muted:40 12% 94%;--muted-foreground:200 8% 46%;--accent:100 10% 90%;--accent-foreground:100 14% 38%;--border:40 14% 88%;font-family:Inter,sans-serif;background-color:hsl(var(--background));color:hsl(var(--foreground));line-height:1.5;-webkit-font-smoothing:antialiased;margin:0 auto;}
+#<?= $uid ?>-app{--background:40 20% 97%;--foreground:200 10% 20%;--card:0 0% 100%;--card-foreground:200 10% 20%;--primary:<?= esc_attr($primary_hsl) ?>;--primary-foreground:<?= esc_attr($pfg_hsl) ?>;--secondary:40 18% 93%;--muted:40 12% 94%;--muted-foreground:200 8% 46%;--accent:100 10% 90%;--accent-foreground:100 14% 38%;--border:40 14% 88%;--br:<?= $br ?>;--cr:<?= $cr ?>;--ir:<?= $ir ?>;font-family:Inter,sans-serif;background-color:hsl(var(--background));color:hsl(var(--foreground));line-height:1.5;-webkit-font-smoothing:antialiased;margin:0 auto;}
 #<?= $uid ?>-app *,#<?= $uid ?>-app *::before,#<?= $uid ?>-app *::after{box-sizing:border-box;border-width:0;border-style:solid;border-color:hsl(var(--border));}
 #<?= $uid ?>-app h1,#<?= $uid ?>-app h2,#<?= $uid ?>-app h3,#<?= $uid ?>-app h4{font-size:inherit;font-weight:inherit;margin:0;}
 #<?= $uid ?>-app p{margin:0;}
@@ -6708,10 +6708,10 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 #<?= $uid ?>-app .option-btn.selected{border-color:hsl(var(--primary))!important;background-color:hsl(var(--accent)/.6)!important;}
 #<?= $uid ?>-app .option-btn:hover:not(.selected){border-color:hsl(var(--primary)/.5);background:hsl(var(--accent)/.6);box-shadow:0 2px 8px rgba(0,0,0,.06);}
 /* CTA button */
-#<?= $uid ?>-app .imp-cta-btn{display:inline-flex;align-items:center;gap:.625rem;padding:1.1rem 2.75rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));border-radius:.5rem;font-family:Inter,sans-serif;font-size:1rem;font-weight:500;letter-spacing:.02em;border:none;cursor:pointer;transition:background .2s,box-shadow .2s,transform .15s;box-shadow:0 2px 8px hsl(var(--primary)/.25);}
+#<?= $uid ?>-app .imp-cta-btn{display:inline-flex;align-items:center;gap:.625rem;padding:1.1rem 2.75rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));border-radius:<?= $br ?>;font-family:Inter,sans-serif;font-size:1rem;font-weight:500;letter-spacing:.02em;border:none;cursor:pointer;transition:background .2s,box-shadow .2s,transform .15s;box-shadow:0 2px 8px hsl(var(--primary)/.25);}
 #<?= $uid ?>-app .imp-cta-btn:hover{background:hsl(var(--primary)/.85);box-shadow:0 6px 20px hsl(var(--primary)/.35);transform:translateY(-1px);}
 #<?= $uid ?>-app .imp-cta-btn:active{transform:translateY(0);box-shadow:0 2px 8px hsl(var(--primary)/.25);}
-#<?= $uid ?>-app .imp-cta-btn-outline{display:inline-flex;align-items:center;gap:.625rem;padding:1.1rem 2.25rem;background:transparent;color:hsl(var(--foreground));border-radius:.5rem;font-family:Inter,sans-serif;font-size:1rem;font-weight:500;letter-spacing:.02em;border:1.5px solid hsl(var(--border));cursor:pointer;transition:border-color .2s,background .2s,transform .15s;text-decoration:none;}
+#<?= $uid ?>-app .imp-cta-btn-outline{display:inline-flex;align-items:center;gap:.625rem;padding:1.1rem 2.25rem;background:transparent;color:hsl(var(--foreground));border-radius:<?= $br ?>;font-family:Inter,sans-serif;font-size:1rem;font-weight:500;letter-spacing:.02em;border:1.5px solid hsl(var(--border));cursor:pointer;transition:border-color .2s,background .2s,transform .15s;text-decoration:none;}
 #<?= $uid ?>-app .imp-cta-btn-outline:hover{border-color:hsl(var(--primary)/.5);background:hsl(var(--accent)/.5);transform:translateY(-1px);}
 #<?= $uid ?>-app .imp-cta-btn-outline:active{transform:translateY(0);}
 /* Spinner */
@@ -6723,12 +6723,12 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 /* Sidebar blur */
 #<?= $uid ?>-app .imp-range-blurred{filter:blur(8px);transition:filter .6s ease;user-select:none;-webkit-user-select:none;}
 /* Inputs */
-#<?= $uid ?>-app .imp-input{width:100%;padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;font-size:.875rem;outline:none;transition:border-color .2s,box-shadow .2s;background:hsl(var(--card));color:hsl(var(--foreground));}
+#<?= $uid ?>-app .imp-input{width:100%;padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:var(--ir);font-size:.875rem;outline:none;transition:border-color .2s,box-shadow .2s;background:hsl(var(--card));color:hsl(var(--foreground));}
 #<?= $uid ?>-app .imp-input:focus{border-color:hsl(var(--primary));box-shadow:0 0 0 3px hsl(var(--primary)/.12);}
 /* Text question type */
 #<?= $uid ?>-app .die-text-q-wrap{display:flex;flex-direction:column;gap:12px;padding:4px 0;}
-#<?= $uid ?>-app .die-text-input{width:100%;padding:12px 16px;border:1px solid hsl(var(--border));border-radius:8px;font-size:1rem;font-family:inherit;box-sizing:border-box;}
-#<?= $uid ?>-app .die-next-btn{align-self:flex-start;padding:12px 28px;background:hsl(var(--primary));color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;}
+#<?= $uid ?>-app .die-text-input{width:100%;padding:12px 16px;border:1px solid hsl(var(--border));border-radius:var(--ir);font-size:1rem;font-family:inherit;box-sizing:border-box;}
+#<?= $uid ?>-app .die-next-btn{align-self:flex-start;padding:12px 28px;background:hsl(var(--primary));color:#fff;border:none;border-radius:var(--br);font-size:0.9rem;font-weight:600;cursor:pointer;}
 #<?= $uid ?>-app .die-next-btn:hover{opacity:.9;}
 /* Reveal button */
 #<?= $uid ?>-reveal-btn:not(:disabled){cursor:pointer;opacity:1!important;}
@@ -6802,7 +6802,7 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
           </div>
         </div>
         <div id="<?= $uid ?>-intro-card">
-          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden;">
+          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden;">
             <div style="padding:1rem 1.25rem;background:hsl(var(--accent)/.35);border-bottom:1px solid hsl(var(--border));">
               <p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.875rem;">Your Estimate Preview</p>
               <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;margin-top:.125rem;">Factors we'll consider</p>
@@ -6917,7 +6917,7 @@ if ( $show_insurance && $ins_q ) {
       <?= $back_btn ?>
       <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;">
         <div style="flex:1;min-width:0;">
-          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.25rem 1.5rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:1.25rem 1.5rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">
               <div style="width:2.75rem;height:2.75rem;border-radius:9999px;background:hsl(var(--primary)/.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -6927,7 +6927,7 @@ if ( $show_insurance && $ins_q ) {
             <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;margin:0 0 .75rem;">What we factored in</p>
             <div id="<?= $uid ?>-summary-list" style="display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.25rem;"></div>
             <p id="<?= $uid ?>-summary-desc" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;padding:1rem;background:hsl(var(--accent)/.4);border-radius:.75rem;margin-bottom:1.5rem;"></p>
-            <button onclick="<?= $uid ?>Nav('<?= $offer_enabled ? 'offer' : 'lead' ?>')" style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:.5rem;width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;cursor:pointer;transition:box-shadow .2s;border:none;">
+            <button onclick="<?= $uid ?>Nav('<?= $offer_enabled ? 'offer' : 'lead' ?>')" style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:var(--br);width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;cursor:pointer;transition:box-shadow .2s;border:none;">
               Continue to My Estimate
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
@@ -6950,7 +6950,7 @@ if ( $show_insurance && $ins_q ) {
       <?= $back_btn ?>
       <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;">
         <div style="flex:1;min-width:0;">
-          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.5rem 1.75rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:1.5rem 1.75rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <?php if ( $offer_badge ): ?>
             <div style="display:inline-flex;align-items:center;gap:.375rem;background:hsl(var(--primary)/.1);border:1px solid hsl(var(--primary)/.2);border-radius:9999px;padding:.375rem 1rem;font-family:Inter,sans-serif;font-size:.75rem;font-weight:600;color:hsl(var(--primary));text-transform:uppercase;letter-spacing:.06em;margin-bottom:1.25rem;">
               <i class="fa-solid fa-gift" style="font-size:.7rem;"></i> <?= esc_html($offer_badge) ?>
@@ -6999,7 +6999,7 @@ if ( $show_insurance && $ins_q ) {
       <?= $back_btn ?>
       <div class="imp-q-row" style="display:flex;flex-direction:column;gap:1.5rem;">
         <div style="flex:1;min-width:0;">
-          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.25rem 1.5rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:1.25rem 1.5rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <div style="margin-bottom:1.5rem;">
               <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;color:hsl(var(--foreground));font-size:1.5rem;line-height:1.3;margin:0 0 .5rem;"><?= esc_html( $s['imp_contact_title'] ) ?></h2>
               <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;"><?= esc_html( $s['imp_contact_subtitle'] ) ?></p>
@@ -7029,7 +7029,7 @@ if ( $show_insurance && $ins_q ) {
                 <input type="tel" id="<?= $uid ?>-phone" class="imp-input" placeholder="Phone number" autocomplete="tel" required>
               </div>
               <button type="submit" id="<?= $uid ?>-reveal-btn" disabled
-                style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:.5rem;width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;border:none;cursor:not-allowed;opacity:.6;margin-top:4px;transition:box-shadow .2s;">
+                style="display:inline-flex;justify-content:center;align-items:center;gap:.5rem;background:hsl(var(--primary));color:hsl(var(--primary-foreground));padding:1rem 2rem;border-radius:var(--br);width:100%;font-family:Inter,sans-serif;font-weight:500;font-size:1rem;letter-spacing:.025em;border:none;cursor:not-allowed;opacity:.6;margin-top:4px;transition:box-shadow .2s;">
                 <?= esc_html( $s['imp_contact_btn'] ) ?>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
@@ -7037,7 +7037,7 @@ if ( $show_insurance && $ins_q ) {
             <?php if ( $s['imp_contact_btn2_enabled'] === '1' && ! empty( $s['imp_contact_btn2_url'] ) ): ?>
             <div style="text-align:center;margin-top:1rem;">
               <a href="<?= esc_url( $s['imp_contact_btn2_url'] ) ?>"
-                 style="display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.75rem;background:transparent;color:hsl(var(--foreground));border:1.5px solid hsl(var(--border));border-radius:.5rem;font-family:Inter,sans-serif;font-size:.9rem;font-weight:500;text-decoration:none;transition:border-color .2s,background .2s;">
+                 style="display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.75rem;background:transparent;color:hsl(var(--foreground));border:1.5px solid hsl(var(--border));border-radius:var(--br);font-family:Inter,sans-serif;font-size:.9rem;font-weight:500;text-decoration:none;transition:border-color .2s,background .2s;">
                 <?= esc_html( $s['imp_contact_btn2_label'] ) ?>
               </a>
             </div>
@@ -7088,7 +7088,7 @@ if ( $graft_display === 'included' ) {
 $result_sections      = json_decode( $s['imp_result_sections'] ?? '[]', true ) ?: [];
 $result_sections_html = '';
 foreach ( $result_sections as $sec ) {
-    $result_sections_html .= '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:1rem;">';
+    $result_sections_html .= '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:1rem;">';
     $result_sections_html .= '<p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.9375rem;margin-bottom:.875rem;display:flex;align-items:center;gap:.5rem;"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>' . esc_html( $sec['title'] ) . '</p>';
     $result_sections_html .= '<div style="display:flex;flex-direction:column;gap:.5rem;">';
     foreach ( ( $sec['items'] ?? [] ) as $item ) {
@@ -7124,7 +7124,7 @@ $fin_block = ( $show_fin && ! empty( $s['imp_financing_text'] ) )
 $disc_block = ! empty( $s['imp_disclaimer'] )
     ? '<div style="margin-bottom:1.5rem;text-align:center;"><p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.75rem;line-height:1.65;">' . esc_html( $s['imp_disclaimer'] ) . '</p></div>'
     : '';
-$no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">'
+$no_price_card = '<div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:2.5rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1.5rem;">'
     . '<div style="width:3.5rem;height:3.5rem;border-radius:9999px;background:hsl(var(--primary)/.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:hsl(var(--primary));"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>'
     . '<h2 style="font-family:\'Cormorant Garamond\',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(1.5rem,4vw,2rem);line-height:1.25;margin:0 0 1rem;">' . esc_html($no_price_title) . '</h2>'
     . '<p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.9375rem;line-height:1.65;margin:0 auto 2rem;max-width:26rem;">' . esc_html($no_price_sub) . '</p>'
@@ -7146,7 +7146,7 @@ $_badge = function($txt) use ($uid) {
 $_price_col = function( $range_id, $label_id, $subtitle, $includes_html, $graft_id, $extra_inner = '', $includes_label = 'Included in your estimate' ) use ( $uid, $s, $graft_note_inner, $fin_block, $disc_block, $cta_buttons ) {
     ob_start(); ?>
     <div style="flex:1;min-width:0;">
-      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:1rem;padding:2rem 2rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1rem;">
+      <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:2rem 2rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1rem;">
         <p id="<?= $label_id ?>" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.8125rem;font-weight:500;margin-bottom:.5rem;"><?= esc_html( $s['imp_result_title'] ) ?></p>
         <p id="<?= $range_id ?>" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:hsl(var(--foreground));font-size:clamp(2rem,8vw,3.25rem);line-height:1;margin-bottom:.375rem;">Calculating&hellip;</p>
         <p id="<?= $subtitle ?>" style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.7);font-size:.875rem;margin-bottom:<?= $includes_html ? '1.5rem' : '.5rem' ?>;"><?= esc_html( $s['imp_result_subtitle'] ) ?></p>
