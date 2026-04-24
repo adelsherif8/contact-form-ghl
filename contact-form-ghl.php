@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.54
+ * Version:     2.5.55
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2306,10 +2306,10 @@ function cfg_settings_page() {
                         </div>
                         <div style="margin-top:14px;">
                             <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;">Choices</label>
-                            <div style="display:grid;grid-template-columns:2fr 52px 3fr 28px;gap:4px;margin-bottom:6px;padding:0 2px;">
+                            <div style="display:grid;grid-template-columns:2fr 52px auto 28px;gap:4px;margin-bottom:6px;padding:0 2px;">
                                 <span style="font-size:11px;color:#666;">Label</span>
                                 <span style="font-size:11px;color:#666;">Emoji</span>
-                                <span style="font-size:11px;color:#666;">Image URL (optional)</span>
+                                <span style="font-size:11px;color:#666;">Image (optional)</span>
                                 <span></span>
                             </div>
                             <div class="alg-choices-container" style="display:flex;flex-direction:column;gap:6px;"></div>
@@ -5979,7 +5979,10 @@ add_action( 'admin_init', function () {
 
 function cfg_aligner_sanitize( $input ) {
     if ( is_string( $input ) && ! empty( $input ) ) {
-        $decoded = json_decode( wp_unslash( $input ), true );
+        // WordPress already calls wp_unslash() on POST values before the sanitize callback.
+        // Calling wp_unslash() again strips the backslash from JSON escape sequences like \n,
+        // corrupting newlines into literal 'n' characters. Use json_decode directly.
+        $decoded = json_decode( $input, true );
         if ( is_array( $decoded ) ) return $decoded;
     }
     return cfg_aligner_defaults();
