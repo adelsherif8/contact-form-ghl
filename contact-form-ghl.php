@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.71
+ * Version:     2.5.73
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3667,30 +3667,19 @@ function cfg_settings_page() {
                     <button class="og-copy-btn" onclick="(function(b){var t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(function(){b.textContent='Copied!';b.classList.add('copied');setTimeout(function(){b.textContent='Copy';b.classList.remove('copied');},2000);})})(this)">Copy</button>
                     <pre>&lt;script&gt;
 (function () {
-  var PARAM_MAP = {
-    'UTMCampaign_Custom': 'utm_campaign',
-    'UTMmedium_custom':   'utm_medium',
-    'UTMContent_custom':  'utm_content',
-    'UTMKeyword_custom':  'utm_keyword',
-    'UTMTerm_custom':     'utm_term',
-    'GCLID_custom':       'gclid'
-  };
-  var TRACKED_PARAMS = [
-    'gclid', 'gbraid', 'wbraid',
-    'fbclid', 'msclkid', 'ttclid',
-    'utm_source', 'utm_medium',
-    'utm_campaign', 'utm_term',
-    'utm_keyword',
-    'utm_content', 'utm_id'
+  /* Canonical lowercase keys — matches GHL field keys exactly */
+  var CUSTOM_KEYS = [
+    'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom',
+    'utmkeyword_custom',  'utmterm_custom',    'gclid_custom'
   ];
   var STORAGE_KEY = 'scad_tracking_params';
 
-  /* 1. Capture params from landing URL into sessionStorage */
+  /* 1. Capture — case-insensitive so any capitalisation from Google Ads works */
   var current = {};
   try {
     new URLSearchParams(window.location.search).forEach(function (v, k) {
-      var std = PARAM_MAP[k] || (TRACKED_PARAMS.indexOf(k) !== -1 ? k : null);
-      if (std &amp;&amp; v) current[std] = v;
+      var lk = k.toLowerCase();
+      if (CUSTOM_KEYS.indexOf(lk) !== -1 &amp;&amp; v) current[lk] = v;
     });
   } catch (e) {}
   var stored = {};
@@ -3698,26 +3687,29 @@ function cfg_settings_page() {
   var merged = Object.assign({}, stored, current);
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
 
-  /* 2. Append stored UTMs to a same-domain URL */
+  /* 2. Append stored params to a same-domain URL */
   function addUTMs(url) {
     var data = {};
     try { data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
+    if (!CUSTOM_KEYS.some(function (k) { return data[k]; })) return url;
     try {
       var u = new URL(url, window.location.href);
       if (u.hostname !== window.location.hostname) return url;
-      /* Always strip custom param names — Elementor may re-inject them */
-      Object.keys(PARAM_MAP).forEach(function (k) { u.searchParams.delete(k); });
-      /* Add standard params only if we have data and URL doesn't already have them */
-      if (TRACKED_PARAMS.some(function (k) { return data[k]; }) &amp;&amp;
-          !TRACKED_PARAMS.some(function (k) { return u.searchParams.has(k); })) {
-        TRACKED_PARAMS.forEach(function (k) { if (data[k]) u.searchParams.set(k, data[k]); });
+      /* Strip any case-variant of the custom params Elementor may have injected */
+      var toDel = [];
+      u.searchParams.forEach(function (v, k) {
+        if (CUSTOM_KEYS.indexOf(k.toLowerCase()) !== -1) toDel.push(k);
+      });
+      toDel.forEach(function (k) { u.searchParams.delete(k); });
+      /* Add canonical lowercase custom params */
+      if (!CUSTOM_KEYS.some(function (k) { return u.searchParams.has(k); })) {
+        CUSTOM_KEYS.forEach(function (k) { if (data[k]) u.searchParams.set(k, data[k]); });
       }
       return u.toString();
     } catch (e) { return url; }
   }
 
-  /* 3. Capture-phase click handler — fires BEFORE Elementor's own handlers.
-        Walks up the DOM so clicks on icons/images inside &lt;a&gt; tags are caught. */
+  /* 3. Capture-phase click handler — fires BEFORE Elementor's own handlers */
   document.addEventListener('click', function (e) {
     var el = e.target;
     while (el &amp;&amp; el.tagName !== 'A') el = el.parentElement;
@@ -3726,9 +3718,9 @@ function cfg_settings_page() {
     if (!raw || /^(#|tel:|mailto:|javascript:)/i.test(raw)) return;
     var decorated = addUTMs(el.href);
     if (decorated !== el.href) el.href = decorated;
-  }, true /* capture = true */);
+  }, true);
 
-  /* 4. Patch programmatic navigation methods */
+  /* 4. Patch programmatic navigation */
   try {
     var _assign  = window.location.assign.bind(window.location);
     var _replace = window.location.replace.bind(window.location);
@@ -3736,7 +3728,7 @@ function cfg_settings_page() {
     window.location.replace = function (u) { _replace(addUTMs(u)); };
   } catch (e) {}
 
-  /* 5. Also pre-decorate links for right-click "Open in new tab" */
+  /* 5. Pre-decorate for right-click / hover */
   function decorateLink(a) {
     var raw = a.getAttribute('href');
     if (!raw || a._utmDone || /^(#|tel:|mailto:|javascript:)/i.test(raw)) return;
@@ -3750,10 +3742,8 @@ function cfg_settings_page() {
   if (window.MutationObserver) {
     new MutationObserver(function (muts) {
       muts.forEach(function (m) {
-        /* Elementor modifies href attribute on existing elements — catch that too */
         if (m.type === 'attributes' &amp;&amp; m.target.tagName === 'A') {
-          m.target._utmDone = false;
-          decorateLink(m.target);
+          m.target._utmDone = false; decorateLink(m.target);
         }
         m.addedNodes.forEach(function (n) {
           if (n.nodeType !== 1) return;
@@ -5314,7 +5304,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
         var _up = new URLSearchParams(window.location.search);
         var _ss = {}; try { _ss = JSON.parse(sessionStorage.getItem('scad_tracking_params') || '{}'); } catch(e) {}
-        function _utm(std, custom) { return _up.get(custom) || _up.get(std) || _ss[std] || ''; }
+        function _getParam(k) { var v=''; _up.forEach(function(val,key){ if(key.toLowerCase()===k) v=val; }); return v||_ss[k]||''; }
         function doSubmit(token) {
             if (RC_KEY) {
                 var tf = document.getElementById('cfg_recaptcha_token');
@@ -5322,21 +5312,21 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             }
             var hp = form.querySelector('[name="cfg_hp_website"]');
             var payload = {
-                action:       'cfg_submit',
-                cfg_nonce:    NONCE,
-                cfg_hp:       hp ? hp.value : '',
-                cfg_rc:       (RC_KEY && document.getElementById('cfg_recaptcha_token')) ? document.getElementById('cfg_recaptcha_token').value : '',
-                firstName:    (form.querySelector('[name="firstName"]') || {}).value || '',
-                lastName:     (form.querySelector('[name="lastName"]')  || {}).value || '',
-                email:        (form.querySelector('[name="email"]')     || {}).value || '',
-                phone:        (form.querySelector('[name="phone"]')     || {}).value || '',
-                treatment:    (form.querySelector('[name="treatment"]') || {value:''}).value || '',
-                utm_campaign: _utm('utm_campaign', 'UTMCampaign_Custom'),
-                utm_medium:   _utm('utm_medium',   'UTMmedium_custom'),
-                utm_content:  _utm('utm_content',  'UTMContent_custom'),
-                utm_keyword:  _utm('utm_keyword',  'UTMKeyword_custom'),
-                utm_term:     _utm('utm_term',     'UTMTerm_custom'),
-                gclid:        _utm('gclid',        'GCLID_custom')
+                action:             'cfg_submit',
+                cfg_nonce:          NONCE,
+                cfg_hp:             hp ? hp.value : '',
+                cfg_rc:             (RC_KEY && document.getElementById('cfg_recaptcha_token')) ? document.getElementById('cfg_recaptcha_token').value : '',
+                firstName:          (form.querySelector('[name="firstName"]') || {}).value || '',
+                lastName:           (form.querySelector('[name="lastName"]')  || {}).value || '',
+                email:              (form.querySelector('[name="email"]')     || {}).value || '',
+                phone:              (form.querySelector('[name="phone"]')     || {}).value || '',
+                treatment:          (form.querySelector('[name="treatment"]') || {value:''}).value || '',
+                utmcampaign_custom: _getParam('utmcampaign_custom'),
+                utmmedium_custom:   _getParam('utmmedium_custom'),
+                utmcontent_custom:  _getParam('utmcontent_custom'),
+                utmkeyword_custom:  _getParam('utmkeyword_custom'),
+                utmterm_custom:     _getParam('utmterm_custom'),
+                gclid_custom:       _getParam('gclid_custom')
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             fetch(AJAX, {
@@ -5503,26 +5493,26 @@ function cfg_embed_shortcode_OLD_UNUSED() {
 
         var _up = new URLSearchParams(window.location.search);
         var _ss = {}; try { _ss = JSON.parse(sessionStorage.getItem('scad_tracking_params') || '{}'); } catch(e) {}
-        function _utm(std, custom) { return _up.get(custom) || _up.get(std) || _ss[std] || ''; }
+        function _getParam(k) { var v=''; _up.forEach(function(val,key){ if(key.toLowerCase()===k) v=val; }); return v||_ss[k]||''; }
         function doSubmit(token) {
             if (RC_KEY) { var tf = document.getElementById('cfge_recaptcha_token'); if (tf) tf.value = token||''; }
             var hp = form.querySelector('[name="cfg_hp_website"]');
             var payload = {
-                action:       'cfg_submit',
-                cfg_nonce:    NONCE,
-                cfg_hp:       hp ? hp.value : '',
-                cfg_rc:       (RC_KEY && document.getElementById('cfge_recaptcha_token')) ? document.getElementById('cfge_recaptcha_token').value : '',
-                firstName:    (form.querySelector('[name="firstName"]') || {}).value || '',
-                lastName:     (form.querySelector('[name="lastName"]')  || {}).value || '',
-                email:        (form.querySelector('[name="email"]')     || {}).value || '',
-                phone:        (form.querySelector('[name="phone"]')     || {}).value || '',
-                treatment:    (form.querySelector('[name="treatment"]') || {value:''}).value || '',
-                utm_campaign: _utm('utm_campaign', 'UTMCampaign_Custom'),
-                utm_medium:   _utm('utm_medium',   'UTMmedium_custom'),
-                utm_content:  _utm('utm_content',  'UTMContent_custom'),
-                utm_keyword:  _utm('utm_keyword',  'UTMKeyword_custom'),
-                utm_term:     _utm('utm_term',     'UTMTerm_custom'),
-                gclid:        _utm('gclid',        'GCLID_custom')
+                action:             'cfg_submit',
+                cfg_nonce:          NONCE,
+                cfg_hp:             hp ? hp.value : '',
+                cfg_rc:             (RC_KEY && document.getElementById('cfge_recaptcha_token')) ? document.getElementById('cfge_recaptcha_token').value : '',
+                firstName:          (form.querySelector('[name="firstName"]') || {}).value || '',
+                lastName:           (form.querySelector('[name="lastName"]')  || {}).value || '',
+                email:              (form.querySelector('[name="email"]')     || {}).value || '',
+                phone:              (form.querySelector('[name="phone"]')     || {}).value || '',
+                treatment:          (form.querySelector('[name="treatment"]') || {value:''}).value || '',
+                utmcampaign_custom: _getParam('utmcampaign_custom'),
+                utmmedium_custom:   _getParam('utmmedium_custom'),
+                utmcontent_custom:  _getParam('utmcontent_custom'),
+                utmkeyword_custom:  _getParam('utmkeyword_custom'),
+                utmterm_custom:     _getParam('utmterm_custom'),
+                gclid_custom:       _getParam('gclid_custom')
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             fetch(AJAX, {
@@ -5869,15 +5859,9 @@ function cfg_ajax_submit() {
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
-    $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
-                          'utm_content'  => 'utmcontent_custom',  'utm_keyword' => 'utmkeyword_custom',
-                          'utm_term'     => 'utmterm_custom',      'gclid'       => 'gclid_custom' ];
-    foreach ( $utm_display_keys as $post_key => $fallback_key ) {
-        $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
-        $ghl_key = preg_replace( '/^contact\./', '', $ghl_key ); // strip contact. prefix — GHL payload uses bare key
-        if ( $val !== '' ) $custom_fields[] = [ 'key' => $ghl_key, 'field_value' => $val ];
+    foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
+        $val = sanitize_text_field( $_POST[ $k ] ?? '' );
+        if ( $val !== '' ) $custom_fields[] = [ 'key' => $k, 'field_value' => $val ];
     }
 
     $payload = [
@@ -6476,14 +6460,14 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
             sbtn.disabled=true; slbl.textContent='Sending\u2026';
             var _up=new URLSearchParams(window.location.search);
             var _ss={}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
-            var _utm_map={'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};
+            function _gp(k){var v='';_up.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss[k]||'';}
             var _fd=new FormData(form);
-            ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ _fd.append(k,_up.get(_utm_map[k])||_up.get(k)||_ss[k]||''); });
+            ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){ _fd.append(k,_gp(k)); });
             fetch(ajaxUrl,{method:'POST',body:_fd})
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
-                    if(surl){ var _up2=new URLSearchParams(window.location.search),_ss2={};try{_ss2=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}var _map2={'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};var _d=surl;['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){var v=_up2.get(_map2[k])||_up2.get(k)||_ss2[k];if(v)_d+=(_d.indexOf('?')>=0?'&':'?')+k+'='+encodeURIComponent(v);});window.location.href=_d; }
+                    if(surl){ var _ss2={};try{_ss2=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}var _up2=new URLSearchParams(window.location.search);function _gp2(k){var v='';_up2.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss2[k]||'';}var _d=surl;['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){var v=_gp2(k);if(v)_d+=(_d.indexOf('?')>=0?'&':'?')+k+'='+encodeURIComponent(v);});window.location.href=_d; }
                     else{
                         form.innerHTML='<div style="text-align:center;padding:2.5rem 0;">'+
                             '<div style="font-size:3.5rem;margin-bottom:1rem;">&#x2705;</div>'+
@@ -6609,15 +6593,9 @@ function cfg_aligner_ajax_submit() {
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
-    $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
-                          'utm_content'  => 'utmcontent_custom',  'utm_keyword' => 'utmkeyword_custom',
-                          'utm_term'     => 'utmterm_custom',      'gclid'       => 'gclid_custom' ];
-    foreach ( $utm_display_keys as $post_key => $fallback_key ) {
-        $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
-        $ghl_key = preg_replace( '/^contact\./', '', $ghl_key );
-        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
+    foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
+        $val = sanitize_text_field( $_POST[ $k ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $k, 'field_value' => $val ];
     }
 
     $payload = [
@@ -7825,8 +7803,8 @@ $_sections_col = $result_sections_html
     }
     var _up = new URLSearchParams(window.location.search);
     var _ss = {}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
-    var _utm_map = {'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};
-    ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(_utm_map[k]) || _up.get(k) || _ss[k] || ''); });
+    function _gp(k){var v='';_up.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss[k]||'';}
+    ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){ fd.append(k, _gp(k)); });
     function _done() {
       isSubmitting = false;
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
@@ -7840,10 +7818,10 @@ $_sections_col = $result_sections_html
     if (!config.resultCtaUrl) return;
     var up  = new URLSearchParams(window.location.search);
     var _ss = {}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
-    var _utm_map = {'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};
+    function _gp(k){var v='';up.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss[k]||'';}
     var url = config.resultCtaUrl;
-    ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){
-      var v = up.get(_utm_map[k]) || up.get(k) || _ss[k]; if (v) url += (url.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
+    ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){
+      var v = _gp(k); if (v) url += (url.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
     });
     window.location.href = url;
   }
@@ -7951,15 +7929,9 @@ function cfg_implant_ajax_submit() {
     if ( $offer_choice !== '' && $offer_ghl_key !== '' ) {
         $custom[] = [ 'key' => $offer_ghl_key, 'field_value' => $offer_choice ];
     }
-    $utm_key_map      = get_option( 'cfg_utm_key_map_' . md5( $s['ghl_location_id'] ), [] );
-    $utm_display_keys = [ 'utm_campaign' => 'utmcampaign_custom', 'utm_medium' => 'utmmedium_custom',
-                          'utm_content'  => 'utmcontent_custom',  'utm_keyword' => 'utmkeyword_custom',
-                          'utm_term'     => 'utmterm_custom',      'gclid'       => 'gclid_custom' ];
-    foreach ( $utm_display_keys as $post_key => $fallback_key ) {
-        $val     = sanitize_text_field( $_POST[ $post_key ] ?? '' );
-        $ghl_key = $utm_key_map[ $post_key ] ?? $fallback_key;
-        $ghl_key = preg_replace( '/^contact\./', '', $ghl_key );
-        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
+    foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
+        $val = sanitize_text_field( $_POST[ $k ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $k, 'field_value' => $val ];
     }
 
     $payload = [
