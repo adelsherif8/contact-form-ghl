@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.63
+ * Version:     2.5.65
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3662,10 +3662,19 @@ function cfg_settings_page() {
             <div class="og-body">
                 <h3>Install the UTM Tracking Script</h3>
                 <p>This script captures UTM parameters and click IDs from the URL and stores them in <code class="og-code">sessionStorage</code>. It uses a <strong>capture-phase click interceptor</strong> so UTMs are appended at the moment of every click — including Elementor buttons that render dynamically — rather than being pre-set on page load (which breaks when Elementor re-renders the DOM). Paste it into <strong>Appearance → Theme File Editor → footer.php</strong> just before <code class="og-code">&lt;/body&gt;</code>, or use a plugin like <em>Insert Headers and Footers</em> to add it to the footer.</p>
+                <p><strong>Google Ads custom parameter names are supported.</strong> If your Google Ads final URL template uses custom ValueTrack names (e.g. <code class="og-code">{lpurl}?UTMCampaign_Custom={campaignid}&amp;UTMmedium_custom={adgroupid}&amp;UTMContent_custom={adgroupname}&amp;UTMKeyword_custom={keyword}&amp;UTMTerm_custom={matchtype}&amp;GCLID_custom={gclid}</code>), the script and all forms will automatically read those and map them to the standard UTM field names sent to GHL. Standard names (<code class="og-code">utm_campaign</code>, <code class="og-code">utm_medium</code>, etc.) also continue to work — whichever is present wins.</p>
                 <div class="og-code-block">
                     <button class="og-copy-btn" onclick="(function(b){var t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(function(){b.textContent='Copied!';b.classList.add('copied');setTimeout(function(){b.textContent='Copy';b.classList.remove('copied');},2000);})})(this)">Copy</button>
                     <pre>&lt;script&gt;
 (function () {
+  var PARAM_MAP = {
+    'UTMCampaign_Custom': 'utm_campaign',
+    'UTMmedium_custom':   'utm_medium',
+    'UTMContent_custom':  'utm_content',
+    'UTMKeyword_custom':  'utm_keyword',
+    'UTMTerm_custom':     'utm_term',
+    'GCLID_custom':       'gclid'
+  };
   var TRACKED_PARAMS = [
     'gclid', 'gbraid', 'wbraid',
     'fbclid', 'msclkid', 'ttclid',
@@ -3680,7 +3689,8 @@ function cfg_settings_page() {
   var current = {};
   try {
     new URLSearchParams(window.location.search).forEach(function (v, k) {
-      if (TRACKED_PARAMS.indexOf(k) !== -1 &amp;&amp; v) current[k] = v;
+      var std = PARAM_MAP[k] || (TRACKED_PARAMS.indexOf(k) !== -1 ? k : null);
+      if (std &amp;&amp; v) current[std] = v;
     });
   } catch (e) {}
   var stored = {};
@@ -5286,6 +5296,8 @@ function cfg_shortcode( $atts = [], $embed = false ) {
         function hideErr(){ errBox.style.display='none'; }
 
         var _up = new URLSearchParams(window.location.search);
+        var _ss = {}; try { _ss = JSON.parse(sessionStorage.getItem('scad_tracking_params') || '{}'); } catch(e) {}
+        function _utm(std, custom) { return _up.get(custom) || _up.get(std) || _ss[std] || ''; }
         function doSubmit(token) {
             if (RC_KEY) {
                 var tf = document.getElementById('cfg_recaptcha_token');
@@ -5302,12 +5314,12 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                 email:        (form.querySelector('[name="email"]')     || {}).value || '',
                 phone:        (form.querySelector('[name="phone"]')     || {}).value || '',
                 treatment:    (form.querySelector('[name="treatment"]') || {value:''}).value || '',
-                utm_campaign: _up.get('utm_campaign') || '',
-                utm_medium:   _up.get('utm_medium')   || '',
-                utm_content:  _up.get('utm_content')  || '',
-                utm_keyword:  _up.get('utm_keyword')  || '',
-                utm_term:     _up.get('utm_term')     || '',
-                gclid:        _up.get('gclid')        || ''
+                utm_campaign: _utm('utm_campaign', 'UTMCampaign_Custom'),
+                utm_medium:   _utm('utm_medium',   'UTMmedium_custom'),
+                utm_content:  _utm('utm_content',  'UTMContent_custom'),
+                utm_keyword:  _utm('utm_keyword',  'UTMKeyword_custom'),
+                utm_term:     _utm('utm_term',     'UTMTerm_custom'),
+                gclid:        _utm('gclid',        'GCLID_custom')
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             fetch(AJAX, {
@@ -5473,6 +5485,8 @@ function cfg_embed_shortcode_OLD_UNUSED() {
         function hideErr(){ errBox.style.display='none'; }
 
         var _up = new URLSearchParams(window.location.search);
+        var _ss = {}; try { _ss = JSON.parse(sessionStorage.getItem('scad_tracking_params') || '{}'); } catch(e) {}
+        function _utm(std, custom) { return _up.get(custom) || _up.get(std) || _ss[std] || ''; }
         function doSubmit(token) {
             if (RC_KEY) { var tf = document.getElementById('cfge_recaptcha_token'); if (tf) tf.value = token||''; }
             var hp = form.querySelector('[name="cfg_hp_website"]');
@@ -5486,12 +5500,12 @@ function cfg_embed_shortcode_OLD_UNUSED() {
                 email:        (form.querySelector('[name="email"]')     || {}).value || '',
                 phone:        (form.querySelector('[name="phone"]')     || {}).value || '',
                 treatment:    (form.querySelector('[name="treatment"]') || {value:''}).value || '',
-                utm_campaign: _up.get('utm_campaign') || '',
-                utm_medium:   _up.get('utm_medium')   || '',
-                utm_content:  _up.get('utm_content')  || '',
-                utm_keyword:  _up.get('utm_keyword')  || '',
-                utm_term:     _up.get('utm_term')     || '',
-                gclid:        _up.get('gclid')        || ''
+                utm_campaign: _utm('utm_campaign', 'UTMCampaign_Custom'),
+                utm_medium:   _utm('utm_medium',   'UTMmedium_custom'),
+                utm_content:  _utm('utm_content',  'UTMContent_custom'),
+                utm_keyword:  _utm('utm_keyword',  'UTMKeyword_custom'),
+                utm_term:     _utm('utm_term',     'UTMTerm_custom'),
+                gclid:        _utm('gclid',        'GCLID_custom')
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             fetch(AJAX, {
@@ -6444,13 +6458,15 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
             if(ansEl) ansEl.value=JSON.stringify(answers);
             sbtn.disabled=true; slbl.textContent='Sending\u2026';
             var _up=new URLSearchParams(window.location.search);
+            var _ss={}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
+            var _utm_map={'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};
             var _fd=new FormData(form);
-            ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ _fd.append(k,_up.get(k)||''); });
+            ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ _fd.append(k,_up.get(_utm_map[k])||_up.get(k)||_ss[k]||''); });
             fetch(ajaxUrl,{method:'POST',body:_fd})
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
-                    if(surl){ var _up2=new URLSearchParams(window.location.search),_d=surl;['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){var v=_up2.get(k);if(v)_d+=(_d.indexOf('?')>=0?'&':'?')+k+'='+encodeURIComponent(v);});window.location.href=_d; }
+                    if(surl){ var _up2=new URLSearchParams(window.location.search),_ss2={};try{_ss2=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}var _map2={'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};var _d=surl;['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){var v=_up2.get(_map2[k])||_up2.get(k)||_ss2[k];if(v)_d+=(_d.indexOf('?')>=0?'&':'?')+k+'='+encodeURIComponent(v);});window.location.href=_d; }
                     else{
                         form.innerHTML='<div style="text-align:center;padding:2.5rem 0;">'+
                             '<div style="font-size:3.5rem;margin-bottom:1rem;">&#x2705;</div>'+
@@ -7791,7 +7807,9 @@ $_sections_col = $result_sections_html
       fd.append('offer_ghl_key',  config.offerGhlKey);
     }
     var _up = new URLSearchParams(window.location.search);
-    ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(k) || ''); });
+    var _ss = {}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
+    var _utm_map = {'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};
+    ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){ fd.append(k, _up.get(_utm_map[k]) || _up.get(k) || _ss[k] || ''); });
     function _done() {
       isSubmitting = false;
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
@@ -7804,9 +7822,11 @@ $_sections_col = $result_sections_html
   function handleCTABook() {
     if (!config.resultCtaUrl) return;
     var up  = new URLSearchParams(window.location.search);
+    var _ss = {}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
+    var _utm_map = {'utm_campaign':'UTMCampaign_Custom','utm_medium':'UTMmedium_custom','utm_content':'UTMContent_custom','utm_keyword':'UTMKeyword_custom','utm_term':'UTMTerm_custom','gclid':'GCLID_custom'};
     var url = config.resultCtaUrl;
     ['utm_campaign','utm_medium','utm_content','utm_keyword','utm_term','gclid'].forEach(function(k){
-      var v = up.get(k); if (v) url += (url.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
+      var v = up.get(_utm_map[k]) || up.get(k) || _ss[k]; if (v) url += (url.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
     });
     window.location.href = url;
   }
