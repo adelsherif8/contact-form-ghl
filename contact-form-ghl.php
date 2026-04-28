@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.69
+ * Version:     2.5.71
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3698,18 +3698,20 @@ function cfg_settings_page() {
   var merged = Object.assign({}, stored, current);
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
 
-  /* 2. Append stored UTMs to a same-domain URL (skip if already has UTM params) */
+  /* 2. Append stored UTMs to a same-domain URL */
   function addUTMs(url) {
     var data = {};
     try { data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
-    if (!TRACKED_PARAMS.some(function (k) { return data[k]; })) return url;
     try {
       var u = new URL(url, window.location.href);
       if (u.hostname !== window.location.hostname) return url;
-      if (TRACKED_PARAMS.some(function (k) { return u.searchParams.has(k); })) return url;
-      /* Strip custom param names so they don't leak alongside the standard ones */
+      /* Always strip custom param names — Elementor may re-inject them */
       Object.keys(PARAM_MAP).forEach(function (k) { u.searchParams.delete(k); });
-      TRACKED_PARAMS.forEach(function (k) { if (data[k]) u.searchParams.set(k, data[k]); });
+      /* Add standard params only if we have data and URL doesn't already have them */
+      if (TRACKED_PARAMS.some(function (k) { return data[k]; }) &amp;&amp;
+          !TRACKED_PARAMS.some(function (k) { return u.searchParams.has(k); })) {
+        TRACKED_PARAMS.forEach(function (k) { if (data[k]) u.searchParams.set(k, data[k]); });
+      }
       return u.toString();
     } catch (e) { return url; }
   }
@@ -3748,13 +3750,18 @@ function cfg_settings_page() {
   if (window.MutationObserver) {
     new MutationObserver(function (muts) {
       muts.forEach(function (m) {
+        /* Elementor modifies href attribute on existing elements — catch that too */
+        if (m.type === 'attributes' &amp;&amp; m.target.tagName === 'A') {
+          m.target._utmDone = false;
+          decorateLink(m.target);
+        }
         m.addedNodes.forEach(function (n) {
           if (n.nodeType !== 1) return;
           if (n.tagName === 'A') decorateLink(n);
           else if (n.querySelectorAll) n.querySelectorAll('a[href]').forEach(decorateLink);
         });
       });
-    }).observe(document.documentElement, { childList: true, subtree: true });
+    }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['href'] });
   }
 })();
 &lt;/script&gt;</pre>
