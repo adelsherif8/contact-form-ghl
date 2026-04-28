@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.62
+ * Version:     2.5.63
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6697,7 +6697,9 @@ add_shortcode( 'implant_estimator_ghl', 'cfg_implant_shortcode' );
 function cfg_implant_shortcode() {
     $s           = cfg_get();
     $accent      = sanitize_hex_color( $s['imp_accent_color'] ?? '#1e3a5f' ) ?: '#1e3a5f';
-    $br          = absint( $s['btn_radius'] ) . 'px';
+    $cr          = absint( $s['card_radius']  ) . 'px';
+    $ir          = absint( $s['input_radius'] ) . 'px';
+    $br          = absint( $s['btn_radius']   ) . 'px';
     $uid         = 'imp' . wp_rand( 1000, 9999 );
     $nonce       = wp_create_nonce( 'cfg_implant_submit' );
     $ajax_url    = esc_url( admin_url( 'admin-ajax.php' ) );
