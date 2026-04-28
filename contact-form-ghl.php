@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.61
+ * Version:     2.5.62
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3661,7 +3661,7 @@ function cfg_settings_page() {
             <div class="og-num">4</div>
             <div class="og-body">
                 <h3>Install the UTM Tracking Script</h3>
-                <p>This script captures UTM parameters and click IDs from the URL, stores them in <code class="og-code">sessionStorage</code>, and automatically appends them to all internal links on the page — including Elementor buttons. Paste it into <strong>Appearance → Theme File Editor → footer.php</strong> just before <code class="og-code">&lt;/body&gt;</code>, or use a plugin like <em>Insert Headers and Footers</em> to add it to the footer.</p>
+                <p>This script captures UTM parameters and click IDs from the URL and stores them in <code class="og-code">sessionStorage</code>. It uses a <strong>capture-phase click interceptor</strong> so UTMs are appended at the moment of every click — including Elementor buttons that render dynamically — rather than being pre-set on page load (which breaks when Elementor re-renders the DOM). Paste it into <strong>Appearance → Theme File Editor → footer.php</strong> just before <code class="og-code">&lt;/body&gt;</code>, or use a plugin like <em>Insert Headers and Footers</em> to add it to the footer.</p>
                 <div class="og-code-block">
                     <button class="og-copy-btn" onclick="(function(b){var t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(function(){b.textContent='Copied!';b.classList.add('copied');setTimeout(function(){b.textContent='Copy';b.classList.remove('copied');},2000);})})(this)">Copy</button>
                     <pre>&lt;script&gt;
@@ -3676,72 +3676,73 @@ function cfg_settings_page() {
   ];
   var STORAGE_KEY = 'scad_tracking_params';
 
-  var currentParams = {};
-  var search = window.location.search;
-  if (search) {
-    search.slice(1).split('&amp;').forEach(function (pair) {
-      var kv = pair.split('=');
-      var key = decodeURIComponent(kv[0] || '');
-      var val = decodeURIComponent(kv[1] || '');
-      if (key &amp;&amp; TRACKED_PARAMS.indexOf(key) !== -1) currentParams[key] = val;
+  /* 1. Capture params from landing URL into sessionStorage */
+  var current = {};
+  try {
+    new URLSearchParams(window.location.search).forEach(function (v, k) {
+      if (TRACKED_PARAMS.indexOf(k) !== -1 &amp;&amp; v) current[k] = v;
     });
-  }
-
+  } catch (e) {}
   var stored = {};
   try { stored = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
-  var merged = Object.assign({}, stored, currentParams);
+  var merged = Object.assign({}, stored, current);
   try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch (e) {}
 
-  function buildQS(params) {
-    var parts = Object.keys(params)
-      .filter(function (k) { return params[k]; })
-      .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); });
-    return parts.length ? '?' + parts.join('&amp;') : '';
+  /* 2. Append stored UTMs to a same-domain URL (skip if already has UTM params) */
+  function addUTMs(url) {
+    var data = {};
+    try { data = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
+    if (!TRACKED_PARAMS.some(function (k) { return data[k]; })) return url;
+    try {
+      var u = new URL(url, window.location.href);
+      if (u.hostname !== window.location.hostname) return url;
+      if (TRACKED_PARAMS.some(function (k) { return u.searchParams.has(k); })) return url;
+      TRACKED_PARAMS.forEach(function (k) { if (data[k]) u.searchParams.set(k, data[k]); });
+      return u.toString();
+    } catch (e) { return url; }
   }
 
-  var qs = buildQS(merged);
-  if (!qs) return;
+  /* 3. Capture-phase click handler — fires BEFORE Elementor's own handlers.
+        Walks up the DOM so clicks on icons/images inside &lt;a&gt; tags are caught. */
+  document.addEventListener('click', function (e) {
+    var el = e.target;
+    while (el &amp;&amp; el.tagName !== 'A') el = el.parentElement;
+    if (!el) return;
+    var raw = el.getAttribute('href');
+    if (!raw || /^(#|tel:|mailto:|javascript:)/i.test(raw)) return;
+    var decorated = addUTMs(el.href);
+    if (decorated !== el.href) el.href = decorated;
+  }, true /* capture = true */);
 
-  function isSameDomain(href) {
-    try { return new URL(href).hostname === window.location.hostname; }
-    catch (e) { return false; }
-  }
+  /* 4. Patch programmatic navigation methods */
+  try {
+    var _assign  = window.location.assign.bind(window.location);
+    var _replace = window.location.replace.bind(window.location);
+    window.location.assign  = function (u) { _assign(addUTMs(u)); };
+    window.location.replace = function (u) { _replace(addUTMs(u)); };
+  } catch (e) {}
 
+  /* 5. Also pre-decorate links for right-click "Open in new tab" */
   function decorateLink(a) {
-    if (a._scadDone) return;
-    var href = a.getAttribute('href');
-    if (!href) return;
-    if (/^(#|tel:|mailto:|javascript:|\/\/)/.test(href)) return;
-    if (/^https?:\/\//.test(href) &amp;&amp; !isSameDomain(href)) return;
-    for (var i = 0; i &lt; TRACKED_PARAMS.length; i++) {
-      if (href.indexOf(encodeURIComponent(TRACKED_PARAMS[i]) + '=') !== -1
-       || href.indexOf(TRACKED_PARAMS[i] + '=') !== -1) return;
-    }
-    a.setAttribute('href', href + (href.indexOf('?') !== -1 ? '&amp;' + qs.slice(1) : qs));
-    a._scadDone = true;
+    var raw = a.getAttribute('href');
+    if (!raw || a._utmDone || /^(#|tel:|mailto:|javascript:)/i.test(raw)) return;
+    var decorated = addUTMs(a.href);
+    if (decorated !== a.href) { a.href = decorated; a._utmDone = true; }
   }
-
-  function decorateAll() {
-    document.querySelectorAll('a[href]').forEach(decorateLink);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', decorateAll);
-  } else {
-    decorateAll();
-  }
+  function decorateAll() { document.querySelectorAll('a[href]').forEach(decorateLink); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', decorateAll);
+  else decorateAll();
   window.addEventListener('load', decorateAll);
-
-  if (window.MutationObserver &amp;&amp; document.body) {
-    new MutationObserver(function (mutations) {
-      mutations.forEach(function (m) {
-        m.addedNodes.forEach(function (node) {
-          if (node.nodeType !== 1) return;
-          if (node.tagName === 'A') { decorateLink(node); }
-          else if (node.querySelectorAll) { node.querySelectorAll('a[href]').forEach(decorateLink); }
+  if (window.MutationObserver) {
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) {
+        m.addedNodes.forEach(function (n) {
+          if (n.nodeType !== 1) return;
+          if (n.tagName === 'A') decorateLink(n);
+          else if (n.querySelectorAll) n.querySelectorAll('a[href]').forEach(decorateLink);
         });
       });
-    }).observe(document.body, { childList: true, subtree: true });
+    }).observe(document.documentElement, { childList: true, subtree: true });
   }
 })();
 &lt;/script&gt;</pre>
