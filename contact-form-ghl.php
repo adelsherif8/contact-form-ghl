@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.73
+ * Version:     2.5.75
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3644,16 +3644,17 @@ function cfg_settings_page() {
             <div class="og-num">3</div>
             <div class="og-body">
                 <h3>UTM Tracking Fields</h3>
-                <p>These capture ad campaign data from the page URL and are sent on every form submission. Create one Text field for each:</p>
+                <p>These capture Google Ads custom ValueTrack parameters from the URL and are sent on every form submission. Create one <strong>Text</strong> field for each — the field key must match exactly (all lowercase):</p>
                 <table class="og-table">
-                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>What it captures</th></tr>
-                    <tr><td><span class="og-field">utm_campaign</span></td><td>UTM Campaign</td><td>Google Ads campaign name</td></tr>
-                    <tr><td><span class="og-field">utm_medium</span></td><td>UTM Medium</td><td>Traffic medium (e.g. <em>cpc</em>, <em>email</em>)</td></tr>
-                    <tr><td><span class="og-field">utm_content</span></td><td>UTM Content</td><td>Ad variation / creative ID</td></tr>
-                    <tr><td><span class="og-field">utm_keyword</span></td><td>UTM Keyword</td><td>Search keyword that triggered the ad</td></tr>
-                    <tr><td><span class="og-field">gclid</span></td><td>Google Click ID</td><td>Google auto-tagging ID (for import into Google Ads)</td></tr>
+                    <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Google Ads ValueTrack param</th></tr>
+                    <tr><td><span class="og-field">utmcampaign_custom</span></td><td>UTM Campaign</td><td><code class="og-code">UTMCampaign_Custom={campaignid}</code></td></tr>
+                    <tr><td><span class="og-field">utmmedium_custom</span></td><td>UTM Medium</td><td><code class="og-code">UTMmedium_custom={adgroupid}</code></td></tr>
+                    <tr><td><span class="og-field">utmcontent_custom</span></td><td>UTM Content</td><td><code class="og-code">UTMContent_custom={adgroupname}</code></td></tr>
+                    <tr><td><span class="og-field">utmkeyword_custom</span></td><td>UTM Keyword</td><td><code class="og-code">UTMKeyword_custom={keyword}</code></td></tr>
+                    <tr><td><span class="og-field">utmterm_custom</span></td><td>UTM Term</td><td><code class="og-code">UTMTerm_custom={matchtype}</code></td></tr>
+                    <tr><td><span class="og-field">gclid_custom</span></td><td>GCLID</td><td><code class="og-code">GCLID_custom={gclid}</code></td></tr>
                 </table>
-                <div class="og-tip"><strong>Why this matters:</strong> These fields let you see exactly which campaign, ad, and keyword produced each lead — and import offline conversions back into Google Ads via the <code class="og-code">gclid</code>.</div>
+                <div class="og-tip"><strong>Why this matters:</strong> These fields let you see exactly which campaign, ad, and keyword produced each lead — and import offline conversions back into Google Ads via the <code class="og-code">gclid_custom</code> value.</div>
             </div>
         </div>
 
@@ -3661,8 +3662,8 @@ function cfg_settings_page() {
             <div class="og-num">4</div>
             <div class="og-body">
                 <h3>Install the UTM Tracking Script</h3>
-                <p>This script captures UTM parameters and click IDs from the URL and stores them in <code class="og-code">sessionStorage</code>. It uses a <strong>capture-phase click interceptor</strong> so UTMs are appended at the moment of every click — including Elementor buttons that render dynamically — rather than being pre-set on page load (which breaks when Elementor re-renders the DOM). Paste it into <strong>Appearance → Theme File Editor → footer.php</strong> just before <code class="og-code">&lt;/body&gt;</code>, or use a plugin like <em>Insert Headers and Footers</em> to add it to the footer.</p>
-                <p><strong>Google Ads custom parameter names are supported.</strong> If your Google Ads final URL template uses custom ValueTrack names (e.g. <code class="og-code">{lpurl}?UTMCampaign_Custom={campaignid}&amp;UTMmedium_custom={adgroupid}&amp;UTMContent_custom={adgroupname}&amp;UTMKeyword_custom={keyword}&amp;UTMTerm_custom={matchtype}&amp;GCLID_custom={gclid}</code>), the script and all forms will automatically read those and map them to the standard UTM field names sent to GHL. Standard names (<code class="og-code">utm_campaign</code>, <code class="og-code">utm_medium</code>, etc.) also continue to work — whichever is present wins.</p>
+                <p>This script captures Google Ads custom ValueTrack parameters from the URL and carries them across every page in the session. It reads the params <strong>case-insensitively</strong> — so <code class="og-code">UTMCampaign_Custom</code>, <code class="og-code">UTMCampaign_custom</code>, or <code class="og-code">utmcampaign_custom</code> all work. It uses a <strong>capture-phase click interceptor</strong> so params are appended at the moment of every click — including Elementor buttons that re-render dynamically. Paste it into <strong>Appearance → Theme File Editor → footer.php</strong> just before <code class="og-code">&lt;/body&gt;</code>, or use a plugin like <em>Insert Headers and Footers</em>.</p>
+                <p><strong>Your Google Ads final URL template should look like:</strong><br><code class="og-code">{lpurl}?UTMCampaign_Custom={campaignid}&amp;UTMmedium_custom={adgroupid}&amp;UTMContent_custom={adgroupname}&amp;UTMKeyword_custom={keyword}&amp;UTMTerm_custom={matchtype}&amp;GCLID_custom={gclid}</code></p>
                 <div class="og-code-block">
                     <button class="og-copy-btn" onclick="(function(b){var t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(function(){b.textContent='Copied!';b.classList.add('copied');setTimeout(function(){b.textContent='Copy';b.classList.remove('copied');},2000);})})(this)">Copy</button>
                     <pre>&lt;script&gt;
@@ -3896,18 +3897,15 @@ function cfg_settings_page() {
             <div class="og-num">12</div>
             <div class="og-body">
                 <h3>Submit a Test Implant Lead</h3>
-                <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL. Use either format — both work:</p>
-                <p><strong>Standard UTM params:</strong></p>
-                <p><code class="og-code">?utm_source=google&amp;utm_campaign=test-campaign&amp;utm_medium=cpc&amp;utm_content=dental-ad-group&amp;utm_keyword=dental+implants&amp;utm_term=broad&amp;gclid=test123</code></p>
-                <p><strong>Google Ads custom params</strong> (if your final URL template uses ValueTrack names):</p>
+                <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL using the Google Ads custom param format:</p>
                 <p><code class="og-code">?UTMCampaign_Custom=test-campaign&amp;UTMmedium_custom=cpc&amp;UTMContent_custom=dental-ad-group&amp;UTMKeyword_custom=dental+implants&amp;UTMTerm_custom=broad&amp;GCLID_custom=test123</code></p>
                 <p>Complete the full quiz and submit your details. Then in GHL <strong>Contacts</strong>, find your test contact and verify:</p>
                 <ul class="og-checklist">
                     <li>Contact was created with correct name, email, and phone</li>
                     <li>Tag <span class="og-tag">implant-estimate</span> was applied</li>
                     <li>Custom field <span class="og-field">implant_range</span> shows the correct price range</li>
-                    <li>Custom field <span class="og-field">utm_campaign</span> shows <em>test-campaign</em></li>
-                    <li>Custom field <span class="og-field">gclid</span> shows <em>test123</em></li>
+                    <li>Custom field <span class="og-field">utmcampaign_custom</span> shows <em>test-campaign</em></li>
+                    <li>Custom field <span class="og-field">gclid_custom</span> shows <em>test123</em></li>
                     <li>Workflow was triggered (check the contact's <strong>Workflow History</strong> tab)</li>
                     <li>Contact was added to the correct pipeline stage</li>
                 </ul>
@@ -3919,16 +3917,14 @@ function cfg_settings_page() {
             <div class="og-num">13</div>
             <div class="og-body">
                 <h3>Submit a Test Contact Form Lead</h3>
-                <p>Append test UTM parameters to the contact form page URL before submitting. Use either format:</p>
-                <p><strong>Standard UTM params:</strong></p>
-                <p><code class="og-code">?utm_source=google&amp;utm_campaign=test-campaign&amp;utm_medium=cpc&amp;utm_content=dental-ad-group&amp;utm_keyword=dental+implants&amp;utm_term=broad&amp;gclid=test123</code></p>
-                <p><strong>Google Ads custom params:</strong></p>
+                <p>Append test UTM parameters to the contact form page URL using the Google Ads custom param format:</p>
                 <p><code class="og-code">?UTMCampaign_Custom=test-campaign&amp;UTMmedium_custom=cpc&amp;UTMContent_custom=dental-ad-group&amp;UTMKeyword_custom=dental+implants&amp;UTMTerm_custom=broad&amp;GCLID_custom=test123</code></p>
                 <p>Fill out the form with a test email and verify:</p>
                 <ul class="og-checklist">
                     <li>Contact created / updated in GHL</li>
                     <li>Tag <span class="og-tag">website-contact-form</span> applied</li>
-                    <li>UTM custom fields populated (utm_campaign shows <em>test-campaign</em>, gclid shows <em>test123</em>)</li>
+                    <li>Custom field <span class="og-field">utmcampaign_custom</span> shows <em>test-campaign</em></li>
+                    <li>Custom field <span class="og-field">gclid_custom</span> shows <em>test123</em></li>
                     <li>Contact form workflow triggered</li>
                 </ul>
             </div>
