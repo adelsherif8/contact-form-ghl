@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.65
+ * Version:     2.5.67
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3897,8 +3897,11 @@ function cfg_settings_page() {
             <div class="og-num">12</div>
             <div class="og-body">
                 <h3>Submit a Test Implant Lead</h3>
-                <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL:</p>
-                <p><code class="og-code">?utm_campaign=test-campaign&amp;utm_medium=cpc&amp;utm_keyword=dental+implants&amp;gclid=test123</code></p>
+                <p>Go to the page with your implant estimator shortcode and append test UTM parameters to the URL. Use either format — both work:</p>
+                <p><strong>Standard UTM params:</strong></p>
+                <p><code class="og-code">?utm_source=google&amp;utm_campaign=test-campaign&amp;utm_medium=cpc&amp;utm_content=dental-ad-group&amp;utm_keyword=dental+implants&amp;utm_term=broad&amp;gclid=test123</code></p>
+                <p><strong>Google Ads custom params</strong> (if your final URL template uses ValueTrack names):</p>
+                <p><code class="og-code">?UTMCampaign_Custom=test-campaign&amp;UTMmedium_custom=cpc&amp;UTMContent_custom=dental-ad-group&amp;UTMKeyword_custom=dental+implants&amp;UTMTerm_custom=broad&amp;GCLID_custom=test123</code></p>
                 <p>Complete the full quiz and submit your details. Then in GHL <strong>Contacts</strong>, find your test contact and verify:</p>
                 <ul class="og-checklist">
                     <li>Contact was created with correct name, email, and phone</li>
@@ -3917,11 +3920,16 @@ function cfg_settings_page() {
             <div class="og-num">13</div>
             <div class="og-body">
                 <h3>Submit a Test Contact Form Lead</h3>
-                <p>Fill out the main contact form (not the estimator) with a test email and verify:</p>
+                <p>Append test UTM parameters to the contact form page URL before submitting. Use either format:</p>
+                <p><strong>Standard UTM params:</strong></p>
+                <p><code class="og-code">?utm_source=google&amp;utm_campaign=test-campaign&amp;utm_medium=cpc&amp;utm_content=dental-ad-group&amp;utm_keyword=dental+implants&amp;utm_term=broad&amp;gclid=test123</code></p>
+                <p><strong>Google Ads custom params:</strong></p>
+                <p><code class="og-code">?UTMCampaign_Custom=test-campaign&amp;UTMmedium_custom=cpc&amp;UTMContent_custom=dental-ad-group&amp;UTMKeyword_custom=dental+implants&amp;UTMTerm_custom=broad&amp;GCLID_custom=test123</code></p>
+                <p>Fill out the form with a test email and verify:</p>
                 <ul class="og-checklist">
                     <li>Contact created / updated in GHL</li>
                     <li>Tag <span class="og-tag">website-contact-form</span> applied</li>
-                    <li>UTM custom fields populated (if URL has UTM params)</li>
+                    <li>UTM custom fields populated (utm_campaign shows <em>test-campaign</em>, gclid shows <em>test123</em>)</li>
                     <li>Contact form workflow triggered</li>
                 </ul>
             </div>
