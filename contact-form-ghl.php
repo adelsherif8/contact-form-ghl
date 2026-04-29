@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.79
+ * Version:     2.5.80
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5741,7 +5741,7 @@ function cfg_thank_you_shortcode() {
     </style>
 
     <div id="cfg-ty-wrap" style="background:<?= $bg ?>;font-family:<?= esc_attr( $font['stack'] ) ?>;color:<?= $tc ?>;font-weight:<?= $nw ?>;line-height:1.6;">
-        <div class="cfg-ty-grid" style="display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:4rem;max-width:1100px;margin:0 auto;padding:<?= $tp ?> 2rem 6rem;">
+        <div class="cfg-ty-grid" style="display:grid;grid-template-columns:<?= $s['ty_show_image'] === '1' ? '1fr 1fr' : '1fr' ?>;align-items:center;gap:4rem;max-width:1100px;margin:0 auto;padding:<?= $tp ?> 2rem 6rem;">
 
             <!-- Left: Text -->
             <div>
@@ -5773,6 +5773,7 @@ function cfg_thank_you_shortcode() {
             </div>
 
             <!-- Right: Image -->
+            <?php if ( $s['ty_show_image'] === '1' ): ?>
             <?php if ( ! empty( $s['ty_image_url'] ) ): ?>
             <div class="cfg-ty-img" style="border-radius:24px;overflow:hidden;position:relative;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
                 <div style="padding-bottom:75%;position:relative;height:0;overflow:hidden;">
@@ -5783,6 +5784,7 @@ function cfg_thank_you_shortcode() {
             <div class="cfg-ty-img" style="border-radius:24px;padding-bottom:75%;position:relative;background:#f4f4f5;">
                 <span style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:0.875rem;padding:1rem;text-align:center;">Set an image URL in Settings → Thank You Page</span>
             </div>
+            <?php endif; ?>
             <?php endif; ?>
 
         </div>
