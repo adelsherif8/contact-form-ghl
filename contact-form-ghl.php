@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.80
+ * Version:     2.5.81
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4928,14 +4928,20 @@ function cfg_settings_page() {
         <div class="cfg-an-card">
             <h3>Quick Stats</h3>
             <?php
-            $today_cnt = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()" );
-            $week_cnt  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
-            $all_time  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table}" );
+            $today_cnt   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()" );
+            $week_cnt    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+            $all_time    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table}" );
+            $conv_pct_30 = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 0;
             ?>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Today</span><strong><?= $today_cnt ?></strong></div>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">This week</span><strong><?= $week_cnt ?></strong></div>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Last 30 days</span><strong><?= $total_30 ?></strong></div>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
+            <div class="cfg-stat-row">
+                <span style="font-size:13px;color:#374151;">Conversion Rate <span style="font-size:11px;color:#9ca3af;">(30d)</span></span>
+                <strong style="color:<?= $conv_pct_30 >= 90 ? '#16a34a' : ($conv_pct_30 >= 70 ? '#f59e0b' : '#dc2626') ?>;"><?= $conv_pct_30 ?>%</strong>
+            </div>
+            <p style="font-size:11px;color:#9ca3af;margin:8px 0 0;">Form fills ÷ total entries</p>
         </div>
 
     </div><!-- /cfg-an-grid -->
