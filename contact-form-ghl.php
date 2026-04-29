@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.81
+ * Version:     2.5.82
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4820,6 +4820,23 @@ function cfg_settings_page() {
     $errors_30  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE ghl_status='error' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" );
     $success_30 = $total_30 - $errors_30;
     $success_pct = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 100;
+
+    // Conversion rate — by form type, today + 30d
+    $conv_rows_today = $wpdb->get_results(
+        "SELECT form_type, COUNT(*) AS total, SUM(ghl_status != 'error') AS fills
+         FROM {$an_table} WHERE DATE(created_at) = CURDATE() GROUP BY form_type",
+        ARRAY_A
+    );
+    $conv_rows_30 = $wpdb->get_results(
+        "SELECT form_type, COUNT(*) AS total, SUM(ghl_status != 'error') AS fills
+         FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY form_type",
+        ARRAY_A
+    );
+    $conv_today = []; $conv_30d = [];
+    foreach ( $conv_rows_today as $r ) $conv_today[ $r['form_type'] ] = [ 'total' => (int)$r['total'], 'fills' => (int)$r['fills'] ];
+    foreach ( $conv_rows_30   as $r ) $conv_30d[   $r['form_type'] ] = [ 'total' => (int)$r['total'], 'fills' => (int)$r['fills'] ];
+    $conv_today['_all'] = [ 'total' => array_sum( array_column( $conv_today, 'total' ) ), 'fills' => array_sum( array_column( $conv_today, 'fills' ) ) ];
+    $conv_30d['_all']   = [ 'total' => $total_30, 'fills' => $success_30 ];
     ?>
 
     <div id="cfg-analytics-wrap" style="display:none;background:#fff;border:1px solid #e2e4e9;border-left:none;border-radius:0 10px 10px 0;min-height:580px;overflow:hidden;">
@@ -4924,24 +4941,63 @@ function cfg_settings_page() {
             <?php endif; ?>
         </div>
 
-        <!-- Summary stats -->
+        <!-- Quick Stats -->
         <div class="cfg-an-card">
             <h3>Quick Stats</h3>
             <?php
-            $today_cnt   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()" );
-            $week_cnt    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
-            $all_time    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table}" );
-            $conv_pct_30 = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 0;
+            $today_cnt = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()" );
+            $week_cnt  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+            $all_time  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table}" );
             ?>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Today</span><strong><?= $today_cnt ?></strong></div>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">This week</span><strong><?= $week_cnt ?></strong></div>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Last 30 days</span><strong><?= $total_30 ?></strong></div>
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
-            <div class="cfg-stat-row">
-                <span style="font-size:13px;color:#374151;">Conversion Rate <span style="font-size:11px;color:#9ca3af;">(30d)</span></span>
-                <strong style="color:<?= $conv_pct_30 >= 90 ? '#16a34a' : ($conv_pct_30 >= 70 ? '#f59e0b' : '#dc2626') ?>;"><?= $conv_pct_30 ?>%</strong>
-            </div>
-            <p style="font-size:11px;color:#9ca3af;margin:8px 0 0;">Form fills ÷ total entries</p>
+        </div>
+
+        <!-- Conversion Rate -->
+        <div class="cfg-an-card cfg-an-full">
+            <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— form fills ÷ total entries</span></h3>
+            <?php
+            $cr_forms = [ '_all' => 'All Forms', 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+            $cr_colors = [ '_all' => '#374151', 'contact' => '#2271b1', 'aligner' => '#7c3aed', 'implant' => '#0891b2' ];
+            function cfg_conv_pct( $data ) {
+                return $data['total'] > 0 ? round( $data['fills'] / $data['total'] * 100 ) : null;
+            }
+            function cfg_conv_color( $pct ) {
+                if ( $pct === null ) return '#9ca3af';
+                return $pct >= 90 ? '#16a34a' : ( $pct >= 70 ? '#f59e0b' : '#dc2626' );
+            }
+            function cfg_conv_display( $data ) {
+                if ( $data['total'] === 0 ) return '<span style="color:#9ca3af;">—</span>';
+                $pct = round( $data['fills'] / $data['total'] * 100 );
+                $col = cfg_conv_color( $pct );
+                return '<strong style="color:' . $col . ';">' . $pct . '%</strong>'
+                     . '<span style="font-size:11px;color:#9ca3af;margin-left:5px;">(' . $data['fills'] . '/' . $data['total'] . ')</span>';
+            }
+            ?>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                    <tr style="border-bottom:2px solid #f3f4f6;">
+                        <th style="text-align:left;padding:6px 0;color:#6b7280;font-weight:600;">Form</th>
+                        <th style="text-align:right;padding:6px 12px;color:#6b7280;font-weight:600;">Today</th>
+                        <th style="text-align:right;padding:6px 0;color:#6b7280;font-weight:600;">Last 30 Days</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ( $cr_forms as $key => $label ):
+                    $d_today = $conv_today[ $key ] ?? [ 'total' => 0, 'fills' => 0 ];
+                    $d_30    = $conv_30d[   $key ] ?? [ 'total' => 0, 'fills' => 0 ];
+                    $is_all  = $key === '_all';
+                ?>
+                <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all ? 'background:#f9fafb;' : '' ?>">
+                    <td style="padding:9px 0;<?= $is_all ? 'font-weight:600;' : '' ?>color:<?= $cr_colors[$key] ?>;"><?= esc_html($label) ?></td>
+                    <td style="text-align:right;padding:9px 12px;"><?= cfg_conv_display($d_today) ?></td>
+                    <td style="text-align:right;padding:9px 0;"><?= cfg_conv_display($d_30) ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
 
     </div><!-- /cfg-an-grid -->
