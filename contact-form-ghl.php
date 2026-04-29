@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.77
+ * Version:     2.5.79
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7371,7 +7371,8 @@ $_sections_col = $result_sections_html
     result_suffix_single:   '<?= esc_js( $s['imp_result_single_suffix'] ) ?>',
     result_suffix_multiple: '<?= esc_js( $s['imp_result_multiple_suffix'] ) ?>',
     result_suffix_fullarch: '<?= esc_js( $s['imp_result_fullarch_suffix'] ) ?>',
-    resultCtaUrl:      '<?= esc_js( ! empty( $s['imp_cta_book_url'] ) ? $s['imp_cta_book_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : '' ) ) ?>',
+    resultCtaUrl:       '<?= esc_js( ! empty( $s['imp_cta_book_url'] ) ? $s['imp_cta_book_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : '' ) ) ?>',
+    contactRedirectUrl: '<?= esc_js( $s['imp_contact_btn_url'] ?? '' ) ?>',
     graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>',
     offerEnabled: <?= $offer_enabled ? 'true' : 'false' ?>,
     offerGhlKey:  '<?= esc_js( $offer_ghl_key ) ?>'
@@ -7815,7 +7816,15 @@ $_sections_col = $result_sections_html
     function _done() {
       isSubmitting = false;
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
-      navigate(panel);
+      if (config.contactRedirectUrl) {
+        var url = config.contactRedirectUrl;
+        ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){
+          var v = _gp(k); if (v) url += (url.indexOf('?') >= 0 ? '&' : '?') + k + '=' + encodeURIComponent(v);
+        });
+        window.location.href = url;
+      } else {
+        navigate(panel);
+      }
     }
     fetch(config.ajaxUrl, { method:'POST', body:fd }).then(_done).catch(_done);
   }
