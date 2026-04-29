@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.75
+ * Version:     2.5.77
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6876,9 +6876,21 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
           <h1 style="font-family:'Cormorant Garamond',serif;font-weight:600;color:hsl(var(--foreground));font-size:clamp(2rem,4vw,3rem);line-height:1.15;margin:0 0 1rem;">
             <?= nl2br( esc_html( $s['imp_intro_heading'] ) ) ?>
           </h1>
-          <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:1rem;line-height:1.65;margin:0 0 2rem;max-width:26rem;">
-            <?= esc_html( $s['imp_intro_subtitle'] ) ?>
+          <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:1rem;line-height:1.65;margin:0 0 1.25rem;max-width:26rem;">
+            <?= nl2br( esc_html( $s['imp_intro_subtitle'] ) ) ?>
           </p>
+          <?php
+          $intro_bullets = array_filter( array_map( 'trim', explode( "\n", $s['imp_intro_bullets'] ?? '' ) ) );
+          if ( ! empty( $intro_bullets ) ) : ?>
+          <ul style="list-style:none;padding:0;margin:0 0 1.75rem;display:flex;flex-direction:column;gap:.5rem;">
+            <?php foreach ( $intro_bullets as $b ) : ?>
+            <li style="display:flex;align-items:center;gap:.5rem;font-family:Inter,sans-serif;font-size:.9rem;color:hsl(var(--muted-foreground));">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke:hsl(var(--primary));flex-shrink:0;"><polyline points="20 6 9 13 4 10"/></svg>
+              <?= esc_html( $b ) ?>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+          <?php endif; ?>
           <div>
             <?php if ( ! empty( $s['imp_intro_btn_url'] ) ): ?>
             <a href="<?= esc_url( $s['imp_intro_btn_url'] ) ?>" class="imp-cta-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;">
@@ -6891,7 +6903,6 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
             <?php endif; ?>
-            <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;margin-top:.75rem;opacity:.5;">Personalized based on your answers &nbsp;&middot;&nbsp; Free &nbsp;&middot;&nbsp; No obligation</p>
           </div>
         </div>
         <div id="<?= $uid ?>-intro-card">
