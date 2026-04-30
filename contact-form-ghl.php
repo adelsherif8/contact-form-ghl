@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.85
+ * Version:     2.5.86
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7263,6 +7263,22 @@ $multi_qs         = json_decode( $s['imp_multi_qs'],    true ) ?: [];
 $arch_qs          = json_decode( $s['imp_arch_qs'],     true ) ?: [];
 $ins_q            = json_decode( $s['imp_ins_q'],       true ) ?: null;
 $router_opts_data = json_decode( $s['imp_router_opts'], true ) ?: [];
+
+// ── Runtime: ensure 'not-removed' option exists (fallback if DB not yet migrated) ──
+foreach ( $single_qs as &$_q ) {
+    if ( ( $_q['field'] ?? '' ) === 'timeMissing' && ! in_array( 'not-removed', array_column( $_q['opts'] ?? [], 'val' ), true ) ) {
+        array_unshift( $_q['opts'], [ 'val' => 'not-removed', 'label' => "Tooth hasn't been removed yet", 'sub' => '' ] );
+        break;
+    }
+}
+unset( $_q );
+foreach ( $multi_qs as &$_q ) {
+    if ( ( $_q['field'] ?? '' ) === 'timeMissingMult' && ! in_array( 'not-removed', array_column( $_q['opts'] ?? [], 'val' ), true ) ) {
+        array_unshift( $_q['opts'], [ 'val' => 'not-removed', 'label' => "Teeth haven't been removed yet", 'sub' => '' ] );
+        break;
+    }
+}
+unset( $_q );
 
 // ── Router ──
 $router_html = '';
