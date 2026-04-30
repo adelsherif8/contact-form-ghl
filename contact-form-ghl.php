@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.83
+ * Version:     2.5.84
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -50,7 +50,29 @@ add_action( 'plugins_loaded', function () {
     if ( get_option( 'cfg_events_db_version' ) !== CFG_EVENTS_DB_VER ) {
         cfg_create_events_table();
     }
-} );
+    // Migration: add 'not-removed' option to time-missing questions if absent
+    if ( ! get_option( 'cfg_mig_not_removed' ) ) {
+        $s = get_option( CFG_OPTION, [] );
+        $changed = false;
+        foreach ( [ 'imp_single_qs' => 'timeMissing', 'imp_multi_qs' => 'timeMissingMult' ] as $qkey => $field ) {
+            if ( empty( $s[ $qkey ] ) ) continue;
+            $qs = json_decode( $s[ $qkey ], true );
+            if ( ! is_array( $qs ) ) continue;
+            foreach ( $qs as &$q ) {
+                if ( ( $q['field'] ?? '' ) !== $field ) continue;
+                $vals = array_column( $q['opts'] ?? [], 'val' );
+                if ( in_array( 'not-removed', $vals, true ) ) continue;
+                $label = $field === 'timeMissing' ? "Tooth hasn't been removed yet" : "Teeth haven't been removed yet";
+                array_unshift( $q['opts'], [ 'val' => 'not-removed', 'label' => $label, 'sub' => '' ] );
+                $changed = true;
+            }
+            unset( $q );
+            if ( $changed ) $s[ $qkey ] = wp_json_encode( $qs, JSON_UNESCAPED_UNICODE );
+        }
+        if ( $changed ) update_option( CFG_OPTION, $s );
+        update_option( 'cfg_mig_not_removed', '1' );
+    }
+}, 20 );
 
 // ═══════════════════════════════════════════════════════════════
 //  DATABASE — EVENTS TABLE (view/start/step/complete tracking)
@@ -256,7 +278,7 @@ function cfg_defaults() {
             ['id'=>'a1','title'=>'Where is the tooth located?','subtitle'=>'Location affects restoration complexity and the materials used.','type'=>'radio','field'=>'toothLocation',
              'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing tooth (molar or premolar)'],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'a2','title'=>'How long has the tooth been missing?','subtitle'=>'This helps us assess potential bone changes at the site.','type'=>'radio','field'=>'timeMissing',
-             'opts'=>[['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+             'opts'=>[['val'=>'not-removed','label'=>"Tooth hasn't been removed yet",'sub'=>''],['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'a3','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraft','pricing_role'=>'bone_graft',
              'opts'=>[['val'=>'yes','label'=>'Yes','sub'=>''],['val'=>'no','label'=>'No','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'a4','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationSingle',
@@ -269,7 +291,7 @@ function cfg_defaults() {
             ['id'=>'m2','title'=>'Where are the teeth located?','subtitle'=>'Location affects restoration complexity and materials.','type'=>'radio','field'=>'teethLocation',
              'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing teeth'],['val'=>'both','label'=>'Both front and back','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'m3','title'=>'How long have the teeth been missing?','subtitle'=>'This helps us assess potential bone changes at the sites.','type'=>'radio','field'=>'timeMissingMult',
-             'opts'=>[['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
+             'opts'=>[['val'=>'not-removed','label'=>"Teeth haven't been removed yet",'sub'=>''],['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'m4','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraftMult','pricing_role'=>'bone_graft',
              'opts'=>[['val'=>'yes','label'=>'Yes','sub'=>''],['val'=>'no','label'=>'No','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
             ['id'=>'m5','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationMult',
