@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.84
+ * Version:     2.5.85
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -50,27 +50,54 @@ add_action( 'plugins_loaded', function () {
     if ( get_option( 'cfg_events_db_version' ) !== CFG_EVENTS_DB_VER ) {
         cfg_create_events_table();
     }
-    // Migration: add 'not-removed' option to time-missing questions if absent
-    if ( ! get_option( 'cfg_mig_not_removed' ) ) {
+    // Migration v2: add 'not-removed' option to time-missing questions if absent
+    if ( ! get_option( 'cfg_mig_not_removed_v2' ) ) {
         $s = get_option( CFG_OPTION, [] );
         $changed = false;
         foreach ( [ 'imp_single_qs' => 'timeMissing', 'imp_multi_qs' => 'timeMissingMult' ] as $qkey => $field ) {
             if ( empty( $s[ $qkey ] ) ) continue;
             $qs = json_decode( $s[ $qkey ], true );
             if ( ! is_array( $qs ) ) continue;
+            $qchanged = false;
             foreach ( $qs as &$q ) {
                 if ( ( $q['field'] ?? '' ) !== $field ) continue;
                 $vals = array_column( $q['opts'] ?? [], 'val' );
                 if ( in_array( 'not-removed', $vals, true ) ) continue;
                 $label = $field === 'timeMissing' ? "Tooth hasn't been removed yet" : "Teeth haven't been removed yet";
                 array_unshift( $q['opts'], [ 'val' => 'not-removed', 'label' => $label, 'sub' => '' ] );
-                $changed = true;
+                $qchanged = true;
             }
             unset( $q );
-            if ( $changed ) $s[ $qkey ] = wp_json_encode( $qs, JSON_UNESCAPED_UNICODE );
+            if ( $qchanged ) { $s[ $qkey ] = wp_json_encode( $qs, JSON_UNESCAPED_UNICODE ); $changed = true; }
         }
         if ( $changed ) update_option( CFG_OPTION, $s );
-        update_option( 'cfg_mig_not_removed', '1' );
+        update_option( 'cfg_mig_not_removed_v2', '1' );
+    }
+    // Migration: add required:true to all stored questions that lack the field
+    if ( ! get_option( 'cfg_mig_required_v1' ) ) {
+        $s = get_option( CFG_OPTION, [] );
+        $changed = false;
+        foreach ( [ 'imp_single_qs', 'imp_multi_qs', 'imp_arch_qs' ] as $qkey ) {
+            if ( empty( $s[ $qkey ] ) ) continue;
+            $qs = json_decode( $s[ $qkey ], true );
+            if ( ! is_array( $qs ) ) continue;
+            $qchanged = false;
+            foreach ( $qs as &$q ) {
+                if ( ! array_key_exists( 'required', $q ) ) { $q['required'] = true; $qchanged = true; }
+            }
+            unset( $q );
+            if ( $qchanged ) { $s[ $qkey ] = wp_json_encode( $qs, JSON_UNESCAPED_UNICODE ); $changed = true; }
+        }
+        if ( ! empty( $s['imp_ins_q'] ) ) {
+            $ins = json_decode( $s['imp_ins_q'], true );
+            if ( is_array( $ins ) && ! array_key_exists( 'required', $ins ) ) {
+                $ins['required'] = true;
+                $s['imp_ins_q']  = wp_json_encode( $ins, JSON_UNESCAPED_UNICODE );
+                $changed = true;
+            }
+        }
+        if ( $changed ) update_option( CFG_OPTION, $s );
+        update_option( 'cfg_mig_required_v1', '1' );
     }
 }, 20 );
 
@@ -275,40 +302,40 @@ function cfg_defaults() {
         ], JSON_UNESCAPED_UNICODE),
 
         'imp_single_qs' => json_encode([
-            ['id'=>'a1','title'=>'Where is the tooth located?','subtitle'=>'Location affects restoration complexity and the materials used.','type'=>'radio','field'=>'toothLocation',
+            ['id'=>'a1','title'=>'Where is the tooth located?','subtitle'=>'Location affects restoration complexity and the materials used.','type'=>'radio','field'=>'toothLocation','required'=>true,
              'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing tooth (molar or premolar)'],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'a2','title'=>'How long has the tooth been missing?','subtitle'=>'This helps us assess potential bone changes at the site.','type'=>'radio','field'=>'timeMissing',
+            ['id'=>'a2','title'=>'How long has the tooth been missing?','subtitle'=>'This helps us assess potential bone changes at the site.','type'=>'radio','field'=>'timeMissing','required'=>true,
              'opts'=>[['val'=>'not-removed','label'=>"Tooth hasn't been removed yet",'sub'=>''],['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'a3','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraft','pricing_role'=>'bone_graft',
+            ['id'=>'a3','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraft','pricing_role'=>'bone_graft','required'=>true,
              'opts'=>[['val'=>'yes','label'=>'Yes','sub'=>''],['val'=>'no','label'=>'No','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'a4','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationSingle',
+            ['id'=>'a4','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationSingle','required'=>true,
              'opts'=>[['val'=>'already-missing','label'=>'Tooth already missing','sub'=>''],['val'=>'needs-removal','label'=>'Tooth needs to be removed','sub'=>''],['val'=>'bridge-crown','label'=>'Replacing a bridge or crown','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
         ], JSON_UNESCAPED_UNICODE),
 
         'imp_multi_qs' => json_encode([
-            ['id'=>'m1','title'=>'How many teeth are you looking to replace?','subtitle'=>"We'll use this to calculate your personalized range.",'type'=>'radio','field'=>'teethCount',
+            ['id'=>'m1','title'=>'How many teeth are you looking to replace?','subtitle'=>"We'll use this to calculate your personalized range.",'type'=>'radio','field'=>'teethCount','required'=>true,
              'opts'=>[['val'=>'2','label'=>'2 teeth','sub'=>''],['val'=>'3','label'=>'3 teeth','sub'=>''],['val'=>'4','label'=>'4 teeth','sub'=>''],['val'=>'5','label'=>'5 teeth','sub'=>''],['val'=>'6','label'=>'6 teeth','sub'=>''],['val'=>'7','label'=>'7 teeth','sub'=>'']]],
-            ['id'=>'m2','title'=>'Where are the teeth located?','subtitle'=>'Location affects restoration complexity and materials.','type'=>'radio','field'=>'teethLocation',
+            ['id'=>'m2','title'=>'Where are the teeth located?','subtitle'=>'Location affects restoration complexity and materials.','type'=>'radio','field'=>'teethLocation','required'=>true,
              'opts'=>[['val'=>'front','label'=>'Front','sub'=>'Visible when smiling'],['val'=>'back','label'=>'Back','sub'=>'Chewing teeth'],['val'=>'both','label'=>'Both front and back','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'m3','title'=>'How long have the teeth been missing?','subtitle'=>'This helps us assess potential bone changes at the sites.','type'=>'radio','field'=>'timeMissingMult',
+            ['id'=>'m3','title'=>'How long have the teeth been missing?','subtitle'=>'This helps us assess potential bone changes at the sites.','type'=>'radio','field'=>'timeMissingMult','required'=>true,
              'opts'=>[['val'=>'not-removed','label'=>"Teeth haven't been removed yet",'sub'=>''],['val'=>'under-6mo','label'=>'Less than 6 months','sub'=>''],['val'=>'6-12mo','label'=>'6–12 months','sub'=>''],['val'=>'1-3yr','label'=>'1–3 years','sub'=>''],['val'=>'3yr+','label'=>'3+ years','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'m4','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraftMult','pricing_role'=>'bone_graft',
+            ['id'=>'m4','title'=>'Has a dentist mentioned bone loss or the need for bone grafting?','subtitle'=>'This can affect your treatment plan and overall timeline.','type'=>'radio','field'=>'boneGraftMult','pricing_role'=>'bone_graft','required'=>true,
              'opts'=>[['val'=>'yes','label'=>'Yes','sub'=>''],['val'=>'no','label'=>'No','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'m5','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationMult',
+            ['id'=>'m5','title'=>'What best describes your situation?','subtitle'=>'This helps us tailor your estimate to your current needs.','type'=>'radio','field'=>'situationMult','required'=>true,
              'opts'=>[['val'=>'already-missing','label'=>'Teeth already missing','sub'=>''],['val'=>'needs-removal','label'=>'Some teeth need to be removed','sub'=>''],['val'=>'bridge-crown','label'=>'Replacing bridges or crowns','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
         ], JSON_UNESCAPED_UNICODE),
 
         'imp_arch_qs' => json_encode([
-            ['id'=>'b1','title'=>'Which arch are you looking to replace?','subtitle'=>'Upper, lower, or both — this shapes your treatment overview.','type'=>'radio','field'=>'archSelection',
+            ['id'=>'b1','title'=>'Which arch are you looking to replace?','subtitle'=>'Upper, lower, or both — this shapes your treatment overview.','type'=>'radio','field'=>'archSelection','required'=>true,
              'opts'=>[['val'=>'upper','label'=>'Upper','sub'=>'Top teeth'],['val'=>'lower','label'=>'Lower','sub'=>'Bottom teeth'],['val'=>'both','label'=>'Both','sub'=>'Full mouth restoration']]],
-            ['id'=>'b2','title'=>'What best describes your current situation?','subtitle'=>'This helps us understand your starting point.','type'=>'radio','field'=>'situationArch',
+            ['id'=>'b2','title'=>'What best describes your current situation?','subtitle'=>'This helps us understand your starting point.','type'=>'radio','field'=>'situationArch','required'=>true,
              'opts'=>[['val'=>'wearing-denture','label'=>'Wearing a denture','sub'=>''],['val'=>'failing-teeth','label'=>'Multiple failing teeth','sub'=>''],['val'=>'beyond-repair','label'=>'Teeth beyond repair','sub'=>''],['val'=>'not-sure','label'=>'Not sure','sub'=>'']]],
-            ['id'=>'b3','title'=>'How long have you had missing or failing teeth?','subtitle'=>'Duration helps determine bone volume and treatment complexity.','type'=>'radio','field'=>'archDuration',
+            ['id'=>'b3','title'=>'How long have you had missing or failing teeth?','subtitle'=>'Duration helps determine bone volume and treatment complexity.','type'=>'radio','field'=>'archDuration','required'=>true,
              'opts'=>[['val'=>'under-1yr','label'=>'Less than 1 year','sub'=>''],['val'=>'1-5yr','label'=>'1–5 years','sub'=>''],['val'=>'5yr+','label'=>'5+ years','sub'=>'']]],
         ], JSON_UNESCAPED_UNICODE),
 
         'imp_ins_q' => json_encode(
-            ['id'=>'ins','title'=>'Do you have dental insurance?','subtitle'=>'Insurance can reduce your out-of-pocket cost.','type'=>'radio','field'=>'insurance',
+            ['id'=>'ins','title'=>'Do you have dental insurance?','subtitle'=>'Insurance can reduce your out-of-pocket cost.','type'=>'radio','field'=>'insurance','required'=>true,
              'opts'=>[['val'=>'yes','label'=>'Yes (I have coverage)','sub'=>''],['val'=>'no','label'=>'No','sub'=>'']]],
         JSON_UNESCAPED_UNICODE),
         'imp_result_single_suffix'   => 'for a single dental implant',
@@ -3039,6 +3066,22 @@ function cfg_settings_page() {
                 if (os) os.style.display = (this.value==='radio'||this.value==='dropdown') ? 'block' : 'none';
             }; });
             typeF.appendChild(typeSel); fields.appendChild(typeF);
+
+            // Required toggle
+            var reqF = impEdField('', 'full');
+            var reqLabel = document.createElement('label');
+            reqLabel.style = 'display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:2px;';
+            var reqChk = document.createElement('input'); reqChk.type='checkbox';
+            reqChk.checked = q.required !== false;
+            reqChk.onchange = (function(p,i){ return function(){
+                var data = isSingleQ ? impEd[p] : impEd[p][i];
+                data.required = this.checked; impEdSave(p);
+            }; })(path, qi);
+            var reqText = document.createElement('span');
+            reqText.style = 'font-size:12.5px;color:#374151;';
+            reqText.textContent = 'Required — must select an answer to continue (uncheck to show a Skip button)';
+            reqLabel.appendChild(reqChk); reqLabel.appendChild(reqText);
+            reqF.appendChild(reqLabel); fields.appendChild(reqF);
 
             card.appendChild(fields);
 
@@ -7234,17 +7277,23 @@ foreach ( $router_opts_data as $ro ) {
 echo $qpanel( 'router', $s['imp_router_title'], $s['imp_router_sub'], $router_html );
 
 // ── Render a path ──
-$render_path = function( $qs, $path_end_next ) use ( $opt, $qpanel ) {
+$render_path = function( $qs, $path_end_next ) use ( $opt, $qpanel, $uid ) {
     foreach ( $qs as $i => $q ) {
-        $next    = isset( $qs[ $i + 1 ] ) ? $qs[ $i + 1 ]['id'] : $path_end_next;
-        $type    = $q['type'] ?? 'radio';
-        $sub     = $q['subtitle'] ?? '';
+        $next     = isset( $qs[ $i + 1 ] ) ? $qs[ $i + 1 ]['id'] : $path_end_next;
+        $type     = $q['type'] ?? 'radio';
+        $sub      = $q['subtitle'] ?? '';
+        $required = $q['required'] ?? true;
+        $skip_btn = $required ? '' :
+            '<div style="text-align:center;margin-top:.875rem;">'
+            . '<button type="button" style="background:none;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:.8125rem;color:hsl(var(--muted-foreground));text-decoration:underline;text-underline-offset:2px;padding:.25rem .5rem;"'
+            . ' onclick="' . esc_attr($uid) . 'Nav(\'' . esc_js($next) . '\')">'
+            . 'Skip this question</button></div>';
         if ( $type === 'radio' || $type === 'dropdown' ) {
             $opts_html = '';
             foreach ( $q['opts'] ?? [] as $o ) {
                 $opts_html .= $opt( $q['field'], $o['val'], $o['label'], $next, $o['sub'] ?? '' );
             }
-            echo $qpanel( $q['id'], $q['title'], $sub, $opts_html );
+            echo $qpanel( $q['id'], $q['title'], $sub, $opts_html . $skip_btn );
         } elseif ( $type === 'text' || $type === 'textarea' ) {
             echo $qpanel( $q['id'], $q['title'], $sub,
                 '<div class="die-text-q-wrap">'
@@ -7257,6 +7306,7 @@ $render_path = function( $qs, $path_end_next ) use ( $opt, $qpanel ) {
                     : '<button class="die-next-btn" onclick="var el=document.getElementById(\'' . esc_attr($q['id']) . '-txt\');window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',el.value,el.value,\'' . esc_js($next) . '\')">Continue &#x2192;</button>'
                   )
                 . '</div>'
+                . $skip_btn
             );
         }
     }
@@ -7273,11 +7323,17 @@ $render_path( $arch_qs, 'summary' );
 
 // ── Insurance ──
 if ( $show_insurance && $ins_q ) {
+    $ins_required  = $ins_q['required'] ?? true;
+    $ins_skip      = $ins_required ? '' :
+        '<div style="text-align:center;margin-top:.875rem;">'
+        . '<button type="button" style="background:none;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:.8125rem;color:hsl(var(--muted-foreground));text-decoration:underline;text-underline-offset:2px;padding:.25rem .5rem;"'
+        . ' onclick="' . esc_attr($uid) . 'Nav(\'summary\')">'
+        . 'Skip this question</button></div>';
     $ins_opts_html = '';
     foreach ( $ins_q['opts'] ?? [] as $o ) {
         $ins_opts_html .= $opt( $ins_q['field'], $o['val'], $o['label'], 'summary', $o['sub'] ?? '' );
     }
-    echo $qpanel( $ins_q['id'], $ins_q['title'], $ins_q['subtitle'] ?? '', $ins_opts_html );
+    echo $qpanel( $ins_q['id'], $ins_q['title'], $ins_q['subtitle'] ?? '', $ins_opts_html . $ins_skip );
 }
 ?>
 
