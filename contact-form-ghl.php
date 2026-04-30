@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.82
+ * Version:     2.5.83
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 define( 'CFG_SLUG',   'contact-form-ghl' );
 define( 'CFG_OPTION', 'cfg_settings' );
 define( 'CFG_ENTRIES_DB_VER', '1.0' );
+define( 'CFG_EVENTS_DB_VER',  '1.0' );
 
 // ═══════════════════════════════════════════════════════════════
 //  DATABASE — ENTRIES TABLE
@@ -46,7 +47,35 @@ add_action( 'plugins_loaded', function () {
     if ( get_option( 'cfg_entries_db_version' ) !== CFG_ENTRIES_DB_VER ) {
         cfg_create_entries_table();
     }
+    if ( get_option( 'cfg_events_db_version' ) !== CFG_EVENTS_DB_VER ) {
+        cfg_create_events_table();
+    }
 } );
+
+// ═══════════════════════════════════════════════════════════════
+//  DATABASE — EVENTS TABLE (view/start/step/complete tracking)
+// ═══════════════════════════════════════════════════════════════
+register_activation_hook( __FILE__, 'cfg_create_events_table' );
+
+function cfg_create_events_table() {
+    global $wpdb;
+    $table           = $wpdb->prefix . 'cfg_events';
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE IF NOT EXISTS {$table} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        form_type  VARCHAR(20)  NOT NULL DEFAULT '',
+        event_type VARCHAR(20)  NOT NULL DEFAULT '',
+        step_key   VARCHAR(100) NOT NULL DEFAULT '',
+        session_id VARCHAR(64)  NOT NULL DEFAULT '',
+        created_at DATETIME     NOT NULL,
+        PRIMARY KEY (id),
+        KEY idx_form_event (form_type, event_type, created_at),
+        KEY idx_session (session_id, form_type)
+    ) {$charset_collate};";
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta( $sql );
+    update_option( 'cfg_events_db_version', CFG_EVENTS_DB_VER );
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  AUTO-UPDATE FROM GITHUB
@@ -4821,22 +4850,57 @@ function cfg_settings_page() {
     $success_30 = $total_30 - $errors_30;
     $success_pct = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 100;
 
-    // Conversion rate — by form type, today + 30d
-    $conv_rows_today = $wpdb->get_results(
-        "SELECT form_type, COUNT(*) AS total, SUM(ghl_status != 'error') AS fills
-         FROM {$an_table} WHERE DATE(created_at) = CURDATE() GROUP BY form_type",
-        ARRAY_A
-    );
-    $conv_rows_30 = $wpdb->get_results(
-        "SELECT form_type, COUNT(*) AS total, SUM(ghl_status != 'error') AS fills
-         FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) GROUP BY form_type",
-        ARRAY_A
-    );
-    $conv_today = []; $conv_30d = [];
-    foreach ( $conv_rows_today as $r ) $conv_today[ $r['form_type'] ] = [ 'total' => (int)$r['total'], 'fills' => (int)$r['fills'] ];
-    foreach ( $conv_rows_30   as $r ) $conv_30d[   $r['form_type'] ] = [ 'total' => (int)$r['total'], 'fills' => (int)$r['fills'] ];
-    $conv_today['_all'] = [ 'total' => array_sum( array_column( $conv_today, 'total' ) ), 'fills' => array_sum( array_column( $conv_today, 'fills' ) ) ];
-    $conv_30d['_all']   = [ 'total' => $total_30, 'fills' => $success_30 ];
+    // Conversion tracking — views/starts/completes from cfg_events
+    $ev_table = $wpdb->prefix . 'cfg_events';
+    $ev_table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$ev_table}'" ) === $ev_table;
+
+    // Per-form today: unique sessions per event_type
+    $cr_forms_list = [ 'contact', 'aligner', 'implant' ];
+    $cr_today = []; $cr_30d = [];
+    if ( $ev_table_exists ) {
+        foreach ( $cr_forms_list as $ft ) {
+            foreach ( [ 'today' => "DATE(created_at) = CURDATE()", '30d' => "created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" ] as $period => $where ) {
+                $rows = $wpdb->get_results(
+                    "SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE form_type=%s AND {$where} GROUP BY event_type",
+                    'ARRAY_A', $ft
+                );
+                $map = [];
+                foreach ( $rows as $r ) $map[ $r['event_type'] ] = (int) $r['cnt'];
+                if ( $period === 'today' ) $cr_today[$ft] = $map;
+                else                      $cr_30d[$ft]   = $map;
+            }
+        }
+        // All-forms totals
+        foreach ( [ 'today' => "DATE(created_at) = CURDATE()", '30d' => "created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" ] as $period => $where ) {
+            $rows = $wpdb->get_results(
+                "SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE {$where} GROUP BY event_type",
+                ARRAY_A
+            );
+            $map = [];
+            foreach ( $rows as $r ) $map[ $r['event_type'] ] = (int) $r['cnt'];
+            if ( $period === 'today' ) $cr_today['_all'] = $map;
+            else                      $cr_30d['_all']   = $map;
+        }
+
+        // Daily conversion rate for line chart (last 30 days, all forms)
+        $daily_evs = $wpdb->get_results(
+            "SELECT DATE(created_at) AS day, event_type, COUNT(DISTINCT session_id) AS cnt
+             FROM {$ev_table}
+             WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY) AND event_type IN ('view','complete')
+             GROUP BY day, event_type ORDER BY day ASC",
+            ARRAY_A
+        );
+        $daily_ev_map = [];
+        foreach ( $daily_evs as $r ) $daily_ev_map[ $r['day'] ][ $r['event_type'] ] = (int) $r['cnt'];
+
+        // Step drop-off for implant (last 30 days, unique sessions per step)
+        $imp_steps_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='step' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+             GROUP BY step_key ORDER BY cnt DESC",
+            ARRAY_A
+        );
+    }
     ?>
 
     <div id="cfg-analytics-wrap" style="display:none;background:#fff;border:1px solid #e2e4e9;border-left:none;border-radius:0 10px 10px 0;min-height:580px;overflow:hidden;">
@@ -4955,52 +5019,152 @@ function cfg_settings_page() {
             <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
         </div>
 
-        <!-- Conversion Rate -->
-        <div class="cfg-an-card cfg-an-full">
-            <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— form fills ÷ total entries</span></h3>
-            <?php
-            $cr_forms = [ '_all' => 'All Forms', 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
-            $cr_colors = [ '_all' => '#374151', 'contact' => '#2271b1', 'aligner' => '#7c3aed', 'implant' => '#0891b2' ];
-            function cfg_conv_pct( $data ) {
-                return $data['total'] > 0 ? round( $data['fills'] / $data['total'] * 100 ) : null;
-            }
-            function cfg_conv_color( $pct ) {
-                if ( $pct === null ) return '#9ca3af';
-                return $pct >= 90 ? '#16a34a' : ( $pct >= 70 ? '#f59e0b' : '#dc2626' );
-            }
-            function cfg_conv_display( $data ) {
-                if ( $data['total'] === 0 ) return '<span style="color:#9ca3af;">—</span>';
-                $pct = round( $data['fills'] / $data['total'] * 100 );
-                $col = cfg_conv_color( $pct );
-                return '<strong style="color:' . $col . ';">' . $pct . '%</strong>'
-                     . '<span style="font-size:11px;color:#9ca3af;margin-left:5px;">(' . $data['fills'] . '/' . $data['total'] . ')</span>';
-            }
-            ?>
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead>
-                    <tr style="border-bottom:2px solid #f3f4f6;">
-                        <th style="text-align:left;padding:6px 0;color:#6b7280;font-weight:600;">Form</th>
-                        <th style="text-align:right;padding:6px 12px;color:#6b7280;font-weight:600;">Today</th>
-                        <th style="text-align:right;padding:6px 0;color:#6b7280;font-weight:600;">Last 30 Days</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ( $cr_forms as $key => $label ):
-                    $d_today = $conv_today[ $key ] ?? [ 'total' => 0, 'fills' => 0 ];
-                    $d_30    = $conv_30d[   $key ] ?? [ 'total' => 0, 'fills' => 0 ];
-                    $is_all  = $key === '_all';
-                ?>
-                <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all ? 'background:#f9fafb;' : '' ?>">
-                    <td style="padding:9px 0;<?= $is_all ? 'font-weight:600;' : '' ?>color:<?= $cr_colors[$key] ?>;"><?= esc_html($label) ?></td>
-                    <td style="text-align:right;padding:9px 12px;"><?= cfg_conv_display($d_today) ?></td>
-                    <td style="text-align:right;padding:9px 0;"><?= cfg_conv_display($d_30) ?></td>
-                </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
     </div><!-- /cfg-an-grid -->
+
+    <?php if ( ! $ev_table_exists ): ?>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:14px 18px;font-size:13px;color:#92400e;margin-bottom:20px;">
+        ⏳ Conversion tracking activates after your next site visit. Data will appear here once the first form view is recorded.
+    </div>
+    <?php else: ?>
+
+    <?php
+    // Helper: render a conv cell from an event map
+    function cfg_ev_cell( $map ) {
+        $views     = $map['view']     ?? 0;
+        $completes = $map['complete'] ?? 0;
+        if ( $views === 0 ) return '<span style="color:#9ca3af;font-size:12px;">—</span>';
+        $pct = round( $completes / $views * 100 );
+        $col = $pct >= 50 ? '#16a34a' : ( $pct >= 25 ? '#f59e0b' : '#dc2626' );
+        return '<div style="text-align:right;">'
+             . '<strong style="font-size:14px;color:' . $col . ';">' . $pct . '%</strong>'
+             . '<div style="font-size:11px;color:#9ca3af;margin-top:1px;">' . $completes . ' / ' . $views . ' views</div>'
+             . '</div>';
+    }
+    $cr_form_labels = [ '_all' => 'All Forms', 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
+    $cr_form_colors = [ '_all' => '#374151',   'contact' => '#2271b1',      'aligner' => '#7c3aed',      'implant' => '#0891b2' ];
+    ?>
+
+    <!-- Conversion Rate Table -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— completions ÷ form views</span></h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="border-bottom:2px solid #f3f4f6;">
+                    <th style="text-align:left;padding:6px 0;color:#6b7280;font-weight:600;width:40%;">Form</th>
+                    <th style="text-align:right;padding:6px 16px 6px 0;color:#6b7280;font-weight:600;">Today</th>
+                    <th style="text-align:right;padding:6px 0;color:#6b7280;font-weight:600;">Last 30 Days</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ( $cr_form_labels as $key => $label ):
+                $is_all = $key === '_all';
+            ?>
+            <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all ? 'background:#f9fafb;' : '' ?>">
+                <td style="padding:10px 0;<?= $is_all ? 'font-weight:600;' : '' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
+                <td style="padding:10px 16px 10px 0;"><?= cfg_ev_cell( $cr_today[$key] ?? [] ) ?></td>
+                <td style="padding:10px 0;"><?= cfg_ev_cell( $cr_30d[$key]   ?? [] ) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Conversion Rate Line Chart -->
+    <?php
+    $chart_days = [];
+    for ( $i = 29; $i >= 0; $i-- ) {
+        $d = date( 'Y-m-d', strtotime( "-{$i} days" ) );
+        $v = $daily_ev_map[$d]['view']     ?? 0;
+        $c = $daily_ev_map[$d]['complete'] ?? 0;
+        $chart_days[] = [ 'day' => date('M j', strtotime($d)), 'rate' => $v > 0 ? round($c/$v*100) : null, 'views' => $v, 'comp' => $c ];
+    }
+    $has_chart_data = count( array_filter( array_column( $chart_days, 'rate' ), fn($r) => $r !== null ) ) > 0;
+    ?>
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Conversion Rate — Last 30 Days <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">all forms combined</span></h3>
+        <?php if ( ! $has_chart_data ): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No conversion data yet — visit your forms to start tracking.</p>
+        <?php else: ?>
+        <div style="position:relative;height:140px;margin-bottom:8px;">
+            <svg viewBox="0 0 600 120" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
+                <!-- Grid lines -->
+                <?php foreach ( [0,25,50,75,100] as $pct ): $y = 110 - $pct * 1.1; ?>
+                <line x1="0" y1="<?= $y ?>" x2="600" y2="<?= $y ?>" stroke="#f3f4f6" stroke-width="1"/>
+                <?php endforeach; ?>
+                <?php
+                // Build polyline points, skip null gaps
+                $segments = []; $cur_seg = [];
+                foreach ( $chart_days as $i => $d ) {
+                    $x = round( $i / 29 * 600, 1 );
+                    if ( $d['rate'] !== null ) {
+                        $y = round( 110 - $d['rate'] * 1.1, 1 );
+                        $cur_seg[] = $x . ',' . $y;
+                    } else {
+                        if ( $cur_seg ) { $segments[] = $cur_seg; $cur_seg = []; }
+                    }
+                }
+                if ( $cur_seg ) $segments[] = $cur_seg;
+                foreach ( $segments as $seg ):
+                    if ( count($seg) < 2 ) continue;
+                ?>
+                <polyline points="<?= implode(' ', $seg) ?>" fill="none" stroke="#2271b1" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <?php endforeach; ?>
+                <!-- Data points with tooltips -->
+                <?php foreach ( $chart_days as $i => $d ):
+                    if ( $d['rate'] === null ) continue;
+                    $x = round( $i / 29 * 600, 1 );
+                    $y = round( 110 - $d['rate'] * 1.1, 1 );
+                ?>
+                <circle cx="<?= $x ?>" cy="<?= $y ?>" r="3.5" fill="#2271b1" stroke="#fff" stroke-width="1.5">
+                    <title><?= esc_attr( $d['day'] ) ?>: <?= $d['rate'] ?>% (<?= $d['comp'] ?>/<?= $d['views'] ?>)</title>
+                </circle>
+                <?php endforeach; ?>
+            </svg>
+            <!-- Y-axis labels -->
+            <div style="position:absolute;top:0;left:-32px;height:100%;display:flex;flex-direction:column;justify-content:space-between;font-size:10px;color:#9ca3af;pointer-events:none;">
+                <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;padding-left:0;">
+            <span><?= esc_html( $chart_days[0]['day'] ) ?></span>
+            <span><?= esc_html( $chart_days[14]['day'] ) ?></span>
+            <span><?= esc_html( $chart_days[29]['day'] ) ?></span>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Implant step drop-off -->
+    <?php if ( ! empty( $imp_steps_raw ) ): ?>
+    <?php
+    $imp_step_labels = [
+        'router' => 'Router', 'intro' => 'Intro',
+        'a1'=>'Q1 (tooth location)','a2'=>'Q2 (time missing)','a3'=>'Q3 (bone graft)','a4'=>'Q4 (situation)',
+        'm1'=>'Q1 (# teeth)','m2'=>'Q2 (location)','m3'=>'Q3 (time missing)','m4'=>'Q4 (bone graft)','m5'=>'Q5 (situation)',
+        'b1'=>'Q1 (arch)','b2'=>'Q2 (situation)','b3'=>'Q3 (duration)',
+        'ins'=>'Insurance Q','offer'=>'Offer','lead'=>'Lead Form',
+        'result-single'=>'Result: Single','result-multiple'=>'Result: Multiple','result-fullarch'=>'Result: Full Arch',
+    ];
+    $imp_max = max( 1, (int)$imp_steps_raw[0]['cnt'] );
+    ?>
+    <div class="cfg-an-card">
+        <h3>Implant Estimator — Step Reach (30 days) <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step</span></h3>
+        <?php foreach ( $imp_steps_raw as $row ):
+            $lbl = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
+            $pct = round( (int)$row['cnt'] / $imp_max * 100 );
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:8px;">
+            <span class="cfg-src-label" style="width:160px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg">
+                <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div>
+            </div>
+            <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php endif; // ev_table_exists ?>
+
         </div><!-- /cfg-panel-body -->
     </div><!-- /cfg-analytics-wrap -->
 
@@ -5396,6 +5560,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             .then(function(d){
                 btn.disabled=false; lbl.textContent=BTN_TXT;
                 if (d.success) {
+                    cfgTrContact('complete','');
                     if (REDIRECT) { utmRedirect(REDIRECT); }
                     else { form.reset(); okBox.style.display='block'; }
                 } else { showErr(d.data||'Submission failed. Please try again.'); }
@@ -5415,6 +5580,13 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                 grecaptcha.ready(function(){ grecaptcha.execute(RC_KEY,{action:'submit'}).then(doSubmit); });
             } else { doSubmit(''); }
         });
+
+        /* ── Conversion tracking ── */
+        var _cfgSidContact = sessionStorage.getItem('cfg_sid_contact') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_contact',id); return id; })();
+        function cfgTrContact(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','contact'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidContact); fetch(AJAX,{method:'POST',body:fd}).catch(function(){}); }
+        if (!sessionStorage.getItem('cfg_v_contact')) { sessionStorage.setItem('cfg_v_contact','1'); cfgTrContact('view',''); }
+        var _cfgContactStarted=false;
+        form.addEventListener('focusin',function(){ if(!_cfgContactStarted){_cfgContactStarted=true;cfgTrContact('start','');} },true);
     })();
     </script>
     <?php
@@ -6438,8 +6610,16 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
         setTimeout(function(){ slider.style.transition=''; setH(); fixLayout(); }, 10);
     });
 
+    /* ── Conversion tracking ── */
+    var _cfgSidAligner = sessionStorage.getItem('cfg_sid_aligner') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_aligner',id); return id; })();
+    function cfgTrAligner(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','aligner'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidAligner); fetch(ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
+    if (!sessionStorage.getItem('cfg_v_aligner')) { sessionStorage.setItem('cfg_v_aligner','1'); cfgTrAligner('view',''); }
+    var _cfgAlgStarted=false;
+
     function goTo(n){
         if(n<0||n>=total) return;
+        if (!_cfgAlgStarted && n > 0) { _cfgAlgStarted=true; cfgTrAligner('start','step_0'); }
+        if (n > 0) { var _sk = steps[n] ? (steps[n].dataset.key||('step_'+n)) : ('step_'+n); cfgTrAligner('step',_sk); }
         cur=n;
         slider.style.transform='translateX(-'+(cur*100)+'%)';
         updateProg();
@@ -6527,6 +6707,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
+                    cfgTrAligner('complete','');
                     if(surl){ var _ss2={};try{_ss2=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}var _up2=new URLSearchParams(window.location.search);function _gp2(k){var v='';_up2.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss2[k]||'';}var _d=surl;['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){var v=_gp2(k);if(v)_d+=(_d.indexOf('?')>=0?'&':'?')+k+'='+encodeURIComponent(v);});window.location.href=_d; }
                     else{
                         form.innerHTML='<div style="text-align:center;padding:2.5rem 0;">'+
@@ -7681,6 +7862,7 @@ $_sections_col = $result_sections_html
       currentPanel = panelId;
       showPanel(panelId);
       updateStepBar(panelId);
+      cfgTrImp('step', panelId);
       if (panelId === 'summary') buildSummary();
       if (panelId === 'result-single' || panelId === 'result-multiple' || panelId === 'result-fullarch') renderResult(panelId);
     }, 1700);
@@ -7696,6 +7878,7 @@ $_sections_col = $result_sections_html
 
   /* ── SELECT OPTION ── */
   function selectOpt(btn, key, val, label, next) {
+    if (!_cfgImpStarted) { _cfgImpStarted=true; cfgTrImp('start',''); }
     s.answers[key]  = val;
     s.answersL[key] = label;
     if (key === 'router') {
@@ -7879,6 +8062,7 @@ $_sections_col = $result_sections_html
     ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){ fd.append(k, _gp(k)); });
     function _done() {
       isSubmitting = false;
+      cfgTrImp('complete','');
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
       if (config.contactRedirectUrl) {
         var url = config.contactRedirectUrl;
@@ -7906,11 +8090,17 @@ $_sections_col = $result_sections_html
     window.location.href = url;
   }
 
+  /* ── Conversion tracking ── */
+  var _cfgSidImp = sessionStorage.getItem('cfg_sid_implant') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_implant',id); return id; })();
+  function cfgTrImp(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','implant'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidImp); fetch(config.ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
+  var _cfgImpStarted=false;
+
   /* ── INIT ── */
   var initialized = false;
   function init() {
     if (initialized) return;
     initialized = true;
+    if (!sessionStorage.getItem('cfg_v_implant')) { sessionStorage.setItem('cfg_v_implant','1'); cfgTrImp('view',''); }
     showPanel('intro');
     updateStepBar('intro');
     var form = document.getElementById(uid + '-lead-form');
@@ -8740,6 +8930,30 @@ function submitToServer(path, cb){
 // ═══════════════════════════════════════════════════════════════
 add_action( 'wp_ajax_cfg_review_submit',        'cfg_review_ajax_submit' );
 add_action( 'wp_ajax_nopriv_cfg_review_submit', 'cfg_review_ajax_submit' );
+
+add_action( 'wp_ajax_cfg_track',        'cfg_ajax_track_event' );
+add_action( 'wp_ajax_nopriv_cfg_track', 'cfg_ajax_track_event' );
+
+function cfg_ajax_track_event() {
+    global $wpdb;
+    $form_type  = sanitize_key( $_POST['form_type']  ?? '' );
+    $event_type = sanitize_key( $_POST['event_type'] ?? '' );
+    $step_key   = sanitize_text_field( $_POST['step_key']   ?? '' );
+    $session_id = sanitize_text_field( $_POST['session_id'] ?? '' );
+    $allowed_forms  = [ 'contact', 'aligner', 'implant' ];
+    $allowed_events = [ 'view', 'start', 'step', 'complete' ];
+    if ( ! in_array( $form_type, $allowed_forms, true ) || ! in_array( $event_type, $allowed_events, true ) ) {
+        wp_send_json_error(); return;
+    }
+    $wpdb->insert( $wpdb->prefix . 'cfg_events', [
+        'form_type'  => $form_type,
+        'event_type' => $event_type,
+        'step_key'   => substr( $step_key, 0, 100 ),
+        'session_id' => substr( $session_id, 0, 64 ),
+        'created_at' => current_time( 'mysql' ),
+    ] );
+    wp_send_json_success();
+}
 
 function cfg_review_ajax_submit() {
     check_ajax_referer( 'cfg_review_submit', 'nonce' );
