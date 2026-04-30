@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.86
+ * Version:     2.5.87
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -398,6 +398,21 @@ function cfg_defaults() {
 function cfg_get( $key = null ) {
     $opts = get_option( CFG_OPTION, [] );
     $opts = wp_parse_args( $opts, cfg_defaults() );
+    // Ensure 'not-removed' option is always present regardless of DB state
+    foreach ( [ 'imp_single_qs' => [ 'timeMissing', "Tooth hasn't been removed yet" ], 'imp_multi_qs' => [ 'timeMissingMult', "Teeth haven't been removed yet" ] ] as $qk => $meta ) {
+        $qs = json_decode( $opts[ $qk ] ?? '', true );
+        if ( ! is_array( $qs ) ) continue;
+        $changed = false;
+        foreach ( $qs as &$q ) {
+            if ( ( $q['field'] ?? '' ) !== $meta[0] ) continue;
+            if ( ! in_array( 'not-removed', array_column( $q['opts'] ?? [], 'val' ), true ) ) {
+                array_unshift( $q['opts'], [ 'val' => 'not-removed', 'label' => $meta[1], 'sub' => '' ] );
+                $changed = true;
+            }
+        }
+        unset( $q );
+        if ( $changed ) $opts[ $qk ] = wp_json_encode( $qs, JSON_UNESCAPED_UNICODE );
+    }
     if ( $key !== null ) return $opts[ $key ] ?? null;
     return $opts;
 }
@@ -3068,20 +3083,21 @@ function cfg_settings_page() {
             typeF.appendChild(typeSel); fields.appendChild(typeF);
 
             // Required toggle
-            var reqF = impEdField('', 'full');
-            var reqLabel = document.createElement('label');
-            reqLabel.style = 'display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:2px;';
-            var reqChk = document.createElement('input'); reqChk.type='checkbox';
+            var reqF = document.createElement('div'); reqF.className = 'imp-q-card-field full';
+            var reqWrap = document.createElement('div');
+            reqWrap.style = 'display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 0;';
+            var reqChk = document.createElement('input'); reqChk.type='checkbox'; reqChk.style='cursor:pointer;width:auto;';
             reqChk.checked = q.required !== false;
             reqChk.onchange = (function(p,i){ return function(){
                 var data = isSingleQ ? impEd[p] : impEd[p][i];
                 data.required = this.checked; impEdSave(p);
             }; })(path, qi);
             var reqText = document.createElement('span');
-            reqText.style = 'font-size:12.5px;color:#374151;';
+            reqText.style = 'font-size:12px;color:#374151;line-height:1.4;';
             reqText.textContent = 'Required — must select an answer to continue (uncheck to show a Skip button)';
-            reqLabel.appendChild(reqChk); reqLabel.appendChild(reqText);
-            reqF.appendChild(reqLabel); fields.appendChild(reqF);
+            reqWrap.appendChild(reqChk); reqWrap.appendChild(reqText);
+            reqWrap.onclick = function(e){ if(e.target !== reqChk){ reqChk.checked = !reqChk.checked; reqChk.dispatchEvent(new Event('change')); } };
+            reqF.appendChild(reqWrap); fields.appendChild(reqF);
 
             card.appendChild(fields);
 
