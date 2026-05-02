@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.89
+ * Version:     2.5.90
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4942,8 +4942,8 @@ function cfg_settings_page() {
         foreach ( $cr_forms_list as $ft ) {
             foreach ( [ 'today' => "DATE(created_at) = CURDATE()", '30d' => "created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" ] as $period => $where ) {
                 $rows = $wpdb->get_results(
-                    "SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE form_type=%s AND {$where} GROUP BY event_type",
-                    'ARRAY_A', $ft
+                    $wpdb->prepare( "SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE form_type=%s AND {$where} GROUP BY event_type", $ft ),
+                    ARRAY_A
                 );
                 $map = [];
                 foreach ( $rows as $r ) $map[ $r['event_type'] ] = (int) $r['cnt'];
