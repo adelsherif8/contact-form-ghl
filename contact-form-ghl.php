@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.87
+ * Version:     2.5.88
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4981,6 +4981,24 @@ function cfg_settings_page() {
              GROUP BY step_key ORDER BY cnt DESC",
             ARRAY_A
         );
+        // Exit-step analysis: last step reached by sessions that never completed (last 30 days)
+        $imp_exits_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(*) AS drop_offs
+             FROM (
+                 SELECT SUBSTRING_INDEX(GROUP_CONCAT(step_key ORDER BY created_at DESC SEPARATOR '|'),'|',1) AS step_key
+                 FROM {$ev_table}
+                 WHERE form_type='implant' AND event_type='step'
+                   AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                   AND session_id NOT IN (
+                       SELECT DISTINCT session_id FROM {$ev_table}
+                       WHERE form_type='implant' AND event_type='complete'
+                         AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                   )
+                 GROUP BY session_id
+             ) last_steps
+             GROUP BY step_key ORDER BY drop_offs DESC",
+            ARRAY_A
+        );
     }
     ?>
 
@@ -5214,21 +5232,22 @@ function cfg_settings_page() {
         <?php endif; ?>
     </div>
 
-    <!-- Implant step drop-off -->
-    <?php if ( ! empty( $imp_steps_raw ) ): ?>
     <?php
     $imp_step_labels = [
         'router' => 'Router', 'intro' => 'Intro',
-        'a1'=>'Q1 (tooth location)','a2'=>'Q2 (time missing)','a3'=>'Q3 (bone graft)','a4'=>'Q4 (situation)',
-        'm1'=>'Q1 (# teeth)','m2'=>'Q2 (location)','m3'=>'Q3 (time missing)','m4'=>'Q4 (bone graft)','m5'=>'Q5 (situation)',
-        'b1'=>'Q1 (arch)','b2'=>'Q2 (situation)','b3'=>'Q3 (duration)',
-        'ins'=>'Insurance Q','offer'=>'Offer','lead'=>'Lead Form',
-        'result-single'=>'Result: Single','result-multiple'=>'Result: Multiple','result-fullarch'=>'Result: Full Arch',
+        'a1'=>'Q1: Tooth location','a2'=>'Q2: Time missing','a3'=>'Q3: Bone graft','a4'=>'Q4: Situation',
+        'm1'=>'Q1: # of teeth','m2'=>'Q2: Location','m3'=>'Q3: Time missing','m4'=>'Q4: Bone graft','m5'=>'Q5: Situation',
+        'b1'=>'Q1: Arch','b2'=>'Q2: Situation','b3'=>'Q3: Duration',
+        'ins'=>'Insurance','offer'=>'Offer','lead'=>'Lead Form',
+        'result-single'=>'Result (single)','result-multiple'=>'Result (multiple)','result-fullarch'=>'Result (full arch)',
     ];
-    $imp_max = max( 1, (int)$imp_steps_raw[0]['cnt'] );
     ?>
-    <div class="cfg-an-card">
-        <h3>Implant Estimator — Step Reach (30 days) <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step</span></h3>
+
+    <!-- Implant step drop-off -->
+    <?php if ( ! empty( $imp_steps_raw ) ): ?>
+    <?php $imp_max = max( 1, (int)$imp_steps_raw[0]['cnt'] ); ?>
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Implant Estimator — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step · 30 days</span></h3>
         <?php foreach ( $imp_steps_raw as $row ):
             $lbl = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
             $pct = round( (int)$row['cnt'] / $imp_max * 100 );
@@ -5239,6 +5258,34 @@ function cfg_settings_page() {
                 <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div>
             </div>
             <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Exit-step analysis -->
+    <?php if ( ! empty( $imp_exits_raw ) ): ?>
+    <?php
+    $total_exits = array_sum( array_column( $imp_exits_raw, 'drop_offs' ) );
+    $exit_max    = max( 1, (int)$imp_exits_raw[0]['drop_offs'] );
+    ?>
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Implant Estimator — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step reached before leaving · 30 days</span></h3>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits !== 1 ? 's' : '' ?> left without completing.</p>
+        <?php foreach ( $imp_exits_raw as $row ):
+            $n      = (int) $row['drop_offs'];
+            $share  = round( $n / $total_exits * 100 );
+            $bar_w  = round( $n / $exit_max * 100 );
+            $lbl    = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
+            $color  = $share >= 30 ? '#dc2626' : ( $share >= 15 ? '#f59e0b' : '#6b7280' );
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
+            <span class="cfg-src-label" style="width:160px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;">
+                <div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div>
+            </div>
+            <span style="font-size:12px;font-weight:700;color:<?= $color ?>;width:36px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
         </div>
         <?php endforeach; ?>
     </div>
