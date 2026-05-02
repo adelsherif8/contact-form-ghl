@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.91
+ * Version:     2.5.92
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5259,12 +5259,31 @@ function cfg_settings_page() {
 
     <?php
     $imp_step_labels = [
-        'router' => 'Router', 'intro' => 'Intro',
-        'a1'=>'Q1: Tooth location','a2'=>'Q2: Time missing','a3'=>'Q3: Bone graft','a4'=>'Q4: Situation',
-        'm1'=>'Q1: # of teeth','m2'=>'Q2: Location','m3'=>'Q3: Time missing','m4'=>'Q4: Bone graft','m5'=>'Q5: Situation',
-        'b1'=>'Q1: Arch','b2'=>'Q2: Situation','b3'=>'Q3: Duration',
-        'ins'=>'Insurance','offer'=>'Offer','lead'=>'Lead Form',
-        'result-single'=>'Result (single)','result-multiple'=>'Result (multiple)','result-fullarch'=>'Result (full arch)',
+        'router'          => 'Path selection (single / multi / full arch)',
+        'intro'           => 'Intro screen',
+        'summary'         => 'Summary (reached estimate)',
+        // Single tooth path
+        'a1' => '[Single] Where is the tooth located?',
+        'a2' => '[Single] How long has the tooth been missing?',
+        'a3' => '[Single] Bone graft needed?',
+        'a4' => '[Single] Describe your situation',
+        // Multiple teeth path
+        'm1' => '[Multi] How many teeth to replace?',
+        'm2' => '[Multi] Where are the teeth located?',
+        'm3' => '[Multi] How long have teeth been missing?',
+        'm4' => '[Multi] Bone graft needed?',
+        'm5' => '[Multi] Describe your situation',
+        // Full arch path
+        'b1' => '[Full Arch] Which arch to replace?',
+        'b2' => '[Full Arch] Describe your situation',
+        'b3' => '[Full Arch] How long have teeth been missing?',
+        // Shared
+        'ins'             => 'Do you have dental insurance?',
+        'offer'           => 'Special offer screen',
+        'lead'            => 'Contact / lead form',
+        'result-single'   => 'Result page (single tooth)',
+        'result-multiple' => 'Result page (multiple teeth)',
+        'result-fullarch' => 'Result page (full arch)',
     ];
     ?>
 
@@ -5279,12 +5298,12 @@ function cfg_settings_page() {
             $lbl = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
             $pct = round( (int)$row['cnt'] / $imp_max * 100 );
         ?>
-        <div class="cfg-src-row" style="margin-bottom:8px;">
-            <span class="cfg-src-label" style="width:160px;font-size:12px;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg">
+        <div class="cfg-src-row" style="margin-bottom:8px;align-items:center;">
+            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;">
                 <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div>
             </div>
-            <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
+            <span style="font-size:12px;color:#374151;width:28px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
         </div>
         <?php endforeach; endif; ?>
     </div>
@@ -5298,7 +5317,7 @@ function cfg_settings_page() {
         $total_exits = array_sum( array_column( $imp_exits_raw, 'drop_offs' ) );
         $exit_max    = max( 1, (int)$imp_exits_raw[0]['drop_offs'] );
         ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits !== 1 ? 's' : '' ?> left without completing.</p>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits !== 1 ? 's' : '' ?> left without completing — shown below from most to least common exit point.</p>
         <?php foreach ( $imp_exits_raw as $row ):
             $n      = (int) $row['drop_offs'];
             $share  = round( $n / $total_exits * 100 );
@@ -5307,12 +5326,12 @@ function cfg_settings_page() {
             $color  = $share >= 30 ? '#dc2626' : ( $share >= 15 ? '#f59e0b' : '#6b7280' );
         ?>
         <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
-            <span class="cfg-src-label" style="width:160px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
             <div class="cfg-src-bar-bg" style="flex:1;">
                 <div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div>
             </div>
-            <span style="font-size:12px;font-weight:700;color:<?= $color ?>;width:36px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
+            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:40px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:50px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
         </div>
         <?php endforeach; ?>
         <?php endif; ?>
