@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.88
+ * Version:     2.5.89
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5244,11 +5244,13 @@ function cfg_settings_page() {
     ?>
 
     <!-- Implant step drop-off -->
-    <?php if ( ! empty( $imp_steps_raw ) ): ?>
-    <?php $imp_max = max( 1, (int)$imp_steps_raw[0]['cnt'] ); ?>
     <div class="cfg-an-card" style="margin-bottom:20px;">
         <h3>Implant Estimator — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step · 30 days</span></h3>
-        <?php foreach ( $imp_steps_raw as $row ):
+        <?php if ( empty( $imp_steps_raw ) ): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
+        <?php else:
+        $imp_max = max( 1, (int)$imp_steps_raw[0]['cnt'] );
+        foreach ( $imp_steps_raw as $row ):
             $lbl = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
             $pct = round( (int)$row['cnt'] / $imp_max * 100 );
         ?>
@@ -5259,18 +5261,18 @@ function cfg_settings_page() {
             </div>
             <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
         </div>
-        <?php endforeach; ?>
+        <?php endforeach; endif; ?>
     </div>
-    <?php endif; ?>
 
     <!-- Exit-step analysis -->
-    <?php if ( ! empty( $imp_exits_raw ) ): ?>
-    <?php
-    $total_exits = array_sum( array_column( $imp_exits_raw, 'drop_offs' ) );
-    $exit_max    = max( 1, (int)$imp_exits_raw[0]['drop_offs'] );
-    ?>
     <div class="cfg-an-card" style="margin-bottom:20px;">
         <h3>Implant Estimator — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step reached before leaving · 30 days</span></h3>
+        <?php if ( empty( $imp_exits_raw ) ): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet — this will populate as users click through the implant estimator.</p>
+        <?php else:
+        $total_exits = array_sum( array_column( $imp_exits_raw, 'drop_offs' ) );
+        $exit_max    = max( 1, (int)$imp_exits_raw[0]['drop_offs'] );
+        ?>
         <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits !== 1 ? 's' : '' ?> left without completing.</p>
         <?php foreach ( $imp_exits_raw as $row ):
             $n      = (int) $row['drop_offs'];
@@ -5288,8 +5290,8 @@ function cfg_settings_page() {
             <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
         </div>
         <?php endforeach; ?>
+        <?php endif; ?>
     </div>
-    <?php endif; ?>
 
     <?php endif; // ev_table_exists ?>
 
