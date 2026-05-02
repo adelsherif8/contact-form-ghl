@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.90
+ * Version:     2.5.91
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -4999,6 +4999,31 @@ function cfg_settings_page() {
              GROUP BY step_key ORDER BY drop_offs DESC",
             ARRAY_A
         );
+        // Aligner quiz: step reach (last 30 days)
+        $alg_steps_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type='step' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+             GROUP BY step_key ORDER BY cnt DESC",
+            ARRAY_A
+        );
+        // Aligner quiz: exit-step analysis (last 30 days)
+        $alg_exits_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(*) AS drop_offs
+             FROM (
+                 SELECT SUBSTRING_INDEX(GROUP_CONCAT(step_key ORDER BY created_at DESC SEPARATOR '|'),'|',1) AS step_key
+                 FROM {$ev_table}
+                 WHERE form_type='aligner' AND event_type='step'
+                   AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                   AND session_id NOT IN (
+                       SELECT DISTINCT session_id FROM {$ev_table}
+                       WHERE form_type='aligner' AND event_type='complete'
+                         AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                   )
+                 GROUP BY session_id
+             ) last_steps
+             GROUP BY step_key ORDER BY drop_offs DESC",
+            ARRAY_A
+        );
     }
     ?>
 
@@ -5283,6 +5308,68 @@ function cfg_settings_page() {
         ?>
         <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
             <span class="cfg-src-label" style="width:160px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;">
+                <div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div>
+            </div>
+            <span style="font-size:12px;font-weight:700;color:<?= $color ?>;width:36px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
+        </div>
+        <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
+    <?php
+    // Build aligner step label map from admin config
+    $alg_cfg        = cfg_aligner_get();
+    $alg_step_labels = [];
+    foreach ( $alg_cfg as $i => $step ) {
+        $fk = $step['field_key'] ?? '';
+        if ( $fk === '' ) continue;
+        $q = $step['question'] ?? $step['title'] ?? ( 'Step ' . ( $i + 1 ) );
+        $alg_step_labels[ $fk ] = mb_strimwidth( $q, 0, 45, '…' );
+    }
+    ?>
+
+    <!-- Aligner quiz: step reach -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Aligner Quiz — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step · 30 days</span></h3>
+        <?php if ( empty( $alg_steps_raw ) ): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
+        <?php else:
+        $alg_max = max( 1, (int)$alg_steps_raw[0]['cnt'] );
+        foreach ( $alg_steps_raw as $row ):
+            $lbl = $alg_step_labels[ $row['step_key'] ] ?? $row['step_key'];
+            $pct = round( (int)$row['cnt'] / $alg_max * 100 );
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:8px;">
+            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg">
+                <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#7c3aed;"></div>
+            </div>
+            <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; endif; ?>
+    </div>
+
+    <!-- Aligner quiz: exit-step analysis -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Aligner Quiz — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step reached before leaving · 30 days</span></h3>
+        <?php if ( empty( $alg_exits_raw ) ): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet — this will populate as users click through the aligner quiz.</p>
+        <?php else:
+        $alg_total_exits = array_sum( array_column( $alg_exits_raw, 'drop_offs' ) );
+        $alg_exit_max    = max( 1, (int)$alg_exits_raw[0]['drop_offs'] );
+        ?>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $alg_total_exits ?> session<?= $alg_total_exits !== 1 ? 's' : '' ?> left without completing.</p>
+        <?php foreach ( $alg_exits_raw as $row ):
+            $n      = (int) $row['drop_offs'];
+            $share  = round( $n / $alg_total_exits * 100 );
+            $bar_w  = round( $n / $alg_exit_max * 100 );
+            $lbl    = $alg_step_labels[ $row['step_key'] ] ?? $row['step_key'];
+            $color  = $share >= 30 ? '#dc2626' : ( $share >= 15 ? '#f59e0b' : '#6b7280' );
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
+            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
             <div class="cfg-src-bar-bg" style="flex:1;">
                 <div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div>
             </div>
