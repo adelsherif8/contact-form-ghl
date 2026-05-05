@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.93
+ * Version:     2.5.95
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6419,11 +6419,11 @@ function cfg_aligner_defaults() {
             'hint'      => '(This will help in assessing the complexity of the alignment issue.)',
             'field_key' => 'teeth_alignment',
             'choices'   => [
-                [ 'label' => 'Very crowded',       'emoji' => '😬', 'img' => '' ],
-                [ 'label' => 'Moderately crowded', 'emoji' => '😐', 'img' => '' ],
-                [ 'label' => 'Slightly crowded',   'emoji' => '🙂', 'img' => '' ],
-                [ 'label' => 'Gaps between teeth', 'emoji' => '😁', 'img' => '' ],
-                [ 'label' => 'Generally straight', 'emoji' => '😊', 'img' => '' ],
+                [ 'label' => 'Very crowded',       'emoji' => '😬', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Crowding-Teeth-300x300-1.webp' ],
+                [ 'label' => 'Moderately crowded', 'emoji' => '😐', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Crowding-Teeth-300x300-1.webp' ],
+                [ 'label' => 'Slightly crowded',   'emoji' => '🙂', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Crowding-Teeth-300x300-1.webp' ],
+                [ 'label' => 'Gaps between teeth', 'emoji' => '😁', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Teeth-Gap-1-300x300-1.webp' ],
+                [ 'label' => 'Generally straight', 'emoji' => '😊', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Preserving-Natural-Teeth.png' ],
             ],
         ],
         [
@@ -6432,11 +6432,11 @@ function cfg_aligner_defaults() {
             'hint'      => '(Specific bite issues might require specialized treatment approaches.)',
             'field_key' => 'bite_issues',
             'choices'   => [
-                [ 'label' => 'Overbite',         'emoji' => '🔼', 'img' => '' ],
-                [ 'label' => 'Underbite',        'emoji' => '🔽', 'img' => '' ],
-                [ 'label' => 'Crossbite',        'emoji' => '↔️',  'img' => '' ],
-                [ 'label' => 'Open bite',        'emoji' => '⭕',  'img' => '' ],
-                [ 'label' => 'None of the above','emoji' => '✅',  'img' => '' ],
+                [ 'label' => 'Overbite',          'emoji' => '🔼', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/admin-ajax.webp' ],
+                [ 'label' => 'Underbite',         'emoji' => '🔽', 'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Underbite-1-300x300-1.webp' ],
+                [ 'label' => 'Crossbite',         'emoji' => '↔️',  'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Crossbite-1-300x300-1.webp' ],
+                [ 'label' => 'Open bite',         'emoji' => '⭕',  'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Open-bite-Teeth-1-300x300-1.webp' ],
+                [ 'label' => 'None of the above', 'emoji' => '✅',  'img' => plugin_dir_url( __FILE__ ) . 'assets/images/Aesthetic-improvement-1-300x300-1.webp' ],
             ],
         ],
         [
@@ -6463,8 +6463,32 @@ function cfg_aligner_defaults() {
 
 function cfg_aligner_get() {
     $saved = get_option( CFG_ALG_OPTION );
-    if ( ! empty( $saved ) && is_array( $saved ) ) return $saved;
-    return cfg_aligner_defaults();
+    $steps = ( ! empty( $saved ) && is_array( $saved ) ) ? $saved : cfg_aligner_defaults();
+    // Runtime-inject image URLs for any saved steps that still have empty img fields.
+    $img_map = [
+        'Very crowded'       => 'Crowding-Teeth-300x300-1.webp',
+        'Moderately crowded' => 'Crowding-Teeth-300x300-1.webp',
+        'Slightly crowded'   => 'Crowding-Teeth-300x300-1.webp',
+        'Gaps between teeth' => 'Teeth-Gap-1-300x300-1.webp',
+        'Generally straight' => 'Preserving-Natural-Teeth.png',
+        'Overbite'           => 'admin-ajax.webp',
+        'Underbite'          => 'Underbite-1-300x300-1.webp',
+        'Crossbite'          => 'Crossbite-1-300x300-1.webp',
+        'Open bite'          => 'Open-bite-Teeth-1-300x300-1.webp',
+        'None of the above'  => 'Aesthetic-improvement-1-300x300-1.webp',
+    ];
+    $base = plugin_dir_url( __FILE__ ) . 'assets/images/';
+    foreach ( $steps as &$step ) {
+        if ( ( $step['type'] ?? '' ) !== 'image' || empty( $step['choices'] ) ) continue;
+        foreach ( $step['choices'] as &$choice ) {
+            if ( ! empty( $choice['img'] ) ) continue;
+            $file = $img_map[ $choice['label'] ?? '' ] ?? '';
+            if ( $file !== '' ) $choice['img'] = $base . $file;
+        }
+        unset( $choice );
+    }
+    unset( $step );
+    return $steps;
 }
 
 add_action( 'admin_init', function () {
@@ -6611,6 +6635,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
   .<?= $uid ?>-navrow .<?= $uid ?>-btn{width:100%!important;}
   .<?= $uid ?>-img3,.<?= $uid ?>-img2{grid-template-columns:1fr!important;}
   .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}
+  .<?= $uid ?>-img2 .<?= $uid ?>-card img,.<?= $uid ?>-img3 .<?= $uid ?>-card img{width:52px!important;height:52px!important;}
 }
 </style>
 <?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?><style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style><?php endif; ?>
@@ -6684,7 +6709,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
                 foreach ( $choices as $c ) {
                     echo '<div class="' . $uid . '-card" data-value="' . esc_attr( $c['label'] ) . '" onclick="' . $uid . 'img(this)">';
                     if ( ! empty( $c['img'] ) ) {
-                        echo '<img src="' . esc_url( $c['img'] ) . '" alt="' . esc_attr( $c['label'] ) . '" style="width:44px;height:44px;object-fit:contain;display:block;"/>';
+                        echo '<img src="' . esc_url( $c['img'] ) . '" alt="' . esc_attr( $c['label'] ) . '" style="width:80px;height:80px;object-fit:contain;display:block;"/>';
                     } else {
                         $fa_icon = cfg_alg_choice_icon( $c['label'] ?? '' );
                         echo '<i class="fa-solid ' . esc_attr( $fa_icon ) . '" style="font-size:1.35rem;color:' . $accent . ';"></i>';
