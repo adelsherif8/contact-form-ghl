@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.92
+ * Version:     2.5.93
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7314,7 +7314,7 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 /* Question row */
 #<?= $uid ?>-app .imp-q-row{display:flex;flex-direction:column;gap:1.5rem;}
 /* Sidebar */
-#<?= $uid ?>-sidebar{display:flex;flex-direction:column;gap:1rem;width:100%;flex-shrink:0;}
+#<?= $uid ?>-sidebar{display:none;flex-direction:column;gap:1rem;width:100%;flex-shrink:0;}
 /* Responsive */
 @media(min-width:640px){
   #<?= $uid ?>-app .sm-flex-row{flex-direction:row!important;}
@@ -7386,37 +7386,7 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
             <?php endif; ?>
           </div>
         </div>
-        <div id="<?= $uid ?>-intro-card">
-          <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden;">
-            <div style="padding:1rem 1.25rem;background:hsl(var(--accent)/.35);border-bottom:1px solid hsl(var(--border));">
-              <p style="font-family:Inter,sans-serif;font-weight:600;color:hsl(var(--foreground));font-size:.875rem;">Your Estimate Preview</p>
-              <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;margin-top:.125rem;">Factors we'll consider</p>
-            </div>
-            <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem;">
-              <?php
-              $preview_items = [
-                ['Your current situation',        'Missing, needs extraction, or replacing a denture'],
-                ['Number of teeth needing care',  'Single implant, multiple, or full arch solution'],
-                ['Bone health at the site',        'Whether a graft may be required'],
-              ];
-              foreach ( $preview_items as $pi ) : ?>
-              <div style="display:flex;align-items:flex-start;gap:.75rem;">
-                <div style="width:1.375rem;height:1.375rem;border-radius:9999px;flex-shrink:0;margin-top:.125rem;display:flex;align-items:center;justify-content:center;background:hsl(var(--primary)/.12);border:1px solid hsl(var(--border));">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke:hsl(var(--primary));"><polyline points="20 6 9 13 4 10"/></svg>
-                </div>
-                <div>
-                  <p style="font-family:Inter,sans-serif;font-weight:500;color:hsl(var(--foreground));font-size:.875rem;"><?= esc_html($pi[0]) ?></p>
-                  <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;margin-top:.2rem;"><?= esc_html($pi[1]) ?></p>
-                </div>
-              </div>
-              <?php endforeach; ?>
-            </div>
-            <div style="padding:.75rem 1.25rem;background:hsl(var(--accent)/.25);border-top:1px solid hsl(var(--border));display:flex;align-items:center;gap:.5rem;">
-              <span class="die-pulse-dot"></span>
-              <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;">Estimate accuracy improves with each step</p>
-            </div>
-          </div>
-        </div>
+        <div id="<?= $uid ?>-intro-card" style="display:none;"></div>
       </div>
     </div>
   </main>
@@ -8143,7 +8113,11 @@ $_sections_col = $result_sections_html
 
   /* ── SELECT OPTION ── */
   function selectOpt(btn, key, val, label, next) {
-    if (!_cfgImpStarted) { _cfgImpStarted=true; cfgTrImp('start',''); }
+    if (!_cfgImpStarted) {
+      _cfgImpStarted=true;
+      cfgTrImp('start','');
+      var sb=document.getElementById(uid+'-sidebar'); if(sb){ sb.style.opacity='0'; sb.style.display='flex'; requestAnimationFrame(function(){ sb.style.transition='opacity .4s ease'; sb.style.opacity='1'; }); }
+    }
     s.answers[key]  = val;
     s.answersL[key] = label;
     if (key === 'router') {
