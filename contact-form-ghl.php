@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.96
+ * Version:     2.5.97
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5806,6 +5806,8 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
         form.addEventListener('submit', function(e){
             e.preventDefault(); hideErr();
+            var reqEls = form.querySelectorAll('input[required],select[required],textarea[required]');
+            for (var ri=0; ri<reqEls.length; ri++) { if (!reqEls[ri].value.trim()) { showErr('Please fill in all required fields.'); reqEls[ri].focus(); return; } }
             var phEl = form.querySelector('input[type="tel"]');
             if (phEl && !window.cfgPhoneValid(phEl)) { showErr('Please enter a valid phone number.'); return; }
             if (HAS_TERMS) {
@@ -5999,6 +6001,8 @@ function cfg_embed_shortcode_OLD_UNUSED() {
 
         form.addEventListener('submit', function(e){
             e.preventDefault(); hideErr();
+            var reqEls = form.querySelectorAll('input[required],select[required],textarea[required]');
+            for (var ri=0; ri<reqEls.length; ri++) { if (!reqEls[ri].value.trim()) { showErr('Please fill in all required fields.'); reqEls[ri].focus(); return; } }
             var phEl = form.querySelector('input[type="tel"]');
             if (phEl && !window.cfgPhoneValid(phEl)) { showErr('Please enter a valid phone number.'); return; }
             if (HAS_TERMS) {
@@ -6637,6 +6641,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
   .<?= $uid ?>-img2 .<?= $uid ?>-card,.<?= $uid ?>-img3 .<?= $uid ?>-card{flex-direction:row!important;justify-content:flex-start!important;text-align:left!important;min-height:unset!important;padding:0.85rem 1rem!important;gap:0.75rem!important;}
   .<?= $uid ?>-img2 .<?= $uid ?>-card img,.<?= $uid ?>-img3 .<?= $uid ?>-card img{width:52px!important;height:52px!important;}
 }
+@keyframes <?= $uid ?>_shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 </style>
 <?php if ( ! empty( $s['alg_hide_page_header'] ) ): ?><style>header,#masthead,.site-header,.header-wrap,.header-main,[role="banner"]{display:none!important;}</style><?php endif; ?>
 
@@ -6879,6 +6884,18 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 
     function goTo(n){
         if(n<0||n>=total) return;
+        // Block forward navigation on choice steps when nothing is selected
+        if (n > cur) {
+            var curStep = steps[cur];
+            if (curStep) {
+                var cards = curStep.querySelectorAll('.'+uid+'-card');
+                if (cards.length > 0 && !curStep.querySelector('.'+uid+'-card.alg-sel')) {
+                    var grid = curStep.querySelector('.'+uid+'-choices,.'+uid+'-img2,.'+uid+'-img3');
+                    if (grid) { grid.style.animation='none'; void grid.offsetWidth; grid.style.animation=uid+'_shake 0.4s ease'; }
+                    return;
+                }
+            }
+        }
         if (!_cfgAlgStarted && n > 0) { _cfgAlgStarted=true; cfgTrAligner('start','step_0'); }
         if (n > 0) { var _sk = steps[n] ? (steps[n].dataset.key||('step_'+n)) : ('step_'+n); cfgTrAligner('step',_sk); }
         cur=n;
