@@ -25,6 +25,7 @@ jobs:
           zip -r build/contact-form-ghl.zip \
             contact-form-ghl.php \
             logo.svg \
+            assets/ \
             vendor/ \
             composer.json \
             composer.lock \
