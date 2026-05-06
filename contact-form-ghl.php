@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.100
+ * Version:     2.5.101
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5764,6 +5764,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     #cfg-wrap input:focus,#cfg-wrap select:focus{outline:none;box-shadow:0 0 0 3px <?= $pri ?>33;border-color:<?= $pri ?> !important;}
     #cfg-wrap button[type=submit]:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
     #cfg-wrap button[type=submit]:disabled{opacity:0.65;cursor:not-allowed;}
+    select#cfg_treatment{height:100%;}
     @media(max-width:600px){.cfg-row2{grid-template-columns:1fr !important;}#cfg-wrap .cfg-card{padding:1.25rem !important;}}
     </style>
 
@@ -5995,6 +5996,7 @@ function cfg_embed_shortcode_OLD_UNUSED() {
     #cfge-wrap input:focus,#cfge-wrap select:focus{outline:none;box-shadow:0 0 0 3px <?= $pri ?>33;border-color:<?= $pri ?> !important;}
     #cfge-wrap button[type=submit]:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
     #cfge-wrap button[type=submit]:disabled{opacity:0.65;cursor:not-allowed;}
+    select#cfge_treatment{height:100%;}
     @media(max-width:600px){.cfge-row2{grid-template-columns:1fr !important;}#cfge-wrap .cfge-card{padding:1.25rem !important;}}
     </style>
 
