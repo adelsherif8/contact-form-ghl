@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.98
+ * Version:     2.5.99
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -515,7 +515,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
             return;
         }
         $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => $data_type, 'position' => 0 ];
-        if ( $options ) $payload['options'] = array_map( function( $o ) { return [ 'label' => $o ]; }, $options );
+        if ( $options ) $payload['options'] = array_values( $options );
         if ( $folder_id ) $payload['parentId'] = $folder_id;
         $r      = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
@@ -927,9 +927,7 @@ function cfg_ajax_fix_treatment_dropdown() {
 
     // Build options list from WordPress settings
     $treatment_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
-    $ghl_options    = array_map( function( $o ) { return [ 'label' => $o ]; }, $treatment_opts );
-
-    $payload = [ 'name' => 'Treatment Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $ghl_options ];
+    $payload = [ 'name' => 'Treatment Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $treatment_opts ];
 
     if ( $field_id ) {
         // Update existing field via PUT
