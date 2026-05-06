@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.97
+ * Version:     2.5.98
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -509,12 +509,13 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     };
 
     // ── Create a single custom field (skip if already exists) ──
-    $make_field = function( $name, $key, $folder_id = null ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
+    $make_field = function( $name, $key, $folder_id = null, $data_type = 'TEXT', $options = [] ) use ( $base, $headers, $location_id, $existing_keys, &$logs ) {
         if ( isset( $existing_keys[ $key ] ) || isset( $existing_keys[ strtolower($key) ] ) ) {
             $logs[] = '"' . $key . '" already exists — skipped';
             return;
         }
-        $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => 'TEXT', 'position' => 0 ];
+        $payload = [ 'name' => $name, 'fieldKey' => $key, 'dataType' => $data_type, 'position' => 0 ];
+        if ( $options ) $payload['options'] = array_map( function( $o ) { return [ 'label' => $o ]; }, $options );
         if ( $folder_id ) $payload['parentId'] = $folder_id;
         $r      = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
@@ -554,9 +555,9 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     $imp_folder = $make_folder( 'Implant Estimator' );
     $utm_folder = $make_folder( 'UTMs' );
 
-    foreach ( [ 'treatment_type' => 'Treatment Type', 'automation_tester' => 'Automation Tester' ] as $key => $name ) {
-        $make_field( $name, $key, $cf_folder );
-    }
+    $treatment_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
+    $make_field( 'Treatment Type', 'treatment_type', $cf_folder, 'SINGLE_OPTIONS', $treatment_opts );
+    $make_field( 'Automation Tester', 'automation_tester', $cf_folder );
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
     // key = GHL fieldKey = display name (both the same per client requirement)
     foreach ( [ 'UTMCampaign_custom', 'UTMMedium_custom', 'UTMContent_custom',
@@ -599,13 +600,14 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 // ═══════════════════════════════════════════════════════════════
 //  GHL FIELDS — ADMIN AJAX: CHECK + CREATE
 // ═══════════════════════════════════════════════════════════════
-add_action( 'wp_ajax_cfg_check_ghl_fields',      'cfg_ajax_check_ghl_fields' );
-add_action( 'wp_ajax_cfg_create_ghl_field',      'cfg_ajax_create_ghl_field' );
-add_action( 'wp_ajax_cfg_move_ghl_fields',       'cfg_ajax_move_ghl_fields' );
-add_action( 'wp_ajax_cfg_save_folder_ids',       'cfg_ajax_save_folder_ids' );
-add_action( 'wp_ajax_cfg_detect_folder_ids',     'cfg_ajax_detect_folder_ids' );
-add_action( 'wp_ajax_cfg_create_checker_fields', 'cfg_ajax_create_checker_fields' );
-add_action( 'wp_ajax_cfg_delete_checker_fields', 'cfg_ajax_delete_checker_fields' );
+add_action( 'wp_ajax_cfg_check_ghl_fields',        'cfg_ajax_check_ghl_fields' );
+add_action( 'wp_ajax_cfg_create_ghl_field',        'cfg_ajax_create_ghl_field' );
+add_action( 'wp_ajax_cfg_move_ghl_fields',         'cfg_ajax_move_ghl_fields' );
+add_action( 'wp_ajax_cfg_save_folder_ids',         'cfg_ajax_save_folder_ids' );
+add_action( 'wp_ajax_cfg_detect_folder_ids',       'cfg_ajax_detect_folder_ids' );
+add_action( 'wp_ajax_cfg_create_checker_fields',   'cfg_ajax_create_checker_fields' );
+add_action( 'wp_ajax_cfg_delete_checker_fields',   'cfg_ajax_delete_checker_fields' );
+add_action( 'wp_ajax_cfg_fix_treatment_dropdown',  'cfg_ajax_fix_treatment_dropdown' );
 
 // Checker field definitions: key → folder name
 function cfg_checker_fields() {
@@ -888,6 +890,78 @@ function cfg_ajax_create_ghl_field() {
         wp_send_json_success( 'Field created.' );
     } else {
         wp_send_json_error( $body['message'] ?? 'HTTP ' . $code );
+    }
+}
+
+// ── Fix Treatment Type field: convert to SINGLE_OPTIONS dropdown in GHL ──
+function cfg_ajax_fix_treatment_dropdown() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+    if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base = 'https://services.leadconnectorhq.com';
+
+    // Fetch all custom fields to find treatment_type
+    $r = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [ 'headers' => $headers, 'timeout' => 15 ] );
+    if ( is_wp_error( $r ) ) wp_send_json_error( $r->get_error_message() );
+
+    $field_id    = null;
+    $current_type = 'unknown';
+    foreach ( json_decode( wp_remote_retrieve_body( $r ), true )['customFields'] ?? [] as $f ) {
+        $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ?? '' ) );
+        if ( $bare === 'treatment_type' ) {
+            $field_id     = $f['id'];
+            $current_type = $f['dataType'] ?? 'TEXT';
+            break;
+        }
+    }
+
+    // Build options list from WordPress settings
+    $treatment_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
+    $ghl_options    = array_map( function( $o ) { return [ 'label' => $o ]; }, $treatment_opts );
+
+    $payload = [ 'name' => 'Treatment Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $ghl_options ];
+
+    if ( $field_id ) {
+        // Update existing field via PUT
+        $r2   = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$field_id}", [
+            'method'  => 'PUT',
+            'headers' => $headers,
+            'body'    => wp_json_encode( $payload ),
+            'timeout' => 15,
+        ] );
+        $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
+        $body = is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 );
+        if ( $code >= 200 && $code < 300 ) {
+            wp_send_json_success( 'Treatment Type updated to dropdown with ' . count( $treatment_opts ) . ' options (was: ' . $current_type . ').' );
+        } else {
+            wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . $body );
+        }
+    } else {
+        // Field doesn't exist — create it
+        $payload['fieldKey'] = 'treatment_type';
+        $payload['position'] = 0;
+        $r2   = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( $payload ),
+            'timeout' => 15,
+        ] );
+        $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
+        $body = is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 );
+        if ( $code >= 200 && $code < 300 ) {
+            wp_send_json_success( 'Treatment Type field created as dropdown with ' . count( $treatment_opts ) . ' options.' );
+        } else {
+            wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . $body );
+        }
     }
 }
 
@@ -4130,6 +4204,9 @@ function cfg_settings_page() {
                 <button type="button" id="cfg-fields-move-btn" class="button" style="font-size:13px;padding:6px 18px;" title="Move all existing fields into their correct GHL folders (requires folder IDs saved above)">
                     &#8594; Move All to Folders
                 </button>
+                <button type="button" id="cfg-fix-treatment-btn" class="button" style="font-size:13px;padding:6px 18px;" title="Convert the Treatment Type field in GHL to a dropdown (SINGLE_OPTIONS) using the options configured above">
+                    &#9660; Fix Treatment Type Dropdown
+                </button>
                 <span id="cfg-fields-status" style="font-size:12px;color:#6b7280;"></span>
             </div>
 
@@ -4442,6 +4519,30 @@ function cfg_settings_page() {
                             status.textContent = '✗ ' + (res.data || 'Error');
                             status.style.color = '#dc2626';
                         }
+                    })
+                    .catch(function(){
+                        btn.disabled = false;
+                        status.textContent = '✗ Request failed';
+                        status.style.color = '#dc2626';
+                    });
+                });
+
+                document.getElementById('cfg-fix-treatment-btn').addEventListener('click', function(){
+                    var btn = this;
+                    var status = document.getElementById('cfg-fields-status');
+                    btn.disabled = true;
+                    status.textContent = 'Updating Treatment Type field in GHL…';
+                    status.style.color = '#6b7280';
+                    fetch(AJAX, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_fix_treatment_dropdown&nonce=' + NONCE
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false;
+                        status.textContent = res.success ? '✓ ' + res.data : '✗ ' + (res.data || 'Error');
+                        status.style.color  = res.success ? '#16a34a' : '#dc2626';
                     })
                     .catch(function(){
                         btn.disabled = false;
