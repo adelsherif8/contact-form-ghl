@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.99
+ * Version:     2.5.100
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -927,38 +927,60 @@ function cfg_ajax_fix_treatment_dropdown() {
 
     // Build options list from WordPress settings
     $treatment_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
-    $payload = [ 'name' => 'Treatment Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $treatment_opts ];
+    $create_payload = [ 'name' => 'Treatment Type', 'fieldKey' => 'treatment_type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $treatment_opts, 'position' => 0 ];
 
     if ( $field_id ) {
-        // Update existing field via PUT
-        $r2   = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$field_id}", [
-            'method'  => 'PUT',
-            'headers' => $headers,
-            'body'    => wp_json_encode( $payload ),
-            'timeout' => 15,
-        ] );
-        $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
-        $body = is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 );
-        if ( $code >= 200 && $code < 300 ) {
-            wp_send_json_success( 'Treatment Type updated to dropdown with ' . count( $treatment_opts ) . ' options (was: ' . $current_type . ').' );
+        if ( $current_type === 'SINGLE_OPTIONS' ) {
+            // Already a dropdown — just sync the options via PUT
+            $r2   = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$field_id}", [
+                'method'  => 'PUT',
+                'headers' => $headers,
+                'body'    => wp_json_encode( [ 'name' => 'Treatment Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $treatment_opts ] ),
+                'timeout' => 15,
+            ] );
+            $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
+            if ( $code >= 200 && $code < 300 ) {
+                wp_send_json_success( 'Treatment Type options synced (' . count( $treatment_opts ) . ' options).' );
+            } else {
+                wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . ( is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 ) ) );
+            }
         } else {
-            wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . $body );
+            // GHL does not allow changing dataType in-place — must delete then recreate.
+            $del  = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$field_id}", [
+                'method'  => 'DELETE',
+                'headers' => $headers,
+                'timeout' => 15,
+            ] );
+            $del_code = is_wp_error( $del ) ? 0 : wp_remote_retrieve_response_code( $del );
+            if ( $del_code < 200 || $del_code >= 300 ) {
+                wp_send_json_error( 'Could not delete existing TEXT field (HTTP ' . $del_code . '). Delete it manually in GHL then click again.' );
+            }
+            // Small delay to let GHL propagate the delete
+            sleep( 1 );
+            $r2   = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+                'headers' => $headers,
+                'body'    => wp_json_encode( $create_payload ),
+                'timeout' => 15,
+            ] );
+            $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
+            if ( $code >= 200 && $code < 300 ) {
+                wp_send_json_success( 'Treatment Type recreated as dropdown with ' . count( $treatment_opts ) . ' options (old TEXT field deleted).' );
+            } else {
+                wp_send_json_error( 'Deleted old field but could not recreate (HTTP ' . $code . '): ' . ( is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 ) ) );
+            }
         }
     } else {
-        // Field doesn't exist — create it
-        $payload['fieldKey'] = 'treatment_type';
-        $payload['position'] = 0;
+        // Field doesn't exist — create it fresh
         $r2   = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
             'headers' => $headers,
-            'body'    => wp_json_encode( $payload ),
+            'body'    => wp_json_encode( $create_payload ),
             'timeout' => 15,
         ] );
         $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
-        $body = is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 );
         if ( $code >= 200 && $code < 300 ) {
             wp_send_json_success( 'Treatment Type field created as dropdown with ' . count( $treatment_opts ) . ' options.' );
         } else {
-            wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . $body );
+            wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . ( is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 ) ) );
         }
     }
 }
