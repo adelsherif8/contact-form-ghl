@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.101
+ * Version:     2.5.102
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -556,8 +556,9 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
     $utm_folder = $make_folder( 'UTMs' );
 
     $treatment_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
-    $make_field( 'Treatment Type', 'treatment_type', $cf_folder, 'SINGLE_OPTIONS', $treatment_opts );
-    $make_field( 'Automation Tester', 'automation_tester', $cf_folder );
+    $make_field( 'Treatment Type',   'treatment_type',   $cf_folder, 'SINGLE_OPTIONS', $treatment_opts );
+    $make_field( 'Automation Tester','automation_tester',$cf_folder );
+    $make_field( 'Latest Form Date', 'latest_form_date', $cf_folder );
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
     // key = GHL fieldKey = display name (both the same per client requirement)
     foreach ( [ 'UTMCampaign_custom', 'UTMMedium_custom', 'UTMContent_custom',
@@ -743,6 +744,7 @@ function cfg_ghl_field_definitions( $s ) {
     $cf = array_map( fn($f) => $f + ['folder' => 'Contact Form'],    [
         [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
         [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
+        [ 'name' => 'Latest Form Date',  'key' => 'latest_form_date' ],
     ] );
     $alg = array_map( fn($f) => $f + ['folder' => 'Invisalign Form'],  $alg_fields );
     $imp = array_map( fn($f) => $f + ['folder' => 'Implants Form'],    $imp_fields );
@@ -6451,6 +6453,7 @@ function cfg_ajax_submit() {
     // ── Build GHL payload ────────────────────────────────────
     $custom_fields = [];
     $custom_fields[] = [ 'key' => 'automation_tester', 'field_value' => 'contact_form_ok' ];
+    $custom_fields[] = [ 'key' => 'latest_form_date',  'field_value' => current_time( 'M j, Y g:i A' ) ];
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
     }
@@ -7231,7 +7234,8 @@ function cfg_aligner_ajax_submit() {
 
     // Custom fields
     $custom = [];
-    $custom[] = [ 'key' => 'treatment_type', 'field_value' => 'Invisalign' ];
+    $custom[] = [ 'key' => 'treatment_type',  'field_value' => 'Invisalign' ];
+    $custom[] = [ 'key' => 'latest_form_date','field_value' => current_time( 'M j, Y g:i A' ) ];
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
@@ -8587,8 +8591,9 @@ function cfg_implant_ajax_submit() {
     // Custom fields — dynamic
     $answers  = $_POST['answer']  ?? [];
     $custom   = [];
-    $custom[] = [ 'key' => 'implant_flow',  'field_value' => $flow ];
-    $custom[] = [ 'key' => 'implant_range', 'field_value' => $range ];
+    $custom[] = [ 'key' => 'implant_flow',   'field_value' => $flow ];
+    $custom[] = [ 'key' => 'implant_range',  'field_value' => $range ];
+    $custom[] = [ 'key' => 'latest_form_date','field_value' => current_time( 'M j, Y g:i A' ) ];
     foreach ( $all_qs as $q ) {
         $raw_field = $q['field'] ?? '';
         $field     = sanitize_key( $raw_field );
@@ -9407,6 +9412,7 @@ function cfg_review_ajax_submit() {
             $rv['ghl_staff']      => $staff,
             $rv['ghl_feedback']   => $feedback,
         ];
+        $custom[] = [ 'key' => 'latest_form_date', 'field_value' => current_time( 'M j, Y g:i A' ) ];
         foreach ( $field_map as $key => $val ) {
             if ( $key !== '' && $val !== '' ) {
                 $key = preg_replace( '/^contact\./', '', $key );
