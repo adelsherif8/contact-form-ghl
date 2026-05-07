@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.5.102
+ * Version:     2.5.103
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -265,6 +265,7 @@ function cfg_defaults() {
         'ty_bg_color'            => '#ffffff',
 
         // ── Aligner / Quiz Form ──────────────────────────────────────────
+        'alg_bg_color'            => '#ffffff',
         'alg_accent_color'        => '#C9A84C',
         'alg_success_url'         => '',
         'alg_hide_page_header'    => '0',
@@ -1410,7 +1411,7 @@ function cfg_sanitize( $input ) {
         'primary_color','bg_color','text_color','muted_color','border_color',
         'btn_hover_bg_color','btn_hover_text_color',
         'bm_hero_bg_color','bm_hero_heading_color','bm_hero_subtext_color',
-        'bm_cta_bg_color','ty_bg_color','alg_accent_color','imp_accent_color',
+        'bm_cta_bg_color','ty_bg_color','alg_bg_color','alg_accent_color','imp_accent_color',
         // imp extra color fields (none currently, placeholder for future)
     ];
     $textarea_fields = [
@@ -2407,6 +2408,14 @@ function cfg_settings_page() {
 
         <div class="cfg-section-title">Global Settings</div>
         <div class="cfg-grid">
+            <div class="cfg-field">
+                <label>Background Color</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="color" id="alg_bg_picker" value="<?= esc_attr( $s['alg_bg_color'] ) ?>" oninput="syncColor('alg_bg_text',this.value)"/>
+                    <input type="text" id="alg_bg_text" name="<?= CFG_OPTION ?>[alg_bg_color]" value="<?= esc_attr( $s['alg_bg_color'] ) ?>" oninput="syncPicker('alg_bg_picker',this.value)" style="width:110px;"/>
+                </div>
+                <span class="cfg-desc">Page & card background color (default white #ffffff)</span>
+            </div>
             <div class="cfg-field">
                 <label>Accent / Highlight Color</label>
                 <div style="display:flex;gap:8px;align-items:center;">
@@ -6664,7 +6673,7 @@ function cfg_aligner_shortcode() {
     $steps  = cfg_aligner_get();
     $font   = cfg_font_setup( $s );
     $accent = sanitize_hex_color( $s['alg_accent_color'] ?? '#C9A84C' ) ?: '#C9A84C';
-    $bg     = sanitize_hex_color( $s['bg_color'] ) ?: '#ffffff';
+    $bg     = sanitize_hex_color( $s['alg_bg_color'] ?? '#ffffff' ) ?: '#ffffff';
     $tc     = sanitize_hex_color( $s['text_color'] ) ?: '#111827';
     $ir     = absint( $s['input_radius'] ) . 'px';
     $br     = absint( $s['btn_radius']   ) . 'px';
