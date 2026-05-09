@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.1
+ * Version:     2.6.2
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -611,6 +611,7 @@ add_action( 'wp_ajax_cfg_detect_folder_ids',       'cfg_ajax_detect_folder_ids' 
 add_action( 'wp_ajax_cfg_create_checker_fields',   'cfg_ajax_create_checker_fields' );
 add_action( 'wp_ajax_cfg_delete_checker_fields',   'cfg_ajax_delete_checker_fields' );
 add_action( 'wp_ajax_cfg_fix_treatment_dropdown',  'cfg_ajax_fix_treatment_dropdown' );
+add_action( 'wp_ajax_cfg_analytics_refresh',       'cfg_ajax_analytics_refresh' );
 
 // Checker field definitions: key → folder name
 function cfg_checker_fields() {
@@ -769,6 +770,450 @@ function cfg_ghl_field_definitions( $s ) {
         'Implants Form'   => $imp,
         'UTM Forms'       => $utms,
     ];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ANALYTICS — AJAX REFRESH
+// ═══════════════════════════════════════════════════════════════
+
+function cfg_analytics_resolve_range( $preset, $custom_from = '', $custom_to = '' ) {
+    $now = current_time( 'timestamp' );
+    switch ( $preset ) {
+        case 'today':
+            return [ 'from' => date('Y-m-d',$now), 'to' => date('Y-m-d',$now), 'label' => 'Today', 'preset' => 'today' ];
+        case 'yesterday':
+            return [ 'from' => date('Y-m-d',strtotime('-1 day',$now)), 'to' => date('Y-m-d',strtotime('-1 day',$now)), 'label' => 'Yesterday', 'preset' => 'yesterday' ];
+        case '1w':
+            return [ 'from' => date('Y-m-d',strtotime('-6 days',$now)), 'to' => date('Y-m-d',$now), 'label' => 'Last 7 days', 'preset' => '1w' ];
+        case '2w':
+            return [ 'from' => date('Y-m-d',strtotime('-13 days',$now)), 'to' => date('Y-m-d',$now), 'label' => 'Last 2 weeks', 'preset' => '2w' ];
+        case '3m':
+            return [ 'from' => date('Y-m-d',strtotime('-89 days',$now)), 'to' => date('Y-m-d',$now), 'label' => 'Last 3 months', 'preset' => '3m' ];
+        case '1y':
+            return [ 'from' => date('Y-m-d',strtotime('-364 days',$now)), 'to' => date('Y-m-d',$now), 'label' => 'Last 1 year', 'preset' => '1y' ];
+        case 'custom':
+            $from = preg_match('/^\d{4}-\d{2}-\d{2}$/',$custom_from) ? $custom_from : date('Y-m-d',strtotime('-29 days',$now));
+            $to   = preg_match('/^\d{4}-\d{2}-\d{2}$/',$custom_to)   ? $custom_to   : date('Y-m-d',$now);
+            if ($from > $to) { $t=$from; $from=$to; $to=$t; }
+            return [ 'from' => $from, 'to' => $to, 'label' => date('M j, Y',strtotime($from)).' – '.date('M j, Y',strtotime($to)), 'preset' => 'custom' ];
+        default:
+            return [ 'from' => date('Y-m-d',strtotime('-29 days',$now)), 'to' => date('Y-m-d',$now), 'label' => 'Last 30 days', 'preset' => '1m' ];
+    }
+}
+
+function cfg_render_analytics_inner( $range ) {
+    global $wpdb;
+    $an_from    = $range['from'];
+    $an_to      = $range['to'];
+    $an_label   = $range['label'];
+    $an_preset  = $range['preset'];
+    $an_table   = $wpdb->prefix . 'cfg_entries';
+    $an_where   = "DATE(created_at) >= '{$an_from}' AND DATE(created_at) <= '{$an_to}'";
+    $an_days    = max( 1, (int) round( ( strtotime($an_to) - strtotime($an_from) ) / 86400 ) + 1 );
+
+    $daily = $wpdb->get_results(
+        "SELECT DATE(created_at) AS day, COUNT(*) AS cnt FROM {$an_table}
+         WHERE {$an_where} GROUP BY DATE(created_at) ORDER BY day ASC", ARRAY_A
+    );
+    $daily_map = [];
+    foreach ( $daily as $row ) $daily_map[$row['day']] = (int)$row['cnt'];
+    $daily_filled = [];
+    for ( $i = 0; $i < $an_days; $i++ ) {
+        $d = date('Y-m-d', strtotime("+{$i} days", strtotime($an_from)));
+        $daily_filled[] = [ 'day' => date('M j', strtotime($d)), 'cnt' => $daily_map[$d] ?? 0 ];
+    }
+    $max_daily = max( 1, max( array_column($daily_filled,'cnt') ) );
+
+    $all_meta = $wpdb->get_col("SELECT meta FROM {$an_table} WHERE {$an_where}");
+    $src = [ 'Google Ads' => 0, 'UTM Campaign' => 0, 'Direct / Organic' => 0 ];
+    foreach ( $all_meta as $m ) {
+        $d = json_decode($m, true) ?: [];
+        if (!empty($d['gclid']))          $src['Google Ads']++;
+        elseif (!empty($d['utm_campaign'])) $src['UTM Campaign']++;
+        else                               $src['Direct / Organic']++;
+    }
+    $src_total = max(1, array_sum($src));
+
+    $by_form = $wpdb->get_results(
+        "SELECT form_type, COUNT(*) AS cnt FROM {$an_table} WHERE {$an_where} GROUP BY form_type", ARRAY_A
+    );
+    $form_map = [];
+    foreach ( $by_form as $r ) $form_map[$r['form_type']] = (int)$r['cnt'];
+    $form_labels_all = ['contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator','review'=>'Review Form'];
+
+    $total_30    = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$an_table} WHERE {$an_where}");
+    $errors_30   = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$an_table} WHERE ghl_status='error' AND {$an_where}");
+    $success_30  = $total_30 - $errors_30;
+    $success_pct = $total_30 > 0 ? round($success_30 / $total_30 * 100) : 100;
+    $today_cnt   = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()");
+    $week_cnt    = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)");
+    $all_time    = (int)$wpdb->get_var("SELECT COUNT(*) FROM {$an_table}");
+
+    $ev_table        = $wpdb->prefix . 'cfg_events';
+    $ev_table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$ev_table}'") === $ev_table;
+    $an_ev_where     = "DATE(created_at) >= '{$an_from}' AND DATE(created_at) <= '{$an_to}'";
+
+    $cr_forms_list = ['contact','aligner','implant'];
+    $cr_today = []; $cr_30d = [];
+    $daily_ev_map = []; $imp_steps_raw = []; $imp_exits_raw = []; $alg_steps_raw = []; $alg_exits_raw = [];
+
+    if ( $ev_table_exists ) {
+        foreach ( $cr_forms_list as $ft ) {
+            foreach ( ['today' => "DATE(created_at) = CURDATE()", 'range' => $an_ev_where] as $period => $where ) {
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare("SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE form_type=%s AND {$where} GROUP BY event_type", $ft), ARRAY_A
+                );
+                $map = [];
+                foreach ( $rows as $r ) $map[$r['event_type']] = (int)$r['cnt'];
+                if ($period === 'today') $cr_today[$ft] = $map; else $cr_30d[$ft] = $map;
+            }
+        }
+        foreach ( ['today' => "DATE(created_at) = CURDATE()", 'range' => $an_ev_where] as $period => $where ) {
+            $rows = $wpdb->get_results("SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE {$where} GROUP BY event_type", ARRAY_A);
+            $map = [];
+            foreach ( $rows as $r ) $map[$r['event_type']] = (int)$r['cnt'];
+            if ($period === 'today') $cr_today['_all'] = $map; else $cr_30d['_all'] = $map;
+        }
+        $daily_evs = $wpdb->get_results(
+            "SELECT DATE(created_at) AS day, event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE {$an_ev_where} AND event_type IN ('view','complete')
+             GROUP BY day, event_type ORDER BY day ASC", ARRAY_A
+        );
+        foreach ( $daily_evs as $r ) $daily_ev_map[$r['day']][$r['event_type']] = (int)$r['cnt'];
+
+        $imp_steps_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='step' AND {$an_ev_where} GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+        );
+        $imp_exits_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(*) AS drop_offs FROM (
+                SELECT SUBSTRING_INDEX(GROUP_CONCAT(step_key ORDER BY created_at DESC SEPARATOR '|'),'|',1) AS step_key
+                FROM {$ev_table} WHERE form_type='implant' AND event_type='step' AND {$an_ev_where}
+                AND session_id NOT IN (SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='implant' AND event_type='complete' AND {$an_ev_where})
+                GROUP BY session_id) last_steps GROUP BY step_key ORDER BY drop_offs DESC", ARRAY_A
+        );
+        $alg_steps_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type='step' AND {$an_ev_where} GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+        );
+        $alg_exits_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(*) AS drop_offs FROM (
+                SELECT SUBSTRING_INDEX(GROUP_CONCAT(step_key ORDER BY created_at DESC SEPARATOR '|'),'|',1) AS step_key
+                FROM {$ev_table} WHERE form_type='aligner' AND event_type='step' AND {$an_ev_where}
+                AND session_id NOT IN (SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='aligner' AND event_type='complete' AND {$an_ev_where})
+                GROUP BY session_id) last_steps GROUP BY step_key ORDER BY drop_offs DESC", ARRAY_A
+        );
+    }
+
+    // ── HTML output ──
+    ob_start();
+    ?>
+    <div class="cfg-an-grid">
+        <!-- Submissions chart -->
+        <div class="cfg-an-card cfg-an-full">
+            <h3>Daily Submissions — <?= esc_html($an_label) ?></h3>
+            <div class="cfg-bar-chart">
+            <?php foreach ( $daily_filled as $d ): ?>
+                <div class="cfg-bar-col" title="<?= esc_attr($d['day']) ?>: <?= $d['cnt'] ?> submission<?= $d['cnt'] !== 1 ? 's' : '' ?>">
+                    <div class="cfg-bar" style="height:<?= $d['cnt'] > 0 ? round($d['cnt']/$max_daily*100) : 2 ?>%;background:<?= $d['cnt'] > 0 ? '#2271b1' : '#e5e7eb' ?>;"></div>
+                </div>
+            <?php endforeach; ?>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:4px;">
+                <?php $an_mid = (int)floor((count($daily_filled)-1)/2); ?>
+                <span><?= esc_html($daily_filled[0]['day']) ?></span>
+                <?php if (count($daily_filled)>2): ?><span><?= esc_html($daily_filled[$an_mid]['day']) ?></span><?php endif; ?>
+                <span><?= esc_html($daily_filled[count($daily_filled)-1]['day']) ?></span>
+            </div>
+        </div>
+
+        <!-- Traffic source -->
+        <div class="cfg-an-card">
+            <h3>Traffic Source</h3>
+            <?php foreach ( $src as $label => $count ):
+                $colors = ['Google Ads'=>'#4285f4','UTM Campaign'=>'#f59e0b','Direct / Organic'=>'#10b981'];
+                $pct = round($count/$src_total*100);
+            ?>
+            <div class="cfg-src-row">
+                <span class="cfg-src-label"><?= esc_html($label) ?></span>
+                <div class="cfg-src-bar-bg"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $colors[$label] ?>;"></div></div>
+                <span class="cfg-src-count"><?= $count ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- By form -->
+        <div class="cfg-an-card">
+            <h3>By Form</h3>
+            <?php foreach ( $form_labels_all as $key => $label ):
+                $cnt = $form_map[$key] ?? 0;
+                $pct = $total_30 > 0 ? round($cnt/$total_30*100) : 0;
+                $fc  = ['contact'=>'#2271b1','aligner'=>'#7c3aed','implant'=>'#0891b2'];
+            ?>
+            <div class="cfg-src-row">
+                <span class="cfg-src-label"><?= esc_html($label) ?></span>
+                <div class="cfg-src-bar-bg"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $fc[$key] ?? '#6b7280' ?>;"></div></div>
+                <span class="cfg-src-count"><?= $cnt ?></span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- GHL send rate -->
+        <div class="cfg-an-card">
+            <h3>GHL Send Rate</h3>
+            <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px;">
+                <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+                    <svg viewBox="0 0 36 36" style="width:80px;height:80px;transform:rotate(-90deg)">
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="3.5"/>
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="<?= $success_pct>=90?'#16a34a':($success_pct>=70?'#f59e0b':'#dc2626') ?>" stroke-width="3.5"
+                            stroke-dasharray="<?= $success_pct ?> 100" stroke-linecap="round"/>
+                    </svg>
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1d2327;"><?= $success_pct ?>%</div>
+                </div>
+                <div>
+                    <div style="font-size:13px;color:#374151;margin-bottom:4px;">✓ <strong><?= $success_30 ?></strong> sent successfully</div>
+                    <div style="font-size:13px;color:#b91c1c;">✗ <strong><?= $errors_30 ?></strong> failed</div>
+                </div>
+            </div>
+            <?php if ($errors_30>0): ?>
+            <a href="<?= esc_url(admin_url('admin.php?page='.CFG_SLUG.'&cfg_tab=entries&filter_status=error')) ?>" style="font-size:12px;color:#b91c1c;">View failed entries →</a>
+            <?php else: ?>
+            <p style="font-size:12px;color:#16a34a;margin:0;">All submissions reached GHL successfully.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="cfg-an-card">
+            <h3>Quick Stats</h3>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Today</span><strong><?= $today_cnt ?></strong></div>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">This week</span><strong><?= $week_cnt ?></strong></div>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;"><?= esc_html($an_label) ?></span><strong><?= $total_30 ?></strong></div>
+            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
+        </div>
+    </div><!-- /cfg-an-grid -->
+
+    <?php if (!$ev_table_exists): ?>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:14px 18px;font-size:13px;color:#92400e;margin-bottom:20px;">
+        ⏳ Conversion tracking activates after your next site visit. Data will appear here once the first form view is recorded.
+    </div>
+    <?php else:
+    // Helper
+    if (!function_exists('cfg_ev_cell')):
+    function cfg_ev_cell($map) {
+        $views=$map['view']??0; $comp=$map['complete']??0;
+        if (!$views) return '<span style="color:#9ca3af;font-size:12px;">—</span>';
+        $pct=round($comp/$views*100);
+        $col=$pct>=50?'#16a34a':($pct>=25?'#f59e0b':'#dc2626');
+        return '<div style="text-align:right;"><strong style="font-size:14px;color:'.$col.';">'.$pct.'%</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.$comp.' / '.$views.' views</div></div>';
+    }
+    endif;
+    $cr_form_labels = ['_all'=>'All Forms','contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator'];
+    $cr_form_colors = ['_all'=>'#374151','contact'=>'#2271b1','aligner'=>'#7c3aed','implant'=>'#0891b2'];
+    ?>
+
+    <!-- Conversion Rate Table -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— completions ÷ form views</span></h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+                <tr style="border-bottom:2px solid #f3f4f6;">
+                    <th style="text-align:left;padding:6px 0;color:#6b7280;font-weight:600;width:40%;">Form</th>
+                    <th style="text-align:right;padding:6px 16px 6px 0;color:#6b7280;font-weight:600;">Today</th>
+                    <th style="text-align:right;padding:6px 0;color:#6b7280;font-weight:600;"><?= esc_html($an_label) ?></th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($cr_form_labels as $key => $label):
+                $is_all = $key === '_all';
+            ?>
+            <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all?'background:#f9fafb;':'' ?>">
+                <td style="padding:10px 0;<?= $is_all?'font-weight:600;':'' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
+                <td style="padding:10px 16px 10px 0;"><?= cfg_ev_cell($cr_today[$key]??[]) ?></td>
+                <td style="padding:10px 0;"><?= cfg_ev_cell($cr_30d[$key]??[]) ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Conversion Rate Line Chart -->
+    <?php
+    $chart_days=[];
+    for ($i=0;$i<$an_days;$i++) {
+        $d=date('Y-m-d',strtotime("+{$i} days",strtotime($an_from)));
+        $v=$daily_ev_map[$d]['view']??0; $c=$daily_ev_map[$d]['complete']??0;
+        $chart_days[]=[ 'day'=>date('M j',strtotime($d)), 'rate'=>$v>0?round($c/$v*100):null, 'views'=>$v, 'comp'=>$c ];
+    }
+    $has_chart_data = count(array_filter(array_column($chart_days,'rate'),fn($r)=>$r!==null))>0;
+    $chart_total    = count($chart_days);
+    $chart_max_i    = max(1,$chart_total-1);
+    ?>
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Conversion Rate — <?= esc_html($an_label) ?> <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">all forms combined</span></h3>
+        <?php if (!$has_chart_data): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No conversion data yet — visit your forms to start tracking.</p>
+        <?php else: ?>
+        <div style="position:relative;height:140px;margin-bottom:8px;">
+            <svg viewBox="0 0 600 120" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
+                <?php foreach ([0,25,50,75,100] as $pct): $y=110-$pct*1.1; ?>
+                <line x1="0" y1="<?= $y ?>" x2="600" y2="<?= $y ?>" stroke="#f3f4f6" stroke-width="1"/>
+                <?php endforeach; ?>
+                <?php
+                $segments=[]; $cur_seg=[];
+                foreach ($chart_days as $i => $d) {
+                    $x=round($i/$chart_max_i*600,1);
+                    if ($d['rate']!==null) { $y=round(110-$d['rate']*1.1,1); $cur_seg[]=$x.','.$y; }
+                    else { if ($cur_seg) {$segments[]=$cur_seg;$cur_seg=[];} }
+                }
+                if ($cur_seg) $segments[]=$cur_seg;
+                foreach ($segments as $seg): if (count($seg)<2) continue;
+                ?>
+                <polyline points="<?= implode(' ',$seg) ?>" fill="none" stroke="#2271b1" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                <?php endforeach; ?>
+                <?php foreach ($chart_days as $i => $d):
+                    if ($d['rate']===null) continue;
+                    $x=round($i/$chart_max_i*600,1); $y=round(110-$d['rate']*1.1,1);
+                ?>
+                <circle cx="<?= $x ?>" cy="<?= $y ?>" r="3.5" fill="#2271b1" stroke="#fff" stroke-width="1.5">
+                    <title><?= esc_attr($d['day']) ?>: <?= $d['rate'] ?>% (<?= $d['comp'] ?>/<?= $d['views'] ?>)</title>
+                </circle>
+                <?php endforeach; ?>
+            </svg>
+            <div style="position:absolute;top:0;left:-32px;height:100%;display:flex;flex-direction:column;justify-content:space-between;font-size:10px;color:#9ca3af;pointer-events:none;">
+                <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;padding-left:0;">
+            <?php $chart_mid=(int)floor(($chart_total-1)/2); ?>
+            <span><?= esc_html($chart_days[0]['day']) ?></span>
+            <?php if ($chart_total>2): ?><span><?= esc_html($chart_days[$chart_mid]['day']) ?></span><?php endif; ?>
+            <span><?= esc_html($chart_days[$chart_total-1]['day']) ?></span>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <?php
+    $imp_step_labels = [
+        'router'=>'Path selection (single / multi / full arch)','intro'=>'Intro screen','summary'=>'Summary (reached estimate)',
+        'a1'=>'[Single] Where is the tooth located?','a2'=>'[Single] How long has the tooth been missing?',
+        'a3'=>'[Single] Bone graft needed?','a4'=>'[Single] Describe your situation',
+        'm1'=>'[Multi] How many teeth to replace?','m2'=>'[Multi] Where are the teeth located?',
+        'm3'=>'[Multi] How long have teeth been missing?','m4'=>'[Multi] Bone graft needed?','m5'=>'[Multi] Describe your situation',
+        'b1'=>'[Full Arch] Which arch to replace?','b2'=>'[Full Arch] Describe your situation','b3'=>'[Full Arch] How long have teeth been missing?',
+        'ins'=>'Do you have dental insurance?','offer'=>'Special offer screen','lead'=>'Contact / lead form',
+        'result-single'=>'Result page (single tooth)','result-multiple'=>'Result page (multiple teeth)','result-fullarch'=>'Result page (full arch)',
+    ];
+    ?>
+
+    <!-- Implant step reach -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Implant Estimator — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions · <?= esc_html($an_label) ?></span></h3>
+        <?php if (empty($imp_steps_raw)): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
+        <?php else:
+        $imp_max=max(1,(int)$imp_steps_raw[0]['cnt']);
+        foreach ($imp_steps_raw as $row):
+            $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
+            $pct=round((int)$row['cnt']/$imp_max*100);
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:8px;align-items:center;">
+            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div></div>
+            <span style="font-size:12px;color:#374151;width:28px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; endif; ?>
+    </div>
+
+    <!-- Implant drop-off -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Implant Estimator — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
+        <?php if (empty($imp_exits_raw)): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
+        <?php else:
+        $total_exits=array_sum(array_column($imp_exits_raw,'drop_offs'));
+        $exit_max=max(1,(int)$imp_exits_raw[0]['drop_offs']);
+        ?>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits!==1?'s':'' ?> left without completing.</p>
+        <?php foreach ($imp_exits_raw as $row):
+            $n=(int)$row['drop_offs']; $share=round($n/$total_exits*100);
+            $bar_w=round($n/$exit_max*100); $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
+            $color=$share>=30?'#dc2626':($share>=15?'#f59e0b':'#6b7280');
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
+            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div></div>
+            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:40px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:50px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
+        </div>
+        <?php endforeach; endif; ?>
+    </div>
+
+    <?php
+    $alg_cfg=$alg_step_labels=[];
+    $alg_cfg=cfg_aligner_get();
+    foreach ($alg_cfg as $i => $step) {
+        $fk=$step['field_key']??''; if (!$fk) continue;
+        $alg_step_labels[$fk]=mb_strimwidth($step['question']??$step['title']??('Step '.($i+1)),0,45,'…');
+    }
+    ?>
+
+    <!-- Aligner step reach -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Aligner Quiz — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions · <?= esc_html($an_label) ?></span></h3>
+        <?php if (empty($alg_steps_raw)): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
+        <?php else:
+        $alg_max=max(1,(int)$alg_steps_raw[0]['cnt']);
+        foreach ($alg_steps_raw as $row):
+            $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
+            $pct=round((int)$row['cnt']/$alg_max*100);
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:8px;align-items:center;">
+            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#7c3aed;"></div></div>
+            <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; endif; ?>
+    </div>
+
+    <!-- Aligner drop-off -->
+    <div class="cfg-an-card" style="margin-bottom:20px;">
+        <h3>Aligner Quiz — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
+        <?php if (empty($alg_exits_raw)): ?>
+        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
+        <?php else:
+        $alg_total_exits=array_sum(array_column($alg_exits_raw,'drop_offs'));
+        $alg_exit_max=max(1,(int)$alg_exits_raw[0]['drop_offs']);
+        ?>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $alg_total_exits ?> session<?= $alg_total_exits!==1?'s':'' ?> left without completing.</p>
+        <?php foreach ($alg_exits_raw as $row):
+            $n=(int)$row['drop_offs']; $share=round($n/$alg_total_exits*100);
+            $bar_w=round($n/$alg_exit_max*100); $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
+            $color=$share>=30?'#dc2626':($share>=15?'#f59e0b':'#6b7280');
+        ?>
+        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
+            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div></div>
+            <span style="font-size:12px;font-weight:700;color:<?= $color ?>;width:36px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
+        </div>
+        <?php endforeach; endif; ?>
+    </div>
+
+    <?php endif; // ev_table_exists ?>
+    <?php
+    return ob_get_clean();
+}
+
+function cfg_ajax_analytics_refresh() {
+    check_ajax_referer( 'cfg_analytics_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+    $range = cfg_analytics_resolve_range(
+        sanitize_key( $_POST['preset'] ?? '1m' ),
+        sanitize_text_field( $_POST['from'] ?? '' ),
+        sanitize_text_field( $_POST['to']   ?? '' )
+    );
+    wp_send_json_success( [ 'html' => cfg_render_analytics_inner( $range ), 'label' => $range['label'], 'preset' => $range['preset'] ] );
 }
 
 function cfg_ajax_check_ghl_fields() {
@@ -5025,200 +5470,8 @@ function cfg_settings_page() {
 
     <?php
     // ── Analytics panel ──
-    $an_table = $wpdb->prefix . 'cfg_entries';
+    $an_range = cfg_analytics_resolve_range( '1m' ); // default; AJAX overrides client-side
 
-    // ── Date range calculation ──
-    $an_preset      = sanitize_key( $_GET['analytics_range'] ?? '1m' );
-    $an_custom_from = sanitize_text_field( $_GET['analytics_from'] ?? '' );
-    $an_custom_to   = sanitize_text_field( $_GET['analytics_to']   ?? '' );
-    $an_now         = current_time( 'timestamp' );
-
-    switch ( $an_preset ) {
-        case 'today':
-            $an_from  = date( 'Y-m-d', $an_now );
-            $an_to    = date( 'Y-m-d', $an_now );
-            $an_label = 'Today';
-            break;
-        case 'yesterday':
-            $an_from  = date( 'Y-m-d', strtotime( '-1 day', $an_now ) );
-            $an_to    = date( 'Y-m-d', strtotime( '-1 day', $an_now ) );
-            $an_label = 'Yesterday';
-            break;
-        case '1w':
-            $an_from  = date( 'Y-m-d', strtotime( '-6 days', $an_now ) );
-            $an_to    = date( 'Y-m-d', $an_now );
-            $an_label = 'Last 7 days';
-            break;
-        case '2w':
-            $an_from  = date( 'Y-m-d', strtotime( '-13 days', $an_now ) );
-            $an_to    = date( 'Y-m-d', $an_now );
-            $an_label = 'Last 2 weeks';
-            break;
-        case '3m':
-            $an_from  = date( 'Y-m-d', strtotime( '-89 days', $an_now ) );
-            $an_to    = date( 'Y-m-d', $an_now );
-            $an_label = 'Last 3 months';
-            break;
-        case '1y':
-            $an_from  = date( 'Y-m-d', strtotime( '-364 days', $an_now ) );
-            $an_to    = date( 'Y-m-d', $an_now );
-            $an_label = 'Last 1 year';
-            break;
-        case 'custom':
-            $an_from  = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $an_custom_from ) ? $an_custom_from : date( 'Y-m-d', strtotime( '-29 days', $an_now ) );
-            $an_to    = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $an_custom_to )   ? $an_custom_to   : date( 'Y-m-d', $an_now );
-            if ( $an_from > $an_to ) { $t = $an_from; $an_from = $an_to; $an_to = $t; }
-            $an_label = date( 'M j, Y', strtotime( $an_from ) ) . ' – ' . date( 'M j, Y', strtotime( $an_to ) );
-            break;
-        default: // '1m'
-            $an_preset = '1m';
-            $an_from   = date( 'Y-m-d', strtotime( '-29 days', $an_now ) );
-            $an_to     = date( 'Y-m-d', $an_now );
-            $an_label  = 'Last 30 days';
-            break;
-    }
-    $an_where = "DATE(created_at) >= '{$an_from}' AND DATE(created_at) <= '{$an_to}'";
-    $an_days  = max( 1, (int) round( ( strtotime( $an_to ) - strtotime( $an_from ) ) / 86400 ) + 1 );
-
-    // ── Daily submissions chart ──
-    $daily = $wpdb->get_results(
-        "SELECT DATE(created_at) AS day, COUNT(*) AS cnt
-         FROM {$an_table}
-         WHERE {$an_where}
-         GROUP BY DATE(created_at)
-         ORDER BY day ASC",
-        ARRAY_A
-    );
-    $daily_map = [];
-    foreach ( $daily as $row ) $daily_map[ $row['day'] ] = (int) $row['cnt'];
-    $daily_filled = [];
-    for ( $i = 0; $i < $an_days; $i++ ) {
-        $d = date( 'Y-m-d', strtotime( "+{$i} days", strtotime( $an_from ) ) );
-        $daily_filled[] = [ 'day' => date( 'M j', strtotime( $d ) ), 'cnt' => $daily_map[ $d ] ?? 0 ];
-    }
-    $max_daily = max( 1, max( array_column( $daily_filled, 'cnt' ) ) );
-
-    // Source breakdown
-    $all_meta = $wpdb->get_col( "SELECT meta FROM {$an_table} WHERE {$an_where}" );
-    $src = [ 'Google Ads' => 0, 'UTM Campaign' => 0, 'Direct / Organic' => 0 ];
-    foreach ( $all_meta as $m ) {
-        $d = json_decode( $m, true ) ?: [];
-        if ( ! empty( $d['gclid'] ) )          $src['Google Ads']++;
-        elseif ( ! empty( $d['utm_campaign'] ) ) $src['UTM Campaign']++;
-        else                                     $src['Direct / Organic']++;
-    }
-    $src_total = max( 1, array_sum( $src ) );
-
-    // Form type breakdown
-    $by_form = $wpdb->get_results(
-        "SELECT form_type, COUNT(*) AS cnt FROM {$an_table} WHERE {$an_where} GROUP BY form_type",
-        ARRAY_A
-    );
-    $form_map = [];
-    foreach ( $by_form as $r ) $form_map[ $r['form_type'] ] = (int) $r['cnt'];
-    $form_labels_all = [ 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator', 'review' => 'Review Form' ];
-
-    // GHL success rate
-    $total_30   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE {$an_where}" );
-    $errors_30  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE ghl_status='error' AND {$an_where}" );
-    $success_30 = $total_30 - $errors_30;
-    $success_pct = $total_30 > 0 ? round( $success_30 / $total_30 * 100 ) : 100;
-
-    // Conversion tracking — views/starts/completes from cfg_events
-    $ev_table = $wpdb->prefix . 'cfg_events';
-    $ev_table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$ev_table}'" ) === $ev_table;
-    $an_ev_where = "DATE(created_at) >= '{$an_from}' AND DATE(created_at) <= '{$an_to}'";
-
-    // Per-form today vs selected range
-    $cr_forms_list = [ 'contact', 'aligner', 'implant' ];
-    $cr_today = []; $cr_30d = [];
-    if ( $ev_table_exists ) {
-        foreach ( $cr_forms_list as $ft ) {
-            foreach ( [ 'today' => "DATE(created_at) = CURDATE()", 'range' => $an_ev_where ] as $period => $where ) {
-                $rows = $wpdb->get_results(
-                    $wpdb->prepare( "SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE form_type=%s AND {$where} GROUP BY event_type", $ft ),
-                    ARRAY_A
-                );
-                $map = [];
-                foreach ( $rows as $r ) $map[ $r['event_type'] ] = (int) $r['cnt'];
-                if ( $period === 'today' ) $cr_today[$ft] = $map;
-                else                      $cr_30d[$ft]   = $map;
-            }
-        }
-        // All-forms totals
-        foreach ( [ 'today' => "DATE(created_at) = CURDATE()", 'range' => $an_ev_where ] as $period => $where ) {
-            $rows = $wpdb->get_results(
-                "SELECT event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table} WHERE {$where} GROUP BY event_type",
-                ARRAY_A
-            );
-            $map = [];
-            foreach ( $rows as $r ) $map[ $r['event_type'] ] = (int) $r['cnt'];
-            if ( $period === 'today' ) $cr_today['_all'] = $map;
-            else                      $cr_30d['_all']   = $map;
-        }
-
-        // Daily conversion rate for line chart (selected range)
-        $daily_evs = $wpdb->get_results(
-            "SELECT DATE(created_at) AS day, event_type, COUNT(DISTINCT session_id) AS cnt
-             FROM {$ev_table}
-             WHERE {$an_ev_where} AND event_type IN ('view','complete')
-             GROUP BY day, event_type ORDER BY day ASC",
-            ARRAY_A
-        );
-        $daily_ev_map = [];
-        foreach ( $daily_evs as $r ) $daily_ev_map[ $r['day'] ][ $r['event_type'] ] = (int) $r['cnt'];
-
-        // Step drop-off for implant (selected range, unique sessions per step)
-        $imp_steps_raw = $wpdb->get_results(
-            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
-             WHERE form_type='implant' AND event_type='step' AND {$an_ev_where}
-             GROUP BY step_key ORDER BY cnt DESC",
-            ARRAY_A
-        );
-        // Exit-step analysis
-        $imp_exits_raw = $wpdb->get_results(
-            "SELECT step_key, COUNT(*) AS drop_offs
-             FROM (
-                 SELECT SUBSTRING_INDEX(GROUP_CONCAT(step_key ORDER BY created_at DESC SEPARATOR '|'),'|',1) AS step_key
-                 FROM {$ev_table}
-                 WHERE form_type='implant' AND event_type='step'
-                   AND {$an_ev_where}
-                   AND session_id NOT IN (
-                       SELECT DISTINCT session_id FROM {$ev_table}
-                       WHERE form_type='implant' AND event_type='complete'
-                         AND {$an_ev_where}
-                   )
-                 GROUP BY session_id
-             ) last_steps
-             GROUP BY step_key ORDER BY drop_offs DESC",
-            ARRAY_A
-        );
-        // Aligner quiz: step reach
-        $alg_steps_raw = $wpdb->get_results(
-            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
-             WHERE form_type='aligner' AND event_type='step' AND {$an_ev_where}
-             GROUP BY step_key ORDER BY cnt DESC",
-            ARRAY_A
-        );
-        // Aligner quiz: exit-step analysis
-        $alg_exits_raw = $wpdb->get_results(
-            "SELECT step_key, COUNT(*) AS drop_offs
-             FROM (
-                 SELECT SUBSTRING_INDEX(GROUP_CONCAT(step_key ORDER BY created_at DESC SEPARATOR '|'),'|',1) AS step_key
-                 FROM {$ev_table}
-                 WHERE form_type='aligner' AND event_type='step'
-                   AND {$an_ev_where}
-                   AND session_id NOT IN (
-                       SELECT DISTINCT session_id FROM {$ev_table}
-                       WHERE form_type='aligner' AND event_type='complete'
-                         AND {$an_ev_where}
-                   )
-                 GROUP BY session_id
-             ) last_steps
-             GROUP BY step_key ORDER BY drop_offs DESC",
-            ARRAY_A
-        );
-    }
     ?>
 
     <div id="cfg-analytics-wrap" style="display:none;background:#fff;border:1px solid #e2e4e9;border-left:none;border-radius:0 10px 10px 0;min-height:580px;overflow:hidden;">
@@ -5232,7 +5485,6 @@ function cfg_settings_page() {
     .cfg-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
     .cfg-bar{width:100%;background:#2271b1;border-radius:2px 2px 0 0;min-height:2px;transition:opacity .15s;}
     .cfg-bar:hover{opacity:.75;}
-    .cfg-bar-label{font-size:9px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:clip;}
     .cfg-src-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
     .cfg-src-bar-bg{flex:1;background:#f3f4f6;border-radius:4px;height:8px;overflow:hidden;}
     .cfg-src-bar-fill{height:100%;border-radius:4px;background:#2271b1;}
@@ -5242,421 +5494,37 @@ function cfg_settings_page() {
     .cfg-stat-row:last-child{border-bottom:none;}
     .cfg-an-full{grid-column:span 2;}
     .cfg-an-range-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:18px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;}
-    .cfg-an-range-bar a{font-size:12px;padding:4px 11px;border-radius:4px;text-decoration:none;color:#374151;border:1px solid #cbd5e1;background:#fff;white-space:nowrap;}
-    .cfg-an-range-bar a:hover{background:#f1f5f9;}
-    .cfg-an-range-bar a.active{background:#2271b1;color:#fff;border-color:#2271b1;}
-    .cfg-an-range-bar .cfg-custom-wrap{display:flex;align-items:center;gap:6px;margin-left:4px;}
+    .cfg-an-range-bar button{font-size:12px;padding:4px 11px;border-radius:4px;text-decoration:none;color:#374151;border:1px solid #cbd5e1;background:#fff;white-space:nowrap;cursor:pointer;}
+    .cfg-an-range-bar button:hover{background:#f1f5f9;}
+    .cfg-an-range-bar button.active{background:#2271b1;color:#fff;border-color:#2271b1;}
+    .cfg-an-range-bar .cfg-custom-wrap{display:flex;align-items:center;gap:6px;}
     .cfg-an-range-bar .cfg-custom-wrap input[type=date]{font-size:12px;padding:3px 7px;border:1px solid #cbd5e1;border-radius:4px;}
-    .cfg-an-range-bar .cfg-custom-wrap button{font-size:12px;padding:4px 11px;border-radius:4px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;}
-    .cfg-an-range-bar .cfg-custom-wrap button:hover{background:#f1f5f9;}
     </style>
 
-    <?php
-    $an_base_url = admin_url( 'admin.php?page=' . CFG_SLUG . '&cfg_tab=analytics' );
-    $an_presets  = [
-        'today'     => 'Today',
-        'yesterday' => 'Yesterday',
-        '1w'        => 'Last 1 week',
-        '2w'        => 'Last 2 weeks',
-        '1m'        => 'Last 1 month',
-        '3m'        => 'Last 3 months',
-        '1y'        => 'Last 1 year',
-        'custom'    => 'Custom',
-    ];
-    ?>
-    <div class="cfg-an-range-bar">
+    <!-- Range bar — fully JS-driven, no page reload -->
+    <div class="cfg-an-range-bar" id="cfg-an-range-bar">
         <span style="font-size:12px;font-weight:600;color:#374151;margin-right:4px;">Range:</span>
-        <?php foreach ( $an_presets as $pk => $pl ): ?>
-            <?php if ( $pk === 'custom' ): ?>
-                <a href="#" class="<?= $an_preset === 'custom' ? 'active' : '' ?>" id="cfg-custom-toggle"><?= esc_html($pl) ?></a>
-                <span class="cfg-custom-wrap" id="cfg-custom-wrap" style="display:<?= $an_preset === 'custom' ? 'flex' : 'none' ?>;">
-                    <input type="date" id="cfg-an-from" value="<?= esc_attr($an_preset === 'custom' ? $an_from : '') ?>">
-                    <span style="font-size:12px;color:#6b7280;">to</span>
-                    <input type="date" id="cfg-an-to" value="<?= esc_attr($an_preset === 'custom' ? $an_to : '') ?>">
-                    <button id="cfg-an-go">Go</button>
-                </span>
-            <?php else: ?>
-                <a href="<?= esc_url( add_query_arg( 'analytics_range', $pk, $an_base_url ) ) ?>"
-                   class="<?= $an_preset === $pk ? 'active' : '' ?>"><?= esc_html($pl) ?></a>
-            <?php endif; ?>
-        <?php endforeach; ?>
-        <span style="font-size:12px;color:#6b7280;margin-left:auto;"><?= esc_html($an_label) ?></span>
+        <button data-preset="today">Today</button>
+        <button data-preset="yesterday">Yesterday</button>
+        <button data-preset="1w">Last 1 week</button>
+        <button data-preset="2w">Last 2 weeks</button>
+        <button data-preset="1m" class="active">Last 1 month</button>
+        <button data-preset="3m">Last 3 months</button>
+        <button data-preset="1y">Last 1 year</button>
+        <button data-preset="custom" id="cfg-an-custom-btn">Custom</button>
+        <span class="cfg-custom-wrap" id="cfg-an-custom-wrap" style="display:none;">
+            <input type="date" id="cfg-an-from">
+            <span style="font-size:12px;color:#6b7280;">to</span>
+            <input type="date" id="cfg-an-to">
+            <button id="cfg-an-go" style="background:#2271b1;color:#fff;border-color:#2271b1;">Go</button>
+        </span>
+        <span id="cfg-an-label" style="font-size:12px;color:#6b7280;margin-left:auto;">Last 30 days</span>
+        <span id="cfg-an-spinner" style="display:none;font-size:12px;color:#6b7280;">Loading…</span>
     </div>
 
-    <script>
-    (function(){
-        var toggle = document.getElementById('cfg-custom-toggle');
-        var wrap   = document.getElementById('cfg-custom-wrap');
-        if (toggle) toggle.addEventListener('click', function(e){
-            e.preventDefault();
-            wrap.style.display = wrap.style.display === 'none' ? 'flex' : 'none';
-            toggle.classList.toggle('active', wrap.style.display !== 'none');
-        });
-        var goBtn = document.getElementById('cfg-an-go');
-        if (goBtn) goBtn.addEventListener('click', function(){
-            var from = document.getElementById('cfg-an-from').value;
-            var to   = document.getElementById('cfg-an-to').value;
-            if (!from || !to) { alert('Please select both dates.'); return; }
-            window.location.href = '<?= esc_js( add_query_arg( 'analytics_range', 'custom', $an_base_url ) ) ?>'
-                + '&analytics_from=' + encodeURIComponent(from)
-                + '&analytics_to='   + encodeURIComponent(to);
-        });
-    })();
-    </script>
-
-    <div class="cfg-an-grid">
-
-        <!-- Submissions chart -->
-        <div class="cfg-an-card cfg-an-full">
-            <h3>Daily Submissions — <?= esc_html($an_label) ?></h3>
-            <div class="cfg-bar-chart">
-            <?php foreach ( $daily_filled as $d ): ?>
-                <div class="cfg-bar-col" title="<?= esc_attr( $d['day'] ) ?>: <?= $d['cnt'] ?> submission<?= $d['cnt'] !== 1 ? 's' : '' ?>">
-                    <div class="cfg-bar" style="height:<?= $d['cnt'] > 0 ? round( $d['cnt'] / $max_daily * 100 ) : 2 ?>%;background:<?= $d['cnt'] > 0 ? '#2271b1' : '#e5e7eb' ?>;"></div>
-                </div>
-            <?php endforeach; ?>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:4px;">
-                <?php $an_mid = (int) floor( ( count($daily_filled) - 1 ) / 2 ); ?>
-                <span><?= esc_html( $daily_filled[0]['day'] ) ?></span>
-                <?php if ( count($daily_filled) > 2 ): ?><span><?= esc_html( $daily_filled[$an_mid]['day'] ) ?></span><?php endif; ?>
-                <span><?= esc_html( $daily_filled[ count($daily_filled) - 1 ]['day'] ) ?></span>
-            </div>
-        </div>
-
-        <!-- Traffic source breakdown -->
-        <div class="cfg-an-card">
-            <h3>Traffic Source</h3>
-            <?php foreach ( $src as $label => $count ):
-                $colors = [ 'Google Ads' => '#4285f4', 'UTM Campaign' => '#f59e0b', 'Direct / Organic' => '#10b981' ];
-                $pct = round( $count / $src_total * 100 );
-            ?>
-            <div class="cfg-src-row">
-                <span class="cfg-src-label"><?= esc_html( $label ) ?></span>
-                <div class="cfg-src-bar-bg">
-                    <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $colors[$label] ?>;"></div>
-                </div>
-                <span class="cfg-src-count"><?= $count ?></span>
-            </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- Form type breakdown -->
-        <div class="cfg-an-card">
-            <h3>By Form</h3>
-            <?php foreach ( $form_labels_all as $key => $label ):
-                $cnt = $form_map[ $key ] ?? 0;
-                $pct = $total_30 > 0 ? round( $cnt / $total_30 * 100 ) : 0;
-                $fc  = [ 'contact' => '#2271b1', 'aligner' => '#7c3aed', 'implant' => '#0891b2' ];
-            ?>
-            <div class="cfg-src-row">
-                <span class="cfg-src-label"><?= esc_html( $label ) ?></span>
-                <div class="cfg-src-bar-bg">
-                    <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $fc[$key] ?>;"></div>
-                </div>
-                <span class="cfg-src-count"><?= $cnt ?></span>
-            </div>
-            <?php endforeach; ?>
-        </div>
-
-        <!-- GHL status -->
-        <div class="cfg-an-card">
-            <h3>GHL Send Rate</h3>
-            <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px;">
-                <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
-                    <svg viewBox="0 0 36 36" style="width:80px;height:80px;transform:rotate(-90deg)">
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="3.5"/>
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="<?= $success_pct >= 90 ? '#16a34a' : ($success_pct >= 70 ? '#f59e0b' : '#dc2626') ?>" stroke-width="3.5"
-                            stroke-dasharray="<?= round( $success_pct * 100 / 100 ) ?> 100" stroke-linecap="round"/>
-                    </svg>
-                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1d2327;"><?= $success_pct ?>%</div>
-                </div>
-                <div>
-                    <div style="font-size:13px;color:#374151;margin-bottom:4px;">✓ <strong><?= $success_30 ?></strong> sent successfully</div>
-                    <div style="font-size:13px;color:#b91c1c;">✗ <strong><?= $errors_30 ?></strong> failed</div>
-                </div>
-            </div>
-            <?php if ( $errors_30 > 0 ): ?>
-            <a href="<?= esc_url( admin_url( 'admin.php?page=' . CFG_SLUG . '&cfg_tab=entries&filter_status=error' ) ) ?>" style="font-size:12px;color:#b91c1c;">View failed entries →</a>
-            <?php else: ?>
-            <p style="font-size:12px;color:#16a34a;margin:0;">All submissions reached GHL successfully.</p>
-            <?php endif; ?>
-        </div>
-
-        <!-- Quick Stats -->
-        <div class="cfg-an-card">
-            <h3>Quick Stats</h3>
-            <?php
-            $today_cnt = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE DATE(created_at) = CURDATE()" );
-            $week_cnt  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table} WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)" );
-            $all_time  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$an_table}" );
-            ?>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Today</span><strong><?= $today_cnt ?></strong></div>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">This week</span><strong><?= $week_cnt ?></strong></div>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;"><?= esc_html($an_label) ?></span><strong><?= $total_30 ?></strong></div>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
-        </div>
-
-    </div><!-- /cfg-an-grid -->
-
-    <?php if ( ! $ev_table_exists ): ?>
-    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:14px 18px;font-size:13px;color:#92400e;margin-bottom:20px;">
-        ⏳ Conversion tracking activates after your next site visit. Data will appear here once the first form view is recorded.
+    <div id="cfg-analytics-body">
+        <?= cfg_render_analytics_inner( $an_range ) ?>
     </div>
-    <?php else: ?>
-
-    <?php
-    // Helper: render a conv cell from an event map
-    function cfg_ev_cell( $map ) {
-        $views     = $map['view']     ?? 0;
-        $completes = $map['complete'] ?? 0;
-        if ( $views === 0 ) return '<span style="color:#9ca3af;font-size:12px;">—</span>';
-        $pct = round( $completes / $views * 100 );
-        $col = $pct >= 50 ? '#16a34a' : ( $pct >= 25 ? '#f59e0b' : '#dc2626' );
-        return '<div style="text-align:right;">'
-             . '<strong style="font-size:14px;color:' . $col . ';">' . $pct . '%</strong>'
-             . '<div style="font-size:11px;color:#9ca3af;margin-top:1px;">' . $completes . ' / ' . $views . ' views</div>'
-             . '</div>';
-    }
-    $cr_form_labels = [ '_all' => 'All Forms', 'contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator' ];
-    $cr_form_colors = [ '_all' => '#374151',   'contact' => '#2271b1',      'aligner' => '#7c3aed',      'implant' => '#0891b2' ];
-    ?>
-
-    <!-- Conversion Rate Table -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— completions ÷ form views</span></h3>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-                <tr style="border-bottom:2px solid #f3f4f6;">
-                    <th style="text-align:left;padding:6px 0;color:#6b7280;font-weight:600;width:40%;">Form</th>
-                    <th style="text-align:right;padding:6px 16px 6px 0;color:#6b7280;font-weight:600;">Today</th>
-                    <th style="text-align:right;padding:6px 0;color:#6b7280;font-weight:600;"><?= esc_html($an_label) ?></th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ( $cr_form_labels as $key => $label ):
-                $is_all = $key === '_all';
-            ?>
-            <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all ? 'background:#f9fafb;' : '' ?>">
-                <td style="padding:10px 0;<?= $is_all ? 'font-weight:600;' : '' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
-                <td style="padding:10px 16px 10px 0;"><?= cfg_ev_cell( $cr_today[$key] ?? [] ) ?></td>
-                <td style="padding:10px 0;"><?= cfg_ev_cell( $cr_30d[$key]   ?? [] ) ?></td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Conversion Rate Line Chart -->
-    <?php
-    $chart_days = [];
-    for ( $i = 0; $i < $an_days; $i++ ) {
-        $d = date( 'Y-m-d', strtotime( "+{$i} days", strtotime( $an_from ) ) );
-        $v = $daily_ev_map[$d]['view']     ?? 0;
-        $c = $daily_ev_map[$d]['complete'] ?? 0;
-        $chart_days[] = [ 'day' => date('M j', strtotime($d)), 'rate' => $v > 0 ? round($c/$v*100) : null, 'views' => $v, 'comp' => $c ];
-    }
-    $has_chart_data = count( array_filter( array_column( $chart_days, 'rate' ), fn($r) => $r !== null ) ) > 0;
-    $chart_total    = count( $chart_days );
-    ?>
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Conversion Rate — <?= esc_html($an_label) ?> <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">all forms combined</span></h3>
-        <?php if ( ! $has_chart_data ): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No conversion data yet — visit your forms to start tracking.</p>
-        <?php else: ?>
-        <div style="position:relative;height:140px;margin-bottom:8px;">
-            <svg viewBox="0 0 600 120" style="width:100%;height:100%;overflow:visible;" preserveAspectRatio="none">
-                <!-- Grid lines -->
-                <?php foreach ( [0,25,50,75,100] as $pct ): $y = 110 - $pct * 1.1; ?>
-                <line x1="0" y1="<?= $y ?>" x2="600" y2="<?= $y ?>" stroke="#f3f4f6" stroke-width="1"/>
-                <?php endforeach; ?>
-                <?php
-                // Build polyline points, skip null gaps
-                $segments = []; $cur_seg = [];
-                $chart_max_i = max( 1, $chart_total - 1 );
-                foreach ( $chart_days as $i => $d ) {
-                    $x = round( $i / $chart_max_i * 600, 1 );
-                    if ( $d['rate'] !== null ) {
-                        $y = round( 110 - $d['rate'] * 1.1, 1 );
-                        $cur_seg[] = $x . ',' . $y;
-                    } else {
-                        if ( $cur_seg ) { $segments[] = $cur_seg; $cur_seg = []; }
-                    }
-                }
-                if ( $cur_seg ) $segments[] = $cur_seg;
-                foreach ( $segments as $seg ):
-                    if ( count($seg) < 2 ) continue;
-                ?>
-                <polyline points="<?= implode(' ', $seg) ?>" fill="none" stroke="#2271b1" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-                <?php endforeach; ?>
-                <!-- Data points with tooltips -->
-                <?php foreach ( $chart_days as $i => $d ):
-                    if ( $d['rate'] === null ) continue;
-                    $x = round( $i / $chart_max_i * 600, 1 );
-                    $y = round( 110 - $d['rate'] * 1.1, 1 );
-                ?>
-                <circle cx="<?= $x ?>" cy="<?= $y ?>" r="3.5" fill="#2271b1" stroke="#fff" stroke-width="1.5">
-                    <title><?= esc_attr( $d['day'] ) ?>: <?= $d['rate'] ?>% (<?= $d['comp'] ?>/<?= $d['views'] ?>)</title>
-                </circle>
-                <?php endforeach; ?>
-            </svg>
-            <!-- Y-axis labels -->
-            <div style="position:absolute;top:0;left:-32px;height:100%;display:flex;flex-direction:column;justify-content:space-between;font-size:10px;color:#9ca3af;pointer-events:none;">
-                <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span>
-            </div>
-        </div>
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;padding-left:0;">
-            <?php $chart_mid = (int) floor( ( $chart_total - 1 ) / 2 ); ?>
-            <span><?= esc_html( $chart_days[0]['day'] ) ?></span>
-            <?php if ( $chart_total > 2 ): ?><span><?= esc_html( $chart_days[$chart_mid]['day'] ) ?></span><?php endif; ?>
-            <span><?= esc_html( $chart_days[$chart_total - 1]['day'] ) ?></span>
-        </div>
-        <?php endif; ?>
-    </div>
-
-    <?php
-    $imp_step_labels = [
-        'router'          => 'Path selection (single / multi / full arch)',
-        'intro'           => 'Intro screen',
-        'summary'         => 'Summary (reached estimate)',
-        // Single tooth path
-        'a1' => '[Single] Where is the tooth located?',
-        'a2' => '[Single] How long has the tooth been missing?',
-        'a3' => '[Single] Bone graft needed?',
-        'a4' => '[Single] Describe your situation',
-        // Multiple teeth path
-        'm1' => '[Multi] How many teeth to replace?',
-        'm2' => '[Multi] Where are the teeth located?',
-        'm3' => '[Multi] How long have teeth been missing?',
-        'm4' => '[Multi] Bone graft needed?',
-        'm5' => '[Multi] Describe your situation',
-        // Full arch path
-        'b1' => '[Full Arch] Which arch to replace?',
-        'b2' => '[Full Arch] Describe your situation',
-        'b3' => '[Full Arch] How long have teeth been missing?',
-        // Shared
-        'ins'             => 'Do you have dental insurance?',
-        'offer'           => 'Special offer screen',
-        'lead'            => 'Contact / lead form',
-        'result-single'   => 'Result page (single tooth)',
-        'result-multiple' => 'Result page (multiple teeth)',
-        'result-fullarch' => 'Result page (full arch)',
-    ];
-    ?>
-
-    <!-- Implant step drop-off -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Implant Estimator — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step · <?= esc_html($an_label) ?></span></h3>
-        <?php if ( empty( $imp_steps_raw ) ): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
-        <?php else:
-        $imp_max = max( 1, (int)$imp_steps_raw[0]['cnt'] );
-        foreach ( $imp_steps_raw as $row ):
-            $lbl = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
-            $pct = round( (int)$row['cnt'] / $imp_max * 100 );
-        ?>
-        <div class="cfg-src-row" style="margin-bottom:8px;align-items:center;">
-            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;">
-                <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div>
-            </div>
-            <span style="font-size:12px;color:#374151;width:28px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
-        </div>
-        <?php endforeach; endif; ?>
-    </div>
-
-    <!-- Exit-step analysis -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Implant Estimator — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step reached before leaving · <?= esc_html($an_label) ?></span></h3>
-        <?php if ( empty( $imp_exits_raw ) ): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet — this will populate as users click through the implant estimator.</p>
-        <?php else:
-        $total_exits = array_sum( array_column( $imp_exits_raw, 'drop_offs' ) );
-        $exit_max    = max( 1, (int)$imp_exits_raw[0]['drop_offs'] );
-        ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits !== 1 ? 's' : '' ?> left without completing — shown below from most to least common exit point.</p>
-        <?php foreach ( $imp_exits_raw as $row ):
-            $n      = (int) $row['drop_offs'];
-            $share  = round( $n / $total_exits * 100 );
-            $bar_w  = round( $n / $exit_max * 100 );
-            $lbl    = $imp_step_labels[ $row['step_key'] ] ?? $row['step_key'];
-            $color  = $share >= 30 ? '#dc2626' : ( $share >= 15 ? '#f59e0b' : '#6b7280' );
-        ?>
-        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
-            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;">
-                <div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div>
-            </div>
-            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:40px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:50px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
-        </div>
-        <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-
-    <?php
-    // Build aligner step label map from admin config
-    $alg_cfg        = cfg_aligner_get();
-    $alg_step_labels = [];
-    foreach ( $alg_cfg as $i => $step ) {
-        $fk = $step['field_key'] ?? '';
-        if ( $fk === '' ) continue;
-        $q = $step['question'] ?? $step['title'] ?? ( 'Step ' . ( $i + 1 ) );
-        $alg_step_labels[ $fk ] = mb_strimwidth( $q, 0, 45, '…' );
-    }
-    ?>
-
-    <!-- Aligner quiz: step reach -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Aligner Quiz — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions reaching each step · <?= esc_html($an_label) ?></span></h3>
-        <?php if ( empty( $alg_steps_raw ) ): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
-        <?php else:
-        $alg_max = max( 1, (int)$alg_steps_raw[0]['cnt'] );
-        foreach ( $alg_steps_raw as $row ):
-            $lbl = $alg_step_labels[ $row['step_key'] ] ?? $row['step_key'];
-            $pct = round( (int)$row['cnt'] / $alg_max * 100 );
-        ?>
-        <div class="cfg-src-row" style="margin-bottom:8px;">
-            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg">
-                <div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#7c3aed;"></div>
-            </div>
-            <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
-        </div>
-        <?php endforeach; endif; ?>
-    </div>
-
-    <!-- Aligner quiz: exit-step analysis -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Aligner Quiz — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step reached before leaving · <?= esc_html($an_label) ?></span></h3>
-        <?php if ( empty( $alg_exits_raw ) ): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet — this will populate as users click through the aligner quiz.</p>
-        <?php else:
-        $alg_total_exits = array_sum( array_column( $alg_exits_raw, 'drop_offs' ) );
-        $alg_exit_max    = max( 1, (int)$alg_exits_raw[0]['drop_offs'] );
-        ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $alg_total_exits ?> session<?= $alg_total_exits !== 1 ? 's' : '' ?> left without completing.</p>
-        <?php foreach ( $alg_exits_raw as $row ):
-            $n      = (int) $row['drop_offs'];
-            $share  = round( $n / $alg_total_exits * 100 );
-            $bar_w  = round( $n / $alg_exit_max * 100 );
-            $lbl    = $alg_step_labels[ $row['step_key'] ] ?? $row['step_key'];
-            $color  = $share >= 30 ? '#dc2626' : ( $share >= 15 ? '#f59e0b' : '#6b7280' );
-        ?>
-        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
-            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;">
-                <div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div>
-            </div>
-            <span style="font-size:12px;font-weight:700;color:<?= $color ?>;width:36px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
-        </div>
-        <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-
-    <?php endif; // ev_table_exists ?>
 
         </div><!-- /cfg-panel-body -->
     </div><!-- /cfg-analytics-wrap -->
@@ -5734,14 +5602,6 @@ function cfg_settings_page() {
         var detail = row.querySelector('.cfg-entry-details');
         if (detail) detail.style.display = detail.style.display === 'block' ? 'none' : 'block';
     }
-    (function() {
-        var params = new URLSearchParams(window.location.search);
-        var activeTab = params.get('cfg_tab');
-        if (activeTab) {
-            var tab = document.querySelector('.cfg-nav-item[onclick*="cfgTab(this,\'' + activeTab + '\')"]');
-            if (tab) tab.click();
-        }
-    })();
     </script>
 
     <script>
@@ -5797,6 +5657,73 @@ function cfg_settings_page() {
     function syncPicker(pickerId, val) {
         if (/^#[0-9a-f]{6}$/i.test(val)) { var el = document.getElementById(pickerId); if (el) el.value = val; }
     }
+
+    /* ── Analytics range-bar ── */
+    var CFG_AN_NONCE = '<?= wp_create_nonce("cfg_analytics_nonce") ?>';
+
+    function cfgAnalyticsLoad(preset, from, to) {
+        var bar     = document.getElementById('cfg-an-range-bar');
+        var body    = document.getElementById('cfg-analytics-body');
+        var label   = document.getElementById('cfg-an-label');
+        var spinner = document.getElementById('cfg-an-spinner');
+        if (!bar || !body) return;
+        bar.querySelectorAll('[data-preset]').forEach(function(b) {
+            b.classList.toggle('active', b.getAttribute('data-preset') === preset);
+        });
+        if (spinner) spinner.style.display = 'inline';
+        var data = new URLSearchParams({
+            action: 'cfg_analytics_refresh',
+            nonce:  CFG_AN_NONCE,
+            preset: preset,
+            from:   from || '',
+            to:     to   || ''
+        });
+        fetch(ajaxurl, { method: 'POST', credentials: 'same-origin', body: data })
+            .then(function(r) { return r.json(); })
+            .then(function(j) {
+                if (j.success) {
+                    body.innerHTML = j.data.html;
+                    if (label) label.textContent = j.data.label;
+                }
+            })
+            .catch(function() {})
+            .finally(function() { if (spinner) spinner.style.display = 'none'; });
+    }
+
+    (function() {
+        var bar = document.getElementById('cfg-an-range-bar');
+        if (!bar) return;
+        bar.querySelectorAll('[data-preset]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var preset = btn.getAttribute('data-preset');
+                if (preset === 'custom') {
+                    var wrap = document.getElementById('cfg-an-custom-wrap');
+                    if (wrap) wrap.style.display = wrap.style.display === 'none' ? 'flex' : 'none';
+                    return;
+                }
+                cfgAnalyticsLoad(preset, '', '');
+            });
+        });
+        var goBtn = document.getElementById('cfg-an-go');
+        if (goBtn) {
+            goBtn.addEventListener('click', function() {
+                var from = (document.getElementById('cfg-an-from') || {}).value || '';
+                var to   = (document.getElementById('cfg-an-to')   || {}).value || '';
+                if (!from || !to) return;
+                cfgAnalyticsLoad('custom', from, to);
+            });
+        }
+    })();
+
+    /* ── Tab restore (must run after cfgTab is defined) ── */
+    (function() {
+        var params    = new URLSearchParams(window.location.search);
+        var activeTab = params.get('cfg_tab');
+        if (activeTab) {
+            var tab = document.querySelector('.cfg-nav-item[onclick*="cfgTab(this,\'' + activeTab + '\')"]');
+            if (tab) tab.click();
+        }
+    })();
 
     </script>
     <?php
