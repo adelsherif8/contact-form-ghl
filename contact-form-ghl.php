@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.2
+ * Version:     2.6.3
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -876,7 +876,7 @@ function cfg_render_analytics_inner( $range ) {
         }
         $daily_evs = $wpdb->get_results(
             "SELECT DATE(created_at) AS day, event_type, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
-             WHERE {$an_ev_where} AND event_type IN ('view','complete')
+             WHERE {$an_ev_where} AND event_type IN ('view','start','complete')
              GROUP BY day, event_type ORDER BY day ASC", ARRAY_A
         );
         foreach ( $daily_evs as $r ) $daily_ev_map[$r['day']][$r['event_type']] = (int)$r['cnt'];
@@ -903,6 +903,38 @@ function cfg_render_analytics_inner( $range ) {
                 AND session_id NOT IN (SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='aligner' AND event_type='complete' AND {$an_ev_where})
                 GROUP BY session_id) last_steps GROUP BY step_key ORDER BY drop_offs DESC", ARRAY_A
         );
+    }
+
+    // ── Sort steps into natural form order (not by count) ──
+    if ( ! empty( $imp_steps_raw ) ) {
+        $imp_natural_order = ['intro','router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
+        usort( $imp_steps_raw, function($a,$b) use($imp_natural_order) {
+            $ai = array_search($a['step_key'],$imp_natural_order); $bi = array_search($b['step_key'],$imp_natural_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
+    }
+    if ( ! empty( $imp_exits_raw ) ) {
+        $imp_natural_order = ['intro','router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
+        usort( $imp_exits_raw, function($a,$b) use($imp_natural_order) {
+            $ai = array_search($a['step_key'],$imp_natural_order); $bi = array_search($b['step_key'],$imp_natural_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
+    }
+    $alg_cfg = cfg_aligner_get();
+    if ( ! empty( $alg_steps_raw ) || ! empty( $alg_exits_raw ) ) {
+        $alg_cfg_order = array_values(array_map(function($step,$i){ $fk=$step['field_key']??''; return $fk?:('step_'.$i); }, $alg_cfg, array_keys($alg_cfg)));
+    }
+    if ( ! empty( $alg_steps_raw ) ) {
+        usort( $alg_steps_raw, function($a,$b) use($alg_cfg_order) {
+            $ai = array_search($a['step_key'],$alg_cfg_order); $bi = array_search($b['step_key'],$alg_cfg_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
+    }
+    if ( ! empty( $alg_exits_raw ) ) {
+        usort( $alg_exits_raw, function($a,$b) use($alg_cfg_order) {
+            $ai = array_search($a['step_key'],$alg_cfg_order); $bi = array_search($b['step_key'],$alg_cfg_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
     }
 
     // ── HTML output ──
@@ -942,20 +974,35 @@ function cfg_render_analytics_inner( $range ) {
             <?php endforeach; ?>
         </div>
 
-        <!-- By form -->
+        <!-- By form: entries vs fills -->
         <div class="cfg-an-card">
-            <h3>By Form</h3>
-            <?php foreach ( $form_labels_all as $key => $label ):
-                $cnt = $form_map[$key] ?? 0;
-                $pct = $total_30 > 0 ? round($cnt/$total_30*100) : 0;
-                $fc  = ['contact'=>'#2271b1','aligner'=>'#7c3aed','implant'=>'#0891b2'];
+            <h3>Form Leads &amp; Conversions <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;"><?= esc_html($an_label) ?></span></h3>
+            <?php
+            $fc_map = ['contact'=>'#2271b1','aligner'=>'#7c3aed','implant'=>'#0891b2'];
+            $fl_map = ['contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator'];
+            foreach ( ['contact','aligner','implant'] as $fkey ):
+                $entered = $cr_30d[$fkey]['start']    ?? 0;
+                $filled  = $cr_30d[$fkey]['complete'] ?? 0;
+                $visited = $cr_30d[$fkey]['view']     ?? 0;
+                $rate    = $entered > 0 ? round($filled/$entered*100) : null;
+                $rcol    = $rate!==null ? ($rate>=50?'#16a34a':($rate>=25?'#f59e0b':'#dc2626')) : '#9ca3af';
             ?>
-            <div class="cfg-src-row">
-                <span class="cfg-src-label"><?= esc_html($label) ?></span>
-                <div class="cfg-src-bar-bg"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $fc[$key] ?? '#6b7280' ?>;"></div></div>
-                <span class="cfg-src-count"><?= $cnt ?></span>
+            <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f3f4f6;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:13px;font-weight:600;color:<?= $fc_map[$fkey] ?>;"><?= esc_html($fl_map[$fkey]) ?></span>
+                    <?php if ($rate!==null): ?>
+                    <span style="font-size:13px;font-weight:700;color:<?= $rcol ?>;"><?= $rate ?>% <span style="font-size:11px;font-weight:400;color:#9ca3af;">(<?= $filled ?> / <?= $entered ?>)</span></span>
+                    <?php else: ?><span style="font-size:12px;color:#9ca3af;">—</span><?php endif; ?>
+                </div>
+                <div style="display:flex;gap:16px;">
+                    <div><div style="font-size:18px;font-weight:700;color:#1d2327;"><?= $entered ?: '—' ?></div><div style="font-size:10px;color:#9ca3af;">entered</div></div>
+                    <div style="font-size:18px;color:#d1d5db;padding-top:2px;">→</div>
+                    <div><div style="font-size:18px;font-weight:700;color:<?= $rcol ?>;"><?= $filled ?: '—' ?></div><div style="font-size:10px;color:#9ca3af;">filled</div></div>
+                    <div style="margin-left:auto;text-align:right;"><div style="font-size:12px;color:#9ca3af;"><?= $visited ?></div><div style="font-size:10px;color:#d1d5db;">page loads</div></div>
+                </div>
             </div>
             <?php endforeach; ?>
+            <p style="font-size:10px;color:#d1d5db;margin:4px 0 0;">Entered = started interacting · Filled = submitted · Rate = filled ÷ entered</p>
         </div>
 
         <!-- GHL send rate -->
@@ -1000,11 +1047,12 @@ function cfg_render_analytics_inner( $range ) {
     // Helper
     if (!function_exists('cfg_ev_cell')):
     function cfg_ev_cell($map) {
-        $views=$map['view']??0; $comp=$map['complete']??0;
-        if (!$views) return '<span style="color:#9ca3af;font-size:12px;">—</span>';
-        $pct=round($comp/$views*100);
+        $started=$map['start']??0; $comp=$map['complete']??0;
+        if (!$started && !$comp) return '<span style="color:#9ca3af;font-size:12px;">—</span>';
+        if (!$started) return '<div style="text-align:right;"><strong style="font-size:14px;color:#9ca3af;">—</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.$comp.' filled</div></div>';
+        $pct=round($comp/$started*100);
         $col=$pct>=50?'#16a34a':($pct>=25?'#f59e0b':'#dc2626');
-        return '<div style="text-align:right;"><strong style="font-size:14px;color:'.$col.';">'.$pct.'%</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.$comp.' / '.$views.' views</div></div>';
+        return '<div style="text-align:right;"><strong style="font-size:14px;color:'.$col.';">'.$pct.'%</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.$comp.' / '.$started.' entered</div></div>';
     }
     endif;
     $cr_form_labels = ['_all'=>'All Forms','contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator'];
@@ -1013,7 +1061,7 @@ function cfg_render_analytics_inner( $range ) {
 
     <!-- Conversion Rate Table -->
     <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— completions ÷ form views</span></h3>
+        <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— fills ÷ entries (unique sessions)</span></h3>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
                 <tr style="border-bottom:2px solid #f3f4f6;">
@@ -1034,6 +1082,7 @@ function cfg_render_analytics_inner( $range ) {
             <?php endforeach; ?>
             </tbody>
         </table>
+        <p style="font-size:10px;color:#d1d5db;margin:10px 0 0;">Entered = sessions that started interacting · Visited (page loads) shown separately in Form Leads card</p>
     </div>
 
     <!-- Conversion Rate Line Chart -->
@@ -1041,15 +1090,15 @@ function cfg_render_analytics_inner( $range ) {
     $chart_days=[];
     for ($i=0;$i<$an_days;$i++) {
         $d=date('Y-m-d',strtotime("+{$i} days",strtotime($an_from)));
-        $v=$daily_ev_map[$d]['view']??0; $c=$daily_ev_map[$d]['complete']??0;
-        $chart_days[]=[ 'day'=>date('M j',strtotime($d)), 'rate'=>$v>0?round($c/$v*100):null, 'views'=>$v, 'comp'=>$c ];
+        $s=$daily_ev_map[$d]['start']??0; $c=$daily_ev_map[$d]['complete']??0;
+        $chart_days[]=[ 'day'=>date('M j',strtotime($d)), 'rate'=>$s>0?round($c/$s*100):null, 'views'=>$s, 'comp'=>$c ];
     }
     $has_chart_data = count(array_filter(array_column($chart_days,'rate'),fn($r)=>$r!==null))>0;
     $chart_total    = count($chart_days);
     $chart_max_i    = max(1,$chart_total-1);
     ?>
     <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Conversion Rate — <?= esc_html($an_label) ?> <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">all forms combined</span></h3>
+        <h3>Conversion Rate — <?= esc_html($an_label) ?> <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">fills ÷ entries, all forms</span></h3>
         <?php if (!$has_chart_data): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No conversion data yet — visit your forms to start tracking.</p>
         <?php else: ?>
@@ -1075,7 +1124,7 @@ function cfg_render_analytics_inner( $range ) {
                     $x=round($i/$chart_max_i*600,1); $y=round(110-$d['rate']*1.1,1);
                 ?>
                 <circle cx="<?= $x ?>" cy="<?= $y ?>" r="3.5" fill="#2271b1" stroke="#fff" stroke-width="1.5">
-                    <title><?= esc_attr($d['day']) ?>: <?= $d['rate'] ?>% (<?= $d['comp'] ?>/<?= $d['views'] ?>)</title>
+                    <title><?= esc_attr($d['day']) ?>: <?= $d['rate'] ?>% (<?= $d['comp'] ?> filled / <?= $d['views'] ?> entered)</title>
                 </circle>
                 <?php endforeach; ?>
             </svg>
@@ -1111,7 +1160,7 @@ function cfg_render_analytics_inner( $range ) {
         <?php if (empty($imp_steps_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
         <?php else:
-        $imp_max=max(1,(int)$imp_steps_raw[0]['cnt']);
+        $imp_max=max(1,max(array_map('intval',array_column($imp_steps_raw,'cnt'))));
         foreach ($imp_steps_raw as $row):
             $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
             $pct=round((int)$row['cnt']/$imp_max*100);
@@ -1149,11 +1198,12 @@ function cfg_render_analytics_inner( $range ) {
     </div>
 
     <?php
-    $alg_cfg=$alg_step_labels=[];
-    $alg_cfg=cfg_aligner_get();
+    $alg_step_labels=[];
+    if (empty($alg_cfg)) $alg_cfg=cfg_aligner_get();
     foreach ($alg_cfg as $i => $step) {
-        $fk=$step['field_key']??''; if (!$fk) continue;
-        $alg_step_labels[$fk]=mb_strimwidth($step['question']??$step['title']??('Step '.($i+1)),0,45,'…');
+        $fk=$step['field_key']??'';
+        $lbl=mb_strimwidth($step['question']??$step['title']??('Step '.($i+1)),0,45,'…');
+        $alg_step_labels[$fk ?: ('step_'.$i)]=$lbl;
     }
     ?>
 
@@ -1163,7 +1213,7 @@ function cfg_render_analytics_inner( $range ) {
         <?php if (empty($alg_steps_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
         <?php else:
-        $alg_max=max(1,(int)$alg_steps_raw[0]['cnt']);
+        $alg_max=max(1,max(array_map('intval',array_column($alg_steps_raw,'cnt'))));
         foreach ($alg_steps_raw as $row):
             $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
             $pct=round((int)$row['cnt']/$alg_max*100);
@@ -6556,12 +6606,12 @@ function cfg_ajax_submit() {
     $ghl_ok = ( $code === 200 || $code === 201 );
     $entry_meta = array_filter( [
         'treatment'    => $treatment,
-        'utm_campaign' => sanitize_text_field( $_POST['utm_campaign'] ?? '' ),
-        'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
-        'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
-        'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
-        'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
-        'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
+        'utm_campaign' => sanitize_text_field( $_POST['utmcampaign_custom'] ?? '' ),
+        'utm_medium'   => sanitize_text_field( $_POST['utmmedium_custom']   ?? '' ),
+        'utm_content'  => sanitize_text_field( $_POST['utmcontent_custom']  ?? '' ),
+        'utm_keyword'  => sanitize_text_field( $_POST['utmkeyword_custom']  ?? '' ),
+        'utm_term'     => sanitize_text_field( $_POST['utmterm_custom']     ?? '' ),
+        'gclid'        => sanitize_text_field( $_POST['gclid_custom']       ?? '' ),
     ] );
     $entry_meta['_ghl_fields_sent'] = $custom_fields;
     $entry_meta['_ghl_http_code']   = $code;
@@ -7335,12 +7385,12 @@ function cfg_aligner_ajax_submit() {
 
     $ghl_ok = ( $code === 200 || $code === 201 );
     $entry_meta = array_filter( array_merge( $answers, [
-        'utm_campaign' => sanitize_text_field( $_POST['utm_campaign'] ?? '' ),
-        'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
-        'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
-        'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
-        'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
-        'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
+        'utm_campaign' => sanitize_text_field( $_POST['utmcampaign_custom'] ?? '' ),
+        'utm_medium'   => sanitize_text_field( $_POST['utmmedium_custom']   ?? '' ),
+        'utm_content'  => sanitize_text_field( $_POST['utmcontent_custom']  ?? '' ),
+        'utm_keyword'  => sanitize_text_field( $_POST['utmkeyword_custom']  ?? '' ),
+        'utm_term'     => sanitize_text_field( $_POST['utmterm_custom']     ?? '' ),
+        'gclid'        => sanitize_text_field( $_POST['gclid_custom']       ?? '' ),
     ] ) );
     $entry_meta['_ghl_fields_sent'] = $custom;
     $entry_meta['_ghl_http_code']   = $code;
@@ -8707,12 +8757,12 @@ function cfg_implant_ajax_submit() {
         'flow'         => $flow,
         'range'        => $range,
         'range_type'   => $range_type,
-        'utm_campaign' => sanitize_text_field( $_POST['utm_campaign'] ?? '' ),
-        'utm_medium'   => sanitize_text_field( $_POST['utm_medium']   ?? '' ),
-        'utm_content'  => sanitize_text_field( $_POST['utm_content']  ?? '' ),
-        'utm_keyword'  => sanitize_text_field( $_POST['utm_keyword']  ?? '' ),
-        'utm_term'     => sanitize_text_field( $_POST['utm_term']     ?? '' ),
-        'gclid'        => sanitize_text_field( $_POST['gclid']        ?? '' ),
+        'utm_campaign' => sanitize_text_field( $_POST['utmcampaign_custom'] ?? '' ),
+        'utm_medium'   => sanitize_text_field( $_POST['utmmedium_custom']   ?? '' ),
+        'utm_content'  => sanitize_text_field( $_POST['utmcontent_custom']  ?? '' ),
+        'utm_keyword'  => sanitize_text_field( $_POST['utmkeyword_custom']  ?? '' ),
+        'utm_term'     => sanitize_text_field( $_POST['utmterm_custom']     ?? '' ),
+        'gclid'        => sanitize_text_field( $_POST['gclid_custom']       ?? '' ),
     ] );
     foreach ( $all_qs as $q ) {
         $raw_field = $q['field'] ?? '';
