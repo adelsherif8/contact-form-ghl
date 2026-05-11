@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.3
+ * Version:     2.6.4
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -892,9 +892,10 @@ function cfg_render_analytics_inner( $range ) {
                 AND session_id NOT IN (SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='implant' AND event_type='complete' AND {$an_ev_where})
                 GROUP BY session_id) last_steps GROUP BY step_key ORDER BY drop_offs DESC", ARRAY_A
         );
+        // Include 'start' events in aligner step reach so intro click (step_0) shows up
         $alg_steps_raw = $wpdb->get_results(
             "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
-             WHERE form_type='aligner' AND event_type='step' AND {$an_ev_where} GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+             WHERE form_type='aligner' AND event_type IN ('step','start') AND {$an_ev_where} AND step_key != '' GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
         );
         $alg_exits_raw = $wpdb->get_results(
             "SELECT step_key, COUNT(*) AS drop_offs FROM (
@@ -903,6 +904,9 @@ function cfg_render_analytics_inner( $range ) {
                 AND session_id NOT IN (SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='aligner' AND event_type='complete' AND {$an_ev_where})
                 GROUP BY session_id) last_steps GROUP BY step_key ORDER BY drop_offs DESC", ARRAY_A
         );
+        // Landing-page view counts (prepended after sorting)
+        $alg_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='aligner' AND event_type='view' AND {$an_ev_where}");
+        $imp_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='implant' AND event_type='view' AND {$an_ev_where}");
     }
 
     // ── Sort steps into natural form order (not by count) ──
@@ -935,6 +939,14 @@ function cfg_render_analytics_inner( $range ) {
             $ai = array_search($a['step_key'],$alg_cfg_order); $bi = array_search($b['step_key'],$alg_cfg_order);
             return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
         });
+    }
+
+    // Prepend landing-page row (view events) at top of each step-reach array
+    if ( isset($imp_view_cnt) && $imp_view_cnt > 0 ) {
+        array_unshift( $imp_steps_raw, ['step_key' => '_view', 'cnt' => $imp_view_cnt] );
+    }
+    if ( isset($alg_view_cnt) && $alg_view_cnt > 0 ) {
+        array_unshift( $alg_steps_raw, ['step_key' => '_view', 'cnt' => $alg_view_cnt] );
     }
 
     // ── HTML output ──
@@ -974,35 +986,42 @@ function cfg_render_analytics_inner( $range ) {
             <?php endforeach; ?>
         </div>
 
-        <!-- By form: entries vs fills -->
+        <!-- By form: split bar (leads vs fills) -->
         <div class="cfg-an-card">
             <h3>Form Leads &amp; Conversions <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;"><?= esc_html($an_label) ?></span></h3>
             <?php
             $fc_map = ['contact'=>'#2271b1','aligner'=>'#7c3aed','implant'=>'#0891b2'];
             $fl_map = ['contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator'];
+            // Max entered across all forms (for bar scaling)
+            $all_entered_max = max(1, max(array_map(function($fk) use($cr_30d){ return $cr_30d[$fk]['start']??0; }, ['contact','aligner','implant'])));
             foreach ( ['contact','aligner','implant'] as $fkey ):
-                $entered = $cr_30d[$fkey]['start']    ?? 0;
-                $filled  = $cr_30d[$fkey]['complete'] ?? 0;
-                $visited = $cr_30d[$fkey]['view']     ?? 0;
-                $rate    = $entered > 0 ? round($filled/$entered*100) : null;
-                $rcol    = $rate!==null ? ($rate>=50?'#16a34a':($rate>=25?'#f59e0b':'#dc2626')) : '#9ca3af';
+                $entered  = $cr_30d[$fkey]['start']    ?? 0;
+                $filled   = $cr_30d[$fkey]['complete'] ?? 0;
+                $visited  = $cr_30d[$fkey]['view']     ?? 0;
+                $rate     = $entered > 0 ? round($filled/$entered*100) : null;
+                $rcol     = $rate!==null ? ($rate>=50?'#16a34a':($rate>=25?'#f59e0b':'#dc2626')) : '#9ca3af';
+                $bar_total = round($entered / $all_entered_max * 100); // overall bar width relative to max form
+                $fill_pct  = $entered > 0 ? round($filled/$entered*100) : 0; // filled portion within the bar
             ?>
-            <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #f3f4f6;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <span style="font-size:13px;font-weight:600;color:<?= $fc_map[$fkey] ?>;"><?= esc_html($fl_map[$fkey]) ?></span>
-                    <?php if ($rate!==null): ?>
-                    <span style="font-size:13px;font-weight:700;color:<?= $rcol ?>;"><?= $rate ?>% <span style="font-size:11px;font-weight:400;color:#9ca3af;">(<?= $filled ?> / <?= $entered ?>)</span></span>
-                    <?php else: ?><span style="font-size:12px;color:#9ca3af;">—</span><?php endif; ?>
+            <div style="margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+                    <span style="font-size:12px;font-weight:600;color:<?= $fc_map[$fkey] ?>;"><?= esc_html($fl_map[$fkey]) ?></span>
+                    <span style="font-size:12px;color:#374151;">
+                        <strong style="color:<?= $rcol ?>;"><?= $filled ?></strong> fills /
+                        <strong><?= $entered ?></strong> entered
+                        <?php if ($rate!==null): ?>&nbsp;<strong style="font-size:13px;color:<?= $rcol ?>;"><?= $rate ?>%</strong><?php endif; ?>
+                    </span>
                 </div>
-                <div style="display:flex;gap:16px;">
-                    <div><div style="font-size:18px;font-weight:700;color:#1d2327;"><?= $entered ?: '—' ?></div><div style="font-size:10px;color:#9ca3af;">entered</div></div>
-                    <div style="font-size:18px;color:#d1d5db;padding-top:2px;">→</div>
-                    <div><div style="font-size:18px;font-weight:700;color:<?= $rcol ?>;"><?= $filled ?: '—' ?></div><div style="font-size:10px;color:#9ca3af;">filled</div></div>
-                    <div style="margin-left:auto;text-align:right;"><div style="font-size:12px;color:#9ca3af;"><?= $visited ?></div><div style="font-size:10px;color:#d1d5db;">page loads</div></div>
+                <!-- Split bar: filled (form color) over entered (light), scaled to max -->
+                <div style="height:14px;border-radius:7px;background:#f3f4f6;overflow:hidden;">
+                    <div style="width:<?= $bar_total ?>%;height:100%;border-radius:7px;background:#e2e8f0;position:relative;">
+                        <div style="position:absolute;left:0;top:0;height:100%;width:<?= $fill_pct ?>%;background:<?= $fc_map[$fkey] ?>;border-radius:7px;"></div>
+                    </div>
                 </div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:3px;"><?= $visited ?> page loads</div>
             </div>
             <?php endforeach; ?>
-            <p style="font-size:10px;color:#d1d5db;margin:4px 0 0;">Entered = started interacting · Filled = submitted · Rate = filled ÷ entered</p>
+            <p style="font-size:10px;color:#d1d5db;margin:4px 0 0;">Bar length = total entries · Colored fill = form fills · Rate = fills ÷ entries</p>
         </div>
 
         <!-- GHL send rate -->
@@ -1143,7 +1162,8 @@ function cfg_render_analytics_inner( $range ) {
 
     <?php
     $imp_step_labels = [
-        'router'=>'Path selection (single / multi / full arch)','intro'=>'Intro screen','summary'=>'Summary (reached estimate)',
+        '_view'  =>'Landing page (intro screen — unique page loads)',
+        'intro'  =>'Intro screen','router'=>'Clicked "Get My Estimate" (path selection)','summary'=>'Summary (reached estimate)',
         'a1'=>'[Single] Where is the tooth located?','a2'=>'[Single] How long has the tooth been missing?',
         'a3'=>'[Single] Bone graft needed?','a4'=>'[Single] Describe your situation',
         'm1'=>'[Multi] How many teeth to replace?','m2'=>'[Multi] Where are the teeth located?',
@@ -1180,7 +1200,7 @@ function cfg_render_analytics_inner( $range ) {
         <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
         <?php else:
         $total_exits=array_sum(array_column($imp_exits_raw,'drop_offs'));
-        $exit_max=max(1,(int)$imp_exits_raw[0]['drop_offs']);
+        $exit_max=max(1,max(array_map('intval',array_column($imp_exits_raw,'drop_offs'))));
         ?>
         <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits!==1?'s':'' ?> left without completing.</p>
         <?php foreach ($imp_exits_raw as $row):
@@ -1198,12 +1218,15 @@ function cfg_render_analytics_inner( $range ) {
     </div>
 
     <?php
-    $alg_step_labels=[];
+    $alg_step_labels=['_view'=>'Landing page (unique page loads)'];
     if (empty($alg_cfg)) $alg_cfg=cfg_aligner_get();
     foreach ($alg_cfg as $i => $step) {
         $fk=$step['field_key']??'';
-        $lbl=mb_strimwidth($step['question']??$step['title']??('Step '.($i+1)),0,45,'…');
-        $alg_step_labels[$fk ?: ('step_'.$i)]=$lbl;
+        $lbl=mb_strimwidth($step['question']??$step['title']??('Step '.($i+1)),0,50,'…');
+        $key=$fk ?: ('step_'.$i);
+        // step_0 = intro screen; the tracked event is 'start' (user clicked "Start Questions")
+        if ($key==='step_0') $lbl='Intro screen (clicked "Start Questions")';
+        $alg_step_labels[$key]=$lbl;
     }
     ?>
 
@@ -1233,7 +1256,7 @@ function cfg_render_analytics_inner( $range ) {
         <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
         <?php else:
         $alg_total_exits=array_sum(array_column($alg_exits_raw,'drop_offs'));
-        $alg_exit_max=max(1,(int)$alg_exits_raw[0]['drop_offs']);
+        $alg_exit_max=max(1,max(array_map('intval',array_column($alg_exits_raw,'drop_offs'))));
         ?>
         <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $alg_total_exits ?> session<?= $alg_total_exits!==1?'s':'' ?> left without completing.</p>
         <?php foreach ($alg_exits_raw as $row):
