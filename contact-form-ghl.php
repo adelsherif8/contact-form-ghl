@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.5
+ * Version:     2.6.6
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -979,9 +979,10 @@ function cfg_render_analytics_inner( $range ) {
                 $pct = round($count/$src_total*100);
             ?>
             <div class="cfg-src-row">
+                <span style="width:8px;height:8px;border-radius:50%;background:<?= $colors[$label] ?>;flex-shrink:0;display:inline-block;"></span>
                 <span class="cfg-src-label"><?= esc_html($label) ?></span>
                 <div class="cfg-src-bar-bg"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:<?= $colors[$label] ?>;"></div></div>
-                <span class="cfg-src-count"><?= $count ?></span>
+                <span style="font-size:12px;color:#374151;width:60px;text-align:right;flex-shrink:0;white-space:nowrap;"><strong><?= $count ?></strong> <span style="color:#9ca3af;font-weight:400;"><?= $pct ?>%</span></span>
             </div>
             <?php endforeach; ?>
         </div>
@@ -1027,34 +1028,55 @@ function cfg_render_analytics_inner( $range ) {
         <!-- GHL send rate -->
         <div class="cfg-an-card">
             <h3>GHL Send Rate</h3>
-            <div style="display:flex;align-items:center;gap:20px;margin-bottom:16px;">
+            <?php $ghl_color=$success_pct>=90?'#16a34a':($success_pct>=70?'#f59e0b':'#dc2626'); ?>
+            <div style="display:flex;align-items:center;gap:24px;margin-bottom:18px;">
                 <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
                     <svg viewBox="0 0 36 36" style="width:80px;height:80px;transform:rotate(-90deg)">
                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="3.5"/>
-                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="<?= $success_pct>=90?'#16a34a':($success_pct>=70?'#f59e0b':'#dc2626') ?>" stroke-width="3.5"
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="<?= $ghl_color ?>" stroke-width="3.5"
                             stroke-dasharray="<?= $success_pct ?> 100" stroke-linecap="round"/>
                     </svg>
-                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1d2327;"><?= $success_pct ?>%</div>
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:<?= $ghl_color ?>;"><?= $success_pct ?>%</div>
                 </div>
-                <div>
-                    <div style="font-size:13px;color:#374151;margin-bottom:4px;">✓ <strong><?= $success_30 ?></strong> sent successfully</div>
-                    <div style="font-size:13px;color:#b91c1c;">✗ <strong><?= $errors_30 ?></strong> failed</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="width:20px;height:20px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:11px;color:#16a34a;flex-shrink:0;">✓</span>
+                        <span style="font-size:13px;color:#374151;"><strong><?= $success_30 ?></strong> sent successfully</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="width:20px;height:20px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:11px;color:#dc2626;flex-shrink:0;">✗</span>
+                        <span style="font-size:13px;color:#374151;"><strong><?= $errors_30 ?></strong> failed</span>
+                    </div>
                 </div>
             </div>
             <?php if ($errors_30>0): ?>
-            <a href="<?= esc_url(admin_url('admin.php?page='.CFG_SLUG.'&cfg_tab=entries&filter_status=error')) ?>" style="font-size:12px;color:#b91c1c;">View failed entries →</a>
+            <a href="<?= esc_url(admin_url('admin.php?page='.CFG_SLUG.'&cfg_tab=entries&filter_status=error')) ?>" style="font-size:12px;color:#b91c1c;display:inline-flex;align-items:center;gap:4px;">View failed entries →</a>
             <?php else: ?>
-            <p style="font-size:12px;color:#16a34a;margin:0;">All submissions reached GHL successfully.</p>
+            <p style="font-size:12px;color:#16a34a;margin:0;background:#f0fdf4;border-radius:6px;padding:8px 12px;">All submissions reached GHL successfully.</p>
             <?php endif; ?>
         </div>
 
         <!-- Quick stats -->
         <div class="cfg-an-card">
             <h3>Quick Stats</h3>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">Today</span><strong><?= $today_cnt ?></strong></div>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">This week</span><strong><?= $week_cnt ?></strong></div>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;"><?= esc_html($an_label) ?></span><strong><?= $total_30 ?></strong></div>
-            <div class="cfg-stat-row"><span style="font-size:13px;color:#374151;">All time</span><strong><?= $all_time ?></strong></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="cfg-an-stat-tile">
+                    <div class="cfg-an-stat-num"><?= $today_cnt ?></div>
+                    <div class="cfg-an-stat-lbl">Today</div>
+                </div>
+                <div class="cfg-an-stat-tile">
+                    <div class="cfg-an-stat-num"><?= $week_cnt ?></div>
+                    <div class="cfg-an-stat-lbl">This Week</div>
+                </div>
+                <div class="cfg-an-stat-tile" style="background:#eff6ff;">
+                    <div class="cfg-an-stat-num" style="color:#2271b1;"><?= $total_30 ?></div>
+                    <div class="cfg-an-stat-lbl" style="color:#93c5fd;"><?= esc_html($an_label) ?></div>
+                </div>
+                <div class="cfg-an-stat-tile">
+                    <div class="cfg-an-stat-num"><?= $all_time ?></div>
+                    <div class="cfg-an-stat-lbl">All Time</div>
+                </div>
+            </div>
         </div>
     </div><!-- /cfg-an-grid -->
 
@@ -1080,28 +1102,28 @@ function cfg_render_analytics_inner( $range ) {
 
     <!-- Conversion Rate Table -->
     <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Conversion Rate <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">— fills ÷ entries (unique sessions)</span></h3>
+        <h3>Conversion Rate <span style="font-size:10px;font-weight:500;color:#c4b5fd;text-transform:none;letter-spacing:0;margin-left:4px;">fills ÷ entries · unique sessions</span></h3>
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
-                <tr style="border-bottom:2px solid #f3f4f6;">
-                    <th style="text-align:left;padding:6px 0;color:#6b7280;font-weight:600;width:40%;">Form</th>
-                    <th style="text-align:right;padding:6px 16px 6px 0;color:#6b7280;font-weight:600;">Today</th>
-                    <th style="text-align:right;padding:6px 0;color:#6b7280;font-weight:600;"><?= esc_html($an_label) ?></th>
+                <tr>
+                    <th style="text-align:left;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;width:40%;border-bottom:1px solid #f3f4f6;">Form</th>
+                    <th style="text-align:right;padding:0 16px 10px 0;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;">Today</th>
+                    <th style="text-align:right;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;"><?= esc_html($an_label) ?></th>
                 </tr>
             </thead>
             <tbody>
             <?php foreach ($cr_form_labels as $key => $label):
                 $is_all = $key === '_all';
             ?>
-            <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all?'background:#f9fafb;':'' ?>">
-                <td style="padding:10px 0;<?= $is_all?'font-weight:600;':'' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
-                <td style="padding:10px 16px 10px 0;"><?= cfg_ev_cell($cr_today[$key]??[]) ?></td>
-                <td style="padding:10px 0;"><?= cfg_ev_cell($cr_30d[$key]??[]) ?></td>
+            <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all?'background:#fafafa;':'' ?>">
+                <td style="padding:11px 0 11px 10px;border-left:3px solid <?= $cr_form_colors[$key] ?>;<?= $is_all?'font-weight:700;':'' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
+                <td style="padding:11px 16px 11px 0;"><?= cfg_ev_cell($cr_today[$key]??[]) ?></td>
+                <td style="padding:11px 0;"><?= cfg_ev_cell($cr_30d[$key]??[]) ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p style="font-size:10px;color:#d1d5db;margin:10px 0 0;">Entered = sessions that started interacting · Visited (page loads) shown separately in Form Leads card</p>
+        <p style="font-size:10px;color:#d1d5db;margin:12px 0 0;">Entered = sessions that started interacting · Unique visitors shown in Form Leads card</p>
     </div>
 
     <!-- Conversion Rate Line Chart -->
@@ -1175,8 +1197,8 @@ function cfg_render_analytics_inner( $range ) {
     ?>
 
     <!-- Implant step reach -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Implant Estimator — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions · <?= esc_html($an_label) ?></span></h3>
+    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #0891b2;">
+        <h3 style="color:#0891b2;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Step Reach</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">unique sessions · <?= esc_html($an_label) ?></span></h3>
         <?php if (empty($imp_steps_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
         <?php else:
@@ -1185,34 +1207,34 @@ function cfg_render_analytics_inner( $range ) {
             $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
             $pct=round((int)$row['cnt']/$imp_max*100);
         ?>
-        <div class="cfg-src-row" style="margin-bottom:8px;align-items:center;">
-            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
+        <div class="cfg-src-row" style="align-items:center;">
+            <span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
             <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div></div>
-            <span style="font-size:12px;color:#374151;width:28px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
+            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
         </div>
         <?php endforeach; endif; ?>
     </div>
 
     <!-- Implant drop-off -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Implant Estimator — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
+    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
+        <h3 style="color:#dc2626;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Where People Drop Off</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
         <?php if (empty($imp_exits_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
         <?php else:
         $total_exits=array_sum(array_column($imp_exits_raw,'drop_offs'));
         $exit_max=max(1,max(array_map('intval',array_column($imp_exits_raw,'drop_offs'))));
         ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $total_exits ?> session<?= $total_exits!==1?'s':'' ?> left without completing.</p>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 16px;"><strong style="color:#1d2327;"><?= $total_exits ?></strong> session<?= $total_exits!==1?'s':'' ?> left without completing.</p>
         <?php foreach ($imp_exits_raw as $row):
             $n=(int)$row['drop_offs']; $share=round($n/$total_exits*100);
             $bar_w=round($n/$exit_max*100); $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
             $color=$share>=30?'#dc2626':($share>=15?'#f59e0b':'#6b7280');
         ?>
-        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
-            <span style="width:300px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.3;"><?= esc_html($lbl) ?></span>
+        <div class="cfg-src-row" style="align-items:center;">
+            <span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
             <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div></div>
-            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:40px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:50px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
+            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:38px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:48px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
         </div>
         <?php endforeach; endif; ?>
     </div>
@@ -1231,8 +1253,8 @@ function cfg_render_analytics_inner( $range ) {
     ?>
 
     <!-- Aligner step reach -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Aligner Quiz — Step Reach <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">unique sessions · <?= esc_html($an_label) ?></span></h3>
+    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #7c3aed;">
+        <h3 style="color:#7c3aed;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Step Reach</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">unique sessions · <?= esc_html($an_label) ?></span></h3>
         <?php if (empty($alg_steps_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
         <?php else:
@@ -1241,34 +1263,34 @@ function cfg_render_analytics_inner( $range ) {
             $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
             $pct=round((int)$row['cnt']/$alg_max*100);
         ?>
-        <div class="cfg-src-row" style="margin-bottom:8px;align-items:center;">
-            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
+        <div class="cfg-src-row" style="align-items:center;">
+            <span style="width:260px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
             <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#7c3aed;"></div></div>
-            <span class="cfg-src-count"><?= (int)$row['cnt'] ?></span>
+            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
         </div>
         <?php endforeach; endif; ?>
     </div>
 
     <!-- Aligner drop-off -->
-    <div class="cfg-an-card" style="margin-bottom:20px;">
-        <h3>Aligner Quiz — Where People Drop Off <span style="font-size:11px;font-weight:400;color:#9ca3af;text-transform:none;letter-spacing:0;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
+    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
+        <h3 style="color:#dc2626;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Where People Drop Off</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
         <?php if (empty($alg_exits_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
         <?php else:
         $alg_total_exits=array_sum(array_column($alg_exits_raw,'drop_offs'));
         $alg_exit_max=max(1,max(array_map('intval',array_column($alg_exits_raw,'drop_offs'))));
         ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 14px;"><?= $alg_total_exits ?> session<?= $alg_total_exits!==1?'s':'' ?> left without completing.</p>
+        <p style="font-size:12px;color:#6b7280;margin:0 0 16px;"><strong style="color:#1d2327;"><?= $alg_total_exits ?></strong> session<?= $alg_total_exits!==1?'s':'' ?> left without completing.</p>
         <?php foreach ($alg_exits_raw as $row):
             $n=(int)$row['drop_offs']; $share=round($n/$alg_total_exits*100);
             $bar_w=round($n/$alg_exit_max*100); $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
             $color=$share>=30?'#dc2626':($share>=15?'#f59e0b':'#6b7280');
         ?>
-        <div class="cfg-src-row" style="margin-bottom:10px;align-items:center;">
-            <span class="cfg-src-label" style="width:220px;font-size:12px;"><?= esc_html($lbl) ?></span>
+        <div class="cfg-src-row" style="align-items:center;">
+            <span style="width:260px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
             <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div></div>
-            <span style="font-size:12px;font-weight:700;color:<?= $color ?>;width:36px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:44px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
+            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:38px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
+            <span style="font-size:11px;color:#9ca3af;width:48px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
         </div>
         <?php endforeach; endif; ?>
     </div>
@@ -5551,27 +5573,30 @@ function cfg_settings_page() {
         <div class="cfg-panel-hdr"><h2>Analytics</h2><p>Conversion stats and source breakdown for all forms.</p></div>
         <div class="cfg-panel-body">
     <style>
-    .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
-    .cfg-an-card{background:#fff;border:1px solid #c3c4c7;border-radius:6px;padding:20px 24px;}
-    .cfg-an-card h3{margin:0 0 16px;font-size:13px;font-weight:700;color:#1d2327;text-transform:uppercase;letter-spacing:.05em;}
-    .cfg-bar-chart{display:flex;align-items:flex-end;gap:3px;height:100px;margin-bottom:6px;}
+    .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
+    .cfg-an-card{background:#fff;border:1px solid #e8eaed;border-radius:12px;padding:22px 24px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+    .cfg-an-card h3{margin:0 0 18px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;}
+    .cfg-bar-chart{display:flex;align-items:flex-end;gap:3px;height:110px;margin-bottom:6px;}
     .cfg-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
-    .cfg-bar{width:100%;background:#2271b1;border-radius:2px 2px 0 0;min-height:2px;transition:opacity .15s;}
+    .cfg-bar{width:100%;background:#2271b1;border-radius:3px 3px 0 0;min-height:2px;transition:opacity .15s;}
     .cfg-bar:hover{opacity:.75;}
-    .cfg-src-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
-    .cfg-src-bar-bg{flex:1;background:#f3f4f6;border-radius:4px;height:8px;overflow:hidden;}
-    .cfg-src-bar-fill{height:100%;border-radius:4px;background:#2271b1;}
-    .cfg-src-label{font-size:13px;color:#374151;width:140px;flex-shrink:0;}
-    .cfg-src-count{font-size:12px;color:#6b7280;width:32px;text-align:right;flex-shrink:0;}
-    .cfg-stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f4f6;}
+    .cfg-src-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .cfg-src-bar-bg{flex:1;background:#f3f4f6;border-radius:6px;height:10px;overflow:hidden;}
+    .cfg-src-bar-fill{height:100%;border-radius:6px;}
+    .cfg-src-label{font-size:12px;color:#374151;width:140px;flex-shrink:0;}
+    .cfg-src-count{font-size:12px;color:#6b7280;width:28px;text-align:right;flex-shrink:0;}
+    .cfg-stat-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6;}
     .cfg-stat-row:last-child{border-bottom:none;}
     .cfg-an-full{grid-column:span 2;}
-    .cfg-an-range-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:18px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;}
-    .cfg-an-range-bar button{font-size:12px;padding:4px 11px;border-radius:4px;text-decoration:none;color:#374151;border:1px solid #cbd5e1;background:#fff;white-space:nowrap;cursor:pointer;}
-    .cfg-an-range-bar button:hover{background:#f1f5f9;}
+    .cfg-an-stat-tile{background:#f8fafc;border-radius:10px;padding:16px;text-align:center;}
+    .cfg-an-stat-tile .cfg-an-stat-num{font-size:28px;font-weight:700;color:#1d2327;line-height:1;}
+    .cfg-an-stat-tile .cfg-an-stat-lbl{font-size:10px;font-weight:600;color:#9ca3af;margin-top:5px;text-transform:uppercase;letter-spacing:.07em;}
+    .cfg-an-range-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:22px;padding:10px 16px;background:#f8fafc;border:1px solid #e8eaed;border-radius:10px;}
+    .cfg-an-range-bar button{font-size:12px;padding:5px 12px;border-radius:6px;color:#374151;border:1px solid #e2e8f0;background:#fff;white-space:nowrap;cursor:pointer;transition:background .12s,border-color .12s;}
+    .cfg-an-range-bar button:hover{background:#f1f5f9;border-color:#cbd5e1;}
     .cfg-an-range-bar button.active{background:#2271b1;color:#fff;border-color:#2271b1;}
     .cfg-an-range-bar .cfg-custom-wrap{display:flex;align-items:center;gap:6px;}
-    .cfg-an-range-bar .cfg-custom-wrap input[type=date]{font-size:12px;padding:3px 7px;border:1px solid #cbd5e1;border-radius:4px;}
+    .cfg-an-range-bar .cfg-custom-wrap input[type=date]{font-size:12px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;}
     </style>
 
     <!-- Range bar — fully JS-driven, no page reload -->
