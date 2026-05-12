@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.4
+ * Version:     2.6.5
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1018,10 +1018,10 @@ function cfg_render_analytics_inner( $range ) {
                         <div style="position:absolute;left:0;top:0;height:100%;width:<?= $fill_pct ?>%;background:<?= $fc_map[$fkey] ?>;border-radius:7px;"></div>
                     </div>
                 </div>
-                <div style="font-size:10px;color:#9ca3af;margin-top:3px;"><?= $visited ?> page loads</div>
+                <div style="font-size:10px;color:#9ca3af;margin-top:3px;"><?= $visited ?> unique visitors</div>
             </div>
             <?php endforeach; ?>
-            <p style="font-size:10px;color:#d1d5db;margin:4px 0 0;">Bar length = total entries · Colored fill = form fills · Rate = fills ÷ entries</p>
+            <p style="font-size:10px;color:#d1d5db;margin:4px 0 0;">Unique visitors = every unique person who opened the page (1 per person) · Entries = started interacting · Bar = fills ÷ entries</p>
         </div>
 
         <!-- GHL send rate -->
@@ -1162,8 +1162,8 @@ function cfg_render_analytics_inner( $range ) {
 
     <?php
     $imp_step_labels = [
-        '_view'  =>'Landing page (intro screen — unique page loads)',
-        'intro'  =>'Intro screen','router'=>'Clicked "Get My Estimate" (path selection)','summary'=>'Summary (reached estimate)',
+        '_view'  =>'Landing page — unique visitors (1 per person)',
+        'intro'  =>'Intro screen','router'=>'Clicked "Get My Estimate" → path selection','summary'=>'Summary (reached estimate)',
         'a1'=>'[Single] Where is the tooth located?','a2'=>'[Single] How long has the tooth been missing?',
         'a3'=>'[Single] Bone graft needed?','a4'=>'[Single] Describe your situation',
         'm1'=>'[Multi] How many teeth to replace?','m2'=>'[Multi] Where are the teeth located?',
@@ -1218,7 +1218,7 @@ function cfg_render_analytics_inner( $range ) {
     </div>
 
     <?php
-    $alg_step_labels=['_view'=>'Landing page (unique page loads)'];
+    $alg_step_labels=['_view'=>'Landing page — unique visitors (1 per person)'];
     if (empty($alg_cfg)) $alg_cfg=cfg_aligner_get();
     foreach ($alg_cfg as $i => $step) {
         $fk=$step['field_key']??'';
@@ -8602,10 +8602,7 @@ $_sections_col = $result_sections_html
     var _ss = {}; try{_ss=JSON.parse(sessionStorage.getItem('scad_tracking_params')||'{}');}catch(e){}
     function _gp(k){var v='';_up.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss[k]||'';}
     ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){ fd.append(k, _gp(k)); });
-    function _done() {
-      isSubmitting = false;
-      cfgTrImp('complete','');
-      if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+    function _nav() {
       if (config.contactRedirectUrl) {
         var url = config.contactRedirectUrl;
         ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){
@@ -8616,7 +8613,19 @@ $_sections_col = $result_sections_html
         navigate(panel);
       }
     }
-    fetch(config.ajaxUrl, { method:'POST', body:fd }).then(_done).catch(_done);
+    fetch(config.ajaxUrl, { method:'POST', body:fd })
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        isSubmitting = false;
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+        if (d.success) cfgTrImp('complete',''); // only count as complete when server confirmed
+        _nav();
+      })
+      .catch(function(){
+        isSubmitting = false;
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+        _nav(); // still navigate to result on network error, but don't count as complete
+      });
   }
 
   /* ── RESULTS CTA — redirects to configured URL (with UTM params) ── */
