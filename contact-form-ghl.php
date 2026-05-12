@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.7
+ * Version:     2.6.8
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -611,6 +611,7 @@ add_action( 'wp_ajax_cfg_detect_folder_ids',       'cfg_ajax_detect_folder_ids' 
 add_action( 'wp_ajax_cfg_create_checker_fields',   'cfg_ajax_create_checker_fields' );
 add_action( 'wp_ajax_cfg_delete_checker_fields',   'cfg_ajax_delete_checker_fields' );
 add_action( 'wp_ajax_cfg_fix_treatment_dropdown',  'cfg_ajax_fix_treatment_dropdown' );
+add_action( 'wp_ajax_cfg_sync_treatment_options',  'cfg_ajax_sync_treatment_options' );
 add_action( 'wp_ajax_cfg_analytics_refresh',       'cfg_ajax_analytics_refresh' );
 
 // Checker field definitions: key → folder name
@@ -1553,6 +1554,72 @@ function cfg_ajax_fix_treatment_dropdown() {
         } else {
             wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . ( is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 ) ) );
         }
+    }
+}
+
+// ── Sync Treatment Type options: add missing plugin options to GHL without removing existing ones ──
+function cfg_ajax_sync_treatment_options() {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = $s['ghl_api_key'] ?? '';
+    $location_id = $s['ghl_location_id'] ?? '';
+    if ( ! $api_key || ! $location_id ) wp_send_json_error( 'API key or Location ID not configured.' );
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base = 'https://services.leadconnectorhq.com';
+
+    // Fetch existing GHL field
+    $r = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [ 'headers' => $headers, 'timeout' => 15 ] );
+    if ( is_wp_error( $r ) ) wp_send_json_error( $r->get_error_message() );
+
+    $field_id      = null;
+    $ghl_options   = [];
+    foreach ( json_decode( wp_remote_retrieve_body( $r ), true )['customFields'] ?? [] as $f ) {
+        $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ?? '' ) );
+        if ( $bare === 'treatment_type' ) {
+            $field_id    = $f['id'];
+            $ghl_options = $f['options'] ?? [];
+            break;
+        }
+    }
+
+    if ( ! $field_id ) wp_send_json_error( 'Treatment Type field not found in GHL. Use "Fix Treatment Type Dropdown" first to create it.' );
+
+    // Build plugin options list
+    $plugin_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
+
+    // Merge: keep all existing GHL options, append any plugin options not already present (case-insensitive)
+    $ghl_lower = array_map( 'strtolower', $ghl_options );
+    $added     = [];
+    foreach ( $plugin_opts as $opt ) {
+        if ( ! in_array( strtolower( $opt ), $ghl_lower, true ) ) {
+            $ghl_options[] = $opt;
+            $added[]       = $opt;
+        }
+    }
+
+    if ( empty( $added ) ) {
+        wp_send_json_success( 'GHL already has all options from your site (' . count( $ghl_options ) . ' total). Nothing to add.' );
+    }
+
+    // PUT merged options back — existing GHL options are preserved
+    $r2   = wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$field_id}", [
+        'method'  => 'PUT',
+        'headers' => $headers,
+        'body'    => wp_json_encode( [ 'name' => 'Treatment Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $ghl_options ] ),
+        'timeout' => 15,
+    ] );
+    $code = is_wp_error( $r2 ) ? 0 : wp_remote_retrieve_response_code( $r2 );
+    if ( $code >= 200 && $code < 300 ) {
+        wp_send_json_success( 'Added ' . count( $added ) . ' missing option' . ( count( $added ) !== 1 ? 's' : '' ) . ' to GHL: ' . implode( ', ', $added ) . '. GHL now has ' . count( $ghl_options ) . ' options total.' );
+    } else {
+        wp_send_json_error( 'GHL returned HTTP ' . $code . ': ' . ( is_wp_error( $r2 ) ? $r2->get_error_message() : wp_remote_retrieve_body( $r2 ) ) );
     }
 }
 
@@ -4808,6 +4875,9 @@ function cfg_settings_page() {
                 <button type="button" id="cfg-fix-treatment-btn" class="button" style="font-size:13px;padding:6px 18px;" title="Convert the Treatment Type field in GHL to a dropdown (SINGLE_OPTIONS) using the options configured above">
                     &#9660; Fix Treatment Type Dropdown
                 </button>
+                <button type="button" id="cfg-sync-treatment-btn" class="button" style="font-size:13px;padding:6px 18px;" title="Add any options from your site's Treatment Type list that are missing in GHL — without removing or changing existing GHL options">
+                    &#8645; Sync Missing Options to GHL
+                </button>
                 <span id="cfg-fields-status" style="font-size:12px;color:#6b7280;"></span>
             </div>
 
@@ -5140,6 +5210,30 @@ function cfg_settings_page() {
                         method: 'POST',
                         headers: {'Content-Type':'application/x-www-form-urlencoded'},
                         body: 'action=cfg_fix_treatment_dropdown&nonce=' + NONCE
+                    })
+                    .then(function(r){ return r.json(); })
+                    .then(function(res){
+                        btn.disabled = false;
+                        status.textContent = res.success ? '✓ ' + res.data : '✗ ' + (res.data || 'Error');
+                        status.style.color  = res.success ? '#16a34a' : '#dc2626';
+                    })
+                    .catch(function(){
+                        btn.disabled = false;
+                        status.textContent = '✗ Request failed';
+                        status.style.color = '#dc2626';
+                    });
+                });
+
+                document.getElementById('cfg-sync-treatment-btn').addEventListener('click', function(){
+                    var btn = this;
+                    var status = document.getElementById('cfg-fields-status');
+                    btn.disabled = true;
+                    status.textContent = 'Checking GHL options…';
+                    status.style.color = '#6b7280';
+                    fetch(AJAX, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: 'action=cfg_sync_treatment_options&nonce=' + NONCE
                     })
                     .then(function(r){ return r.json(); })
                     .then(function(res){
