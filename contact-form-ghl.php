@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.6
+ * Version:     2.6.7
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -908,6 +908,29 @@ function cfg_render_analytics_inner( $range ) {
         $alg_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='aligner' AND event_type='view' AND {$an_ev_where}");
         $imp_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='implant' AND event_type='view' AND {$an_ev_where}");
     }
+
+    // ── Override 'complete' with actual submission counts (cfg_submissions = source of truth) ──
+    $actual_today_rows = $wpdb->get_results(
+        "SELECT form_type, COUNT(*) AS cnt FROM {$an_table} WHERE DATE(created_at) = CURDATE() AND form_type IN ('contact','aligner','implant') GROUP BY form_type", ARRAY_A
+    );
+    $actual_range_rows = $wpdb->get_results(
+        "SELECT form_type, COUNT(*) AS cnt FROM {$an_table} WHERE {$an_where} AND form_type IN ('contact','aligner','implant') GROUP BY form_type", ARRAY_A
+    );
+    $actual_today_all = 0; $actual_range_all = 0;
+    foreach ( $actual_today_rows as $r ) {
+        $cr_today[$r['form_type']]['complete'] = (int)$r['cnt'];
+        $actual_today_all += (int)$r['cnt'];
+    }
+    foreach ( $actual_range_rows as $r ) {
+        $cr_30d[$r['form_type']]['complete'] = (int)$r['cnt'];
+        $actual_range_all += (int)$r['cnt'];
+    }
+    foreach ( $cr_forms_list as $ft ) {
+        if ( ! isset($cr_today[$ft]['complete']) ) $cr_today[$ft]['complete'] = 0;
+        if ( ! isset($cr_30d[$ft]['complete'])   ) $cr_30d[$ft]['complete']   = 0;
+    }
+    $cr_today['_all']['complete'] = $actual_today_all;
+    $cr_30d['_all']['complete']   = $actual_range_all;
 
     // ── Sort steps into natural form order (not by count) ──
     if ( ! empty( $imp_steps_raw ) ) {
