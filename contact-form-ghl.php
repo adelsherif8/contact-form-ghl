@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.9
+ * Version:     2.6.10
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7657,15 +7657,16 @@ function cfg_implant_shortcode() {
     $offer_claim_btn  = $s['imp_offer_claim_btn'] ?? 'Claim My Free Offer';
     $offer_skip_btn   = $s['imp_offer_skip_btn']  ?? 'Skip for Now';
     $offer_ghl_key    = sanitize_key( $s['imp_offer_ghl_key'] ?? 'consultation_offer' ) ?: 'consultation_offer';
+    $imp_price_clean = function($val, $default) { return (int)preg_replace('/[^0-9]/', '', (string)($val ?? $default)); };
     $prices_json = wp_json_encode([
-        'single_min' => (int)($s['imp_single_min'] ?? 3000),
-        'single_max' => (int)($s['imp_single_max'] ?? 6000),
-        'multi_min'  => (int)($s['imp_multi_min']  ?? 5000),
-        'multi_max'  => (int)($s['imp_multi_max']  ?? 20000),
-        'arch_min'   => (int)($s['imp_arch_min']   ?? 24000),
-        'arch_max'   => (int)($s['imp_arch_max']   ?? 30000),
-        'graft_min'  => (int)($s['imp_graft_min']  ?? 650),
-        'graft_max'  => (int)($s['imp_graft_max']  ?? 1100),
+        'single_min' => $imp_price_clean($s['imp_single_min'] ?? null, 3000),
+        'single_max' => $imp_price_clean($s['imp_single_max'] ?? null, 6000),
+        'multi_min'  => $imp_price_clean($s['imp_multi_min']  ?? null, 5000),
+        'multi_max'  => $imp_price_clean($s['imp_multi_max']  ?? null, 20000),
+        'arch_min'   => $imp_price_clean($s['imp_arch_min']   ?? null, 24000),
+        'arch_max'   => $imp_price_clean($s['imp_arch_max']   ?? null, 30000),
+        'graft_min'  => $imp_price_clean($s['imp_graft_min']  ?? null, 650),
+        'graft_max'  => $imp_price_clean($s['imp_graft_max']  ?? null, 1100),
     ]);
 
     // Option button helper — fixed internal $val for logic, $label for display
