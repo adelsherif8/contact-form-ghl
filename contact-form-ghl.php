@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.14
+ * Version:     2.6.15
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -272,9 +272,15 @@ function cfg_defaults() {
         'alg_page_top_padding'    => '3',
         'alg_page_bottom_padding' => '3',
         'alg_landing_pages'       => [],
+        'alg_an_lbl_landing'      => 'Marketing page visit (came from landing page)',
+        'alg_an_lbl_view'         => 'Visitor reached the aligner quiz page',
+        'alg_an_lbl_complete'     => 'Submitted form (became a lead)',
 
         // ── Implant Cost Estimator ────────────────────────────────────────
         'imp_landing_pages'    => [],
+        'imp_an_lbl_landing'   => 'Marketing page visit (came from landing page)',
+        'imp_an_lbl_view'      => 'Visitor reached the implant estimator page',
+        'imp_an_lbl_complete'  => 'Submitted form (became a lead)',
         'imp_accent_color'     => '#1e3a5f',
         'imp_success_url'      => '',
         'imp_currency'         => '$',
@@ -806,6 +812,7 @@ function cfg_analytics_resolve_range( $preset, $custom_from = '', $custom_to = '
 
 function cfg_render_analytics_inner( $range ) {
     global $wpdb;
+    $s          = get_option( CFG_OPTION, [] ) + cfg_defaults();
     $an_from    = $range['from'];
     $an_to      = $range['to'];
     $an_label   = $range['label'];
@@ -1341,9 +1348,9 @@ function cfg_render_analytics_inner( $range ) {
 
     <?php
     $imp_step_labels = [
-        '_landing'=>'Marketing page (landing page visit)',
-        '_view'  =>'Estimator page loaded',
-        '_complete'=>'Form submitted (lead captured)',
+        '_landing' => $s['imp_an_lbl_landing']  ?? 'Marketing page visit (came from landing page)',
+        '_view'    => $s['imp_an_lbl_view']     ?? 'Visitor reached the implant estimator page',
+        '_complete'=> $s['imp_an_lbl_complete'] ?? 'Submitted form (became a lead)',
         'intro'  =>'Intro screen','router'=>'Clicked "Get My Estimate" → path selection','summary'=>'Summary (reached estimate)',
         'a1'=>'[Single] Where is the tooth located?','a2'=>'[Single] How long has the tooth been missing?',
         'a3'=>'[Single] Bone graft needed?','a4'=>'[Single] Describe your situation',
@@ -1407,9 +1414,9 @@ function cfg_render_analytics_inner( $range ) {
 
     <?php
     $alg_step_labels=[
-        '_landing'=>'Marketing page (landing page visit)',
-        '_view'=>'Quiz page loaded',
-        '_complete'=>'Form submitted (lead captured)',
+        '_landing' => $s['alg_an_lbl_landing']  ?? 'Marketing page visit (came from landing page)',
+        '_view'    => $s['alg_an_lbl_view']     ?? 'Visitor reached the aligner quiz page',
+        '_complete'=> $s['alg_an_lbl_complete'] ?? 'Submitted form (became a lead)',
     ];
     foreach ($alg_cfg as $i => $step) {
         $fk=$step['field_key']??'';
@@ -3267,6 +3274,18 @@ function cfg_settings_page() {
                 </select>
                 <span class="cfg-desc">Hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> to select multiple. Visitors who land on these pages will be tracked as part of the aligner journey funnel in Analytics.</span>
             </div>
+            <div class="cfg-field cfg-full">
+                <label>Analytics Funnel Labels <span style="font-weight:400;color:#9ca3af;">— what each funnel row says in the Aligner tab</span></label>
+                <div style="display:grid;grid-template-columns:140px 1fr;gap:8px 10px;align-items:center;max-width:680px;">
+                    <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Landing row</span>
+                    <input type="text" name="<?= CFG_OPTION ?>[alg_an_lbl_landing]" value="<?= esc_attr( $s['alg_an_lbl_landing'] ?? '' ) ?>" placeholder="Marketing page visit (came from landing page)"/>
+                    <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Page-loaded row</span>
+                    <input type="text" name="<?= CFG_OPTION ?>[alg_an_lbl_view]" value="<?= esc_attr( $s['alg_an_lbl_view'] ?? '' ) ?>" placeholder="Visitor reached the aligner quiz page"/>
+                    <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Submitted row</span>
+                    <input type="text" name="<?= CFG_OPTION ?>[alg_an_lbl_complete]" value="<?= esc_attr( $s['alg_an_lbl_complete'] ?? '' ) ?>" placeholder="Submitted form (became a lead)"/>
+                </div>
+                <span class="cfg-desc">Rename the meta funnel rows shown at the top/bottom of the Aligner Quiz analytics tab. The individual question rows in the funnel are derived from your question editor below and update automatically.</span>
+            </div>
         </div>
 
         <div class="cfg-section-title" style="margin-top:24px;">Form Steps</div>
@@ -3689,6 +3708,18 @@ function cfg_settings_page() {
                     <?php endforeach; ?>
                 </select>
                 <span class="cfg-desc">Hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> to select multiple. Visitors who land on these pages will be tracked as part of the implant journey funnel in Analytics.</span>
+            </div>
+            <div class="cfg-field cfg-full">
+                <label>Analytics Funnel Labels <span style="font-weight:400;color:#9ca3af;">— what each funnel row says in the Implant tab</span></label>
+                <div style="display:grid;grid-template-columns:140px 1fr;gap:8px 10px;align-items:center;max-width:680px;">
+                    <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Landing row</span>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_an_lbl_landing]" value="<?= esc_attr( $s['imp_an_lbl_landing'] ?? '' ) ?>" placeholder="Marketing page visit (came from landing page)"/>
+                    <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Page-loaded row</span>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_an_lbl_view]" value="<?= esc_attr( $s['imp_an_lbl_view'] ?? '' ) ?>" placeholder="Visitor reached the implant estimator page"/>
+                    <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Submitted row</span>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_an_lbl_complete]" value="<?= esc_attr( $s['imp_an_lbl_complete'] ?? '' ) ?>" placeholder="Submitted form (became a lead)"/>
+                </div>
+                <span class="cfg-desc">Rename the meta funnel rows shown at the top/bottom of the Implant Estimator analytics tab. The individual question rows in the funnel are derived from your question editor below and update automatically.</span>
             </div>
         </div>
 
