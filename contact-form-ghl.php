@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.13
+ * Version:     2.6.14
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3272,6 +3272,10 @@ function cfg_settings_page() {
         <div class="cfg-section-title" style="margin-top:24px;">Form Steps</div>
         <p class="cfg-desc">Click a step to expand and edit. Use ↑↓ to reorder. Steps auto-advance on selection for yes/no and image types.</p>
 
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:12.5px;color:#1e40af;">
+            <strong>Standard order:</strong> Intro → Have you had orthodontic treatment before? → Crowns/bridges/implants/veneers? → How would you describe your teeth alignment? → Bite issues? → Dental insurance? → Limited Time Offer → Contact Form. If your saved order has drifted, click <em>Restore Standard Order</em> below to snap back. Any extra custom questions you've added are preserved and placed just before the Limited Time Offer step.
+        </div>
+
         <div id="alg-builder" style="margin-top:12px;"></div>
 
         <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap;">
@@ -3283,8 +3287,34 @@ function cfg_settings_page() {
                 <option value="contact">Contact Form</option>
             </select>
             <button type="button" id="alg-add-step-btn" class="button">+ Add Step</button>
-            <button type="button" onclick="algResetSteps()" class="button" style="margin-left:auto;color:#b32d2e;">↺ Reset to Defaults</button>
+            <button type="button" id="alg-restore-order-btn" class="button" style="margin-left:auto;">↻ Restore Standard Order</button>
+            <span id="alg-restore-order-status" style="font-size:12px;color:#6b7280;"></span>
+            <button type="button" onclick="algResetSteps()" class="button" style="color:#b32d2e;">↺ Reset to Defaults</button>
         </div>
+        <script>
+        (function(){
+            var btn = document.getElementById('alg-restore-order-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function(){
+                if (!confirm('This will reorder your saved aligner steps to match the standard company template. Any customizations of the standard questions are preserved. Continue?')) return;
+                var status = document.getElementById('alg-restore-order-status');
+                btn.disabled = true;
+                status.textContent = 'Restoring…'; status.style.color = '#6b7280';
+                fetch('<?= admin_url("admin-ajax.php") ?>', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body: 'action=cfg_aligner_restore_order&nonce=<?= wp_create_nonce("cfg_fields_nonce") ?>'
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(res){
+                    btn.disabled = false;
+                    status.textContent = res.success ? '✓ ' + res.data + ' Reload the page to see the changes.' : '✗ ' + (res.data || 'Error');
+                    status.style.color = res.success ? '#16a34a' : '#dc2626';
+                })
+                .catch(function(){ btn.disabled = false; status.textContent='✗ Request failed'; status.style.color='#dc2626'; });
+            });
+        })();
+        </script>
 
         <textarea name="cfg_aligner_steps" id="cfg_aligner_steps_json" style="display:none;"></textarea>
 
@@ -7100,6 +7130,56 @@ function cfg_aligner_defaults() {
     ];
 }
 
+/**
+ * Enforce the standard aligner question order required by the company template.
+ * Preserves customizations of standard steps. Extra (non-standard) custom questions
+ * are kept and placed between has_insurance and the Limited Time Offer step.
+ */
+function cfg_aligner_enforce_standard_order( $steps ) {
+    if ( ! is_array( $steps ) || empty( $steps ) ) return cfg_aligner_defaults();
+
+    $canonical = [ '_intro', 'prev_orthodontic', 'dental_work', 'teeth_alignment', 'bite_issues', 'has_insurance', '_content', '_contact' ];
+    $defaults  = cfg_aligner_defaults();
+
+    $key_of = function( $step ) {
+        $t = $step['type'] ?? '';
+        if ( $t === 'intro' )   return '_intro';
+        if ( $t === 'content' ) return '_content';
+        if ( $t === 'contact' ) return '_contact';
+        return $step['field_key'] ?? '';
+    };
+
+    $defaults_by_key = [];
+    foreach ( $defaults as $d ) {
+        $k = $key_of( $d );
+        if ( $k !== '' ) $defaults_by_key[ $k ] = $d;
+    }
+
+    $saved_by_key = [];
+    $extras       = [];
+    foreach ( $steps as $s ) {
+        $k = $key_of( $s );
+        if ( in_array( $k, $canonical, true ) && ! isset( $saved_by_key[ $k ] ) ) {
+            $saved_by_key[ $k ] = $s;
+        } else {
+            $extras[] = $s;
+        }
+    }
+
+    $out = [];
+    foreach ( $canonical as $k ) {
+        if ( $k === '_content' && ! empty( $extras ) ) {
+            foreach ( $extras as $e ) $out[] = $e;
+            $extras = [];
+        }
+        if ( isset( $saved_by_key[ $k ] ) )       $out[] = $saved_by_key[ $k ];
+        elseif ( isset( $defaults_by_key[ $k ] ) ) $out[] = $defaults_by_key[ $k ];
+    }
+    foreach ( $extras as $e ) $out[] = $e;
+
+    return array_values( $out );
+}
+
 function cfg_aligner_get() {
     $saved = get_option( CFG_ALG_OPTION );
     $steps = ( ! empty( $saved ) && is_array( $saved ) ) ? $saved : cfg_aligner_defaults();
@@ -7150,6 +7230,28 @@ add_action( 'admin_init', function () {
         unset( $step );
         if ( $changed ) update_option( CFG_ALG_OPTION, $data );
     }
+
+    // One-time migration: enforce the standard aligner question order across all sites.
+    // Preserves any customizations of standard steps and keeps extras between the last
+    // standard question and the Limited Time Offer step.
+    if ( get_option( 'cfg_alg_std_order_v1', '0' ) !== '1' ) {
+        $saved = get_option( CFG_ALG_OPTION );
+        if ( is_array( $saved ) && ! empty( $saved ) ) {
+            $reordered = cfg_aligner_enforce_standard_order( $saved );
+            update_option( CFG_ALG_OPTION, $reordered );
+        }
+        update_option( 'cfg_alg_std_order_v1', '1' );
+    }
+} );
+
+add_action( 'wp_ajax_cfg_aligner_restore_order', function () {
+    check_ajax_referer( 'cfg_fields_nonce', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( 'Unauthorized.' );
+    $saved = get_option( CFG_ALG_OPTION );
+    if ( ! is_array( $saved ) || empty( $saved ) ) $saved = cfg_aligner_defaults();
+    $reordered = cfg_aligner_enforce_standard_order( $saved );
+    update_option( CFG_ALG_OPTION, $reordered );
+    wp_send_json_success( 'Restored standard order (' . count( $reordered ) . ' steps).' );
 } );
 
 function cfg_aligner_sanitize( $input ) {
