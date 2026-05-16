@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.16
+ * Version:     2.6.17
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1132,10 +1132,10 @@ function cfg_render_analytics_inner( $range ) {
     ob_start();
     ?>
     <style>
-    .cfg-an-tabnav{display:flex;gap:4px;border-bottom:1px solid #e5e7eb;margin-bottom:20px;flex-wrap:wrap;}
-    .cfg-an-tabnav button{background:none;border:none;padding:10px 18px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
-    .cfg-an-tabnav button:hover{color:#1d2327;}
-    .cfg-an-tabnav button.active{color:#2271b1;border-bottom-color:#2271b1;}
+    .cfg-an-tabnav{display:inline-flex;gap:2px;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:22px;flex-wrap:wrap;}
+    .cfg-an-tabnav button{background:transparent;border:none;padding:9px 18px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-radius:7px;transition:background .15s,color .15s,box-shadow .15s;display:inline-flex;align-items:center;gap:6px;}
+    .cfg-an-tabnav button:hover{color:#1d2327;background:rgba(255,255,255,.55);}
+    .cfg-an-tabnav button.active{background:#fff;color:#2271b1;box-shadow:0 1px 3px rgba(0,0,0,.08);}
     .cfg-an-tab-content{display:none;}
     .cfg-an-tab-content.active{display:block;}
     </style>
@@ -1150,11 +1150,27 @@ function cfg_render_analytics_inner( $range ) {
     <div class="cfg-an-grid">
         <!-- Submissions chart -->
         <div class="cfg-an-card cfg-an-full">
-            <h3>Daily Submissions — <?= esc_html($an_label) ?></h3>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:20px;">
+                <div>
+                    <div style="font-size:15px;font-weight:700;color:#1d2327;margin-bottom:3px;line-height:1.2;">Daily Submissions</div>
+                    <div style="font-size:11.5px;color:#9ca3af;line-height:1.4;">Form submissions per day · <?= esc_html($an_label) ?></div>
+                </div>
+                <?php $peak = max(0, $max_daily ?? 0); ?>
+                <div style="display:flex;gap:18px;align-items:flex-start;flex-shrink:0;">
+                    <div style="text-align:right;">
+                        <div style="font-size:24px;font-weight:700;color:#2271b1;line-height:1;"><?= (int)($total_30 ?? 0) ?></div>
+                        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-top:5px;font-weight:600;">Total</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:24px;font-weight:700;color:#1d2327;line-height:1;"><?= (int)$peak ?></div>
+                        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-top:5px;font-weight:600;">Peak day</div>
+                    </div>
+                </div>
+            </div>
             <div class="cfg-bar-chart">
             <?php foreach ( $daily_filled as $d ): ?>
                 <div class="cfg-bar-col" title="<?= esc_attr($d['day']) ?>: <?= $d['cnt'] ?> submission<?= $d['cnt'] !== 1 ? 's' : '' ?>">
-                    <div class="cfg-bar" style="height:<?= $d['cnt'] > 0 ? round($d['cnt']/$max_daily*100) : 2 ?>%;background:<?= $d['cnt'] > 0 ? '#2271b1' : '#e5e7eb' ?>;"></div>
+                    <div class="cfg-bar" style="height:<?= $d['cnt'] > 0 ? round($d['cnt']/$max_daily*100) : 4 ?>%;background:<?= $d['cnt'] > 0 ? '#2271b1' : '#e5e7eb' ?>;"></div>
                 </div>
             <?php endforeach; ?>
             </div>
@@ -6016,9 +6032,9 @@ function cfg_settings_page() {
     .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
     .cfg-an-card{background:#fff;border:1px solid #e8eaed;border-radius:12px;padding:22px 24px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
     .cfg-an-card h3{margin:0 0 18px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;}
-    .cfg-bar-chart{display:flex;align-items:flex-end;gap:3px;height:110px;margin-bottom:6px;}
-    .cfg-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
-    .cfg-bar{width:100%;background:#2271b1;border-radius:3px 3px 0 0;min-height:2px;transition:opacity .15s;}
+    .cfg-bar-chart{display:flex;align-items:flex-end;gap:2px;height:70px;margin-bottom:6px;}
+    .cfg-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;}
+    .cfg-bar{width:100%;background:#2271b1;border-radius:3px 3px 0 0;min-height:4px;transition:opacity .15s;}
     .cfg-bar:hover{opacity:.75;}
     .cfg-src-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
     .cfg-src-bar-bg{flex:1;background:#f3f4f6;border-radius:6px;height:10px;overflow:hidden;}
@@ -6031,17 +6047,18 @@ function cfg_settings_page() {
     .cfg-an-stat-tile{background:#f8fafc;border-radius:10px;padding:16px;text-align:center;}
     .cfg-an-stat-tile .cfg-an-stat-num{font-size:28px;font-weight:700;color:#1d2327;line-height:1;}
     .cfg-an-stat-tile .cfg-an-stat-lbl{font-size:10px;font-weight:600;color:#9ca3af;margin-top:5px;text-transform:uppercase;letter-spacing:.07em;}
-    .cfg-an-range-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:22px;padding:10px 16px;background:#f8fafc;border:1px solid #e8eaed;border-radius:10px;}
-    .cfg-an-range-bar button{font-size:12px;padding:5px 12px;border-radius:6px;color:#374151;border:1px solid #e2e8f0;background:#fff;white-space:nowrap;cursor:pointer;transition:background .12s,border-color .12s;}
-    .cfg-an-range-bar button:hover{background:#f1f5f9;border-color:#cbd5e1;}
-    .cfg-an-range-bar button.active{background:#2271b1;color:#fff;border-color:#2271b1;}
+    .cfg-an-range-bar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:18px;padding:0;background:transparent;border:none;}
+    .cfg-an-range-bar > span:first-child{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-right:6px;}
+    .cfg-an-range-bar button{font-size:11.5px;padding:5px 11px;border-radius:14px;color:#475569;border:1px solid #e5e7eb;background:#fff;white-space:nowrap;cursor:pointer;transition:background .12s,border-color .12s,color .12s;font-weight:500;}
+    .cfg-an-range-bar button:hover{background:#f8fafc;border-color:#cbd5e1;color:#1d2327;}
+    .cfg-an-range-bar button.active{background:#2271b1;color:#fff;border-color:#2271b1;font-weight:600;}
     .cfg-an-range-bar .cfg-custom-wrap{display:flex;align-items:center;gap:6px;}
-    .cfg-an-range-bar .cfg-custom-wrap input[type=date]{font-size:12px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;}
+    .cfg-an-range-bar .cfg-custom-wrap input[type=date]{font-size:12px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;}
     </style>
 
     <!-- Range bar — fully JS-driven, no page reload -->
     <div class="cfg-an-range-bar" id="cfg-an-range-bar">
-        <span style="font-size:12px;font-weight:600;color:#374151;margin-right:4px;">Range:</span>
+        <span>Date range</span>
         <button data-preset="today">Today</button>
         <button data-preset="yesterday">Yesterday</button>
         <button data-preset="1w">Last 1 week</button>
