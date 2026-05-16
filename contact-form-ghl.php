@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.11
+ * Version:     2.6.12
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -970,20 +970,24 @@ function cfg_render_analytics_inner( $range ) {
         });
     }
 
-    // Prepend landing-page row (view events) at top of each step-reach array
+    // ── Form-only journey: form page view → intro → steps → complete ──
     if ( isset($imp_view_cnt) && $imp_view_cnt > 0 ) {
         array_unshift( $imp_steps_raw, ['step_key' => '_view', 'cnt' => $imp_view_cnt] );
     }
     if ( isset($alg_view_cnt) && $alg_view_cnt > 0 ) {
         array_unshift( $alg_steps_raw, ['step_key' => '_view', 'cnt' => $alg_view_cnt] );
     }
-    // Prepend marketing-page landing row when configured landing pages received visits
+    // ── Full journey: marketing landing → form view → intro → steps → complete (only when landing pages configured) ──
+    $imp_steps_full = $imp_steps_raw;
+    $alg_steps_full = $alg_steps_raw;
     if ( isset($imp_landing_cnt) && $imp_landing_cnt > 0 ) {
-        array_unshift( $imp_steps_raw, ['step_key' => '_landing', 'cnt' => $imp_landing_cnt] );
+        array_unshift( $imp_steps_full, ['step_key' => '_landing', 'cnt' => $imp_landing_cnt] );
     }
     if ( isset($alg_landing_cnt) && $alg_landing_cnt > 0 ) {
-        array_unshift( $alg_steps_raw, ['step_key' => '_landing', 'cnt' => $alg_landing_cnt] );
+        array_unshift( $alg_steps_full, ['step_key' => '_landing', 'cnt' => $alg_landing_cnt] );
     }
+    $imp_has_full_journey = ! empty( $imp_landing_cnt );
+    $alg_has_full_journey = ! empty( $alg_landing_cnt );
 
     // ── HTML output ──
     ob_start();
@@ -1233,9 +1237,9 @@ function cfg_render_analytics_inner( $range ) {
     ];
     ?>
 
-    <!-- Implant step reach -->
+    <!-- Implant step reach: FORM-ONLY journey -->
     <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #0891b2;">
-        <h3 style="color:#0891b2;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Step Reach</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">unique sessions · <?= esc_html($an_label) ?></span></h3>
+        <h3 style="color:#0891b2;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Form Conversion Journey</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">form page → complete · <?= esc_html($an_label) ?></span></h3>
         <?php if (empty($imp_steps_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
         <?php else:
@@ -1251,6 +1255,25 @@ function cfg_render_analytics_inner( $range ) {
         </div>
         <?php endforeach; endif; ?>
     </div>
+
+    <?php if ( $imp_has_full_journey ): ?>
+    <!-- Implant step reach: FULL journey including landing pages -->
+    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #6366f1;">
+        <h3 style="color:#6366f1;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Full Journey (Landing → Form → Complete)</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">marketing pages included · <?= esc_html($an_label) ?></span></h3>
+        <?php
+        $imp_max_f=max(1,max(array_map('intval',array_column($imp_steps_full,'cnt'))));
+        foreach ($imp_steps_full as $row):
+            $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
+            $pct=round((int)$row['cnt']/$imp_max_f*100);
+        ?>
+        <div class="cfg-src-row" style="align-items:center;">
+            <span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#6366f1;"></div></div>
+            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Implant drop-off -->
     <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
@@ -1292,9 +1315,9 @@ function cfg_render_analytics_inner( $range ) {
     }
     ?>
 
-    <!-- Aligner step reach -->
+    <!-- Aligner step reach: FORM-ONLY journey -->
     <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #7c3aed;">
-        <h3 style="color:#7c3aed;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Step Reach</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">unique sessions · <?= esc_html($an_label) ?></span></h3>
+        <h3 style="color:#7c3aed;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Form Conversion Journey</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">form page → complete · <?= esc_html($an_label) ?></span></h3>
         <?php if (empty($alg_steps_raw)): ?>
         <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
         <?php else:
@@ -1310,6 +1333,25 @@ function cfg_render_analytics_inner( $range ) {
         </div>
         <?php endforeach; endif; ?>
     </div>
+
+    <?php if ( $alg_has_full_journey ): ?>
+    <!-- Aligner step reach: FULL journey including landing pages -->
+    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #6366f1;">
+        <h3 style="color:#6366f1;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Full Journey (Landing → Form → Complete)</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">marketing pages included · <?= esc_html($an_label) ?></span></h3>
+        <?php
+        $alg_max_f=max(1,max(array_map('intval',array_column($alg_steps_full,'cnt'))));
+        foreach ($alg_steps_full as $row):
+            $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
+            $pct=round((int)$row['cnt']/$alg_max_f*100);
+        ?>
+        <div class="cfg-src-row" style="align-items:center;">
+            <span style="width:260px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
+            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#6366f1;"></div></div>
+            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Aligner drop-off -->
     <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
