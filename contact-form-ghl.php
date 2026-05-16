@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.15
+ * Version:     2.6.16
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1094,6 +1094,40 @@ function cfg_render_analytics_inner( $range ) {
     $imp_has_landing = ! empty( $imp_landing_cnt );
     $alg_has_landing = ! empty( $alg_landing_cnt );
 
+    // ── Fill in canonical steps with 0 counts so all questions are always visible ──
+    $cfg_fill_funnel = function( $rows, $canonical, $top_keys = [], $bottom_keys = [] ) {
+        $by_key = [];
+        foreach ( $rows as $r ) $by_key[ $r['step_key'] ] = (int) $r['cnt'];
+        $out = [];
+        foreach ( $top_keys as $k ) {
+            if ( isset( $by_key[ $k ] ) ) $out[] = [ 'step_key' => $k, 'cnt' => $by_key[ $k ] ];
+        }
+        foreach ( $canonical as $k ) {
+            $out[] = [ 'step_key' => $k, 'cnt' => $by_key[ $k ] ?? 0 ];
+        }
+        foreach ( $bottom_keys as $k ) {
+            if ( isset( $by_key[ $k ] ) ) $out[] = [ 'step_key' => $k, 'cnt' => $by_key[ $k ] ];
+        }
+        return $out;
+    };
+    $cfg_fill_dropoff = function( $rows, $canonical ) {
+        $by_key = [];
+        foreach ( $rows as $r ) $by_key[ $r['step_key'] ] = (int) $r['drop_offs'];
+        $out = [];
+        foreach ( $canonical as $k ) {
+            $out[] = [ 'step_key' => $k, 'drop_offs' => $by_key[ $k ] ?? 0 ];
+        }
+        return $out;
+    };
+    if ( $ev_table_exists ) {
+        $imp_steps_direct_raw = $cfg_fill_funnel( $imp_steps_direct_raw ?? [], $imp_natural_order, ['_view'], ['_complete'] );
+        $imp_steps_via_raw    = $cfg_fill_funnel( $imp_steps_via_raw    ?? [], $imp_natural_order, ['_landing','_view'], ['_complete'] );
+        $alg_steps_direct_raw = $cfg_fill_funnel( $alg_steps_direct_raw ?? [], $alg_cfg_order,     ['_view'], ['_complete'] );
+        $alg_steps_via_raw    = $cfg_fill_funnel( $alg_steps_via_raw    ?? [], $alg_cfg_order,     ['_landing','_view'], ['_complete'] );
+        $imp_exits_raw        = $cfg_fill_dropoff( $imp_exits_raw       ?? [], $imp_natural_order );
+        $alg_exits_raw        = $cfg_fill_dropoff( $alg_exits_raw       ?? [], $alg_cfg_order );
+    }
+
     // ── HTML output ──
     ob_start();
     ?>
@@ -1361,18 +1395,57 @@ function cfg_render_analytics_inner( $range ) {
         'result-single'=>'Result page (single tooth)','result-multiple'=>'Result page (multiple teeth)','result-fullarch'=>'Result page (full arch)',
     ];
 
+    // Reusable renderer for the drop-off card
+    $cfg_render_dropoff = function($title, $subtitle, $rows, $labels) {
+        $total = array_sum(array_column($rows, 'drop_offs'));
+        $max   = max(1, !empty($rows) ? max(array_map('intval', array_column($rows, 'drop_offs'))) : 1);
+        echo '<div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">';
+        echo '<div style="margin-bottom:18px;"><div style="font-size:15px;font-weight:700;color:#dc2626;margin-bottom:3px;line-height:1.2;">'.esc_html($title).'</div><div style="font-size:11.5px;color:#9ca3af;line-height:1.4;">'.esc_html($subtitle).'</div></div>';
+        if ($total === 0) {
+            echo '<p style="font-size:13px;color:#9ca3af;margin:0 0 14px;">No drop-offs yet — when a visitor leaves the form without completing, the last step they reached will be tracked here.</p>';
+        } else {
+            echo '<p style="font-size:12.5px;color:#6b7280;margin:0 0 16px;"><strong style="color:#1d2327;font-size:14px;">'.$total.'</strong> session'.($total!==1?'s':'').' left without completing.</p>';
+        }
+        foreach ($rows as $row) {
+            $n     = (int) $row['drop_offs'];
+            $lbl   = $labels[$row['step_key']] ?? $row['step_key'];
+            $share = $total > 0 ? round($n / $total * 100) : 0;
+            $barW  = round($n / $max * 100);
+            $is0   = $n === 0;
+            $color = $is0 ? '#cbd5e1' : ($share >= 30 ? '#dc2626' : ($share >= 15 ? '#f59e0b' : '#6b7280'));
+            $lblc  = $is0 ? '#cbd5e1' : '#374151';
+            $op    = $is0 ? '0.18' : '1';
+            echo '<div class="cfg-src-row" style="align-items:center;">';
+            echo '<span style="width:280px;flex-shrink:0;font-size:12px;color:'.$lblc.';line-height:1.4;">'.esc_html($lbl).'</span>';
+            echo '<div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:'.max($barW,2).'%;background:'.$color.';opacity:'.$op.';"></div></div>';
+            echo '<span style="font-size:13px;font-weight:'.($is0?'500':'700').';color:'.$color.';width:38px;text-align:right;flex-shrink:0;">'.$share.'%</span>';
+            echo '<span style="font-size:11px;color:#9ca3af;width:48px;text-align:right;flex-shrink:0;">'.$n.' left</span>';
+            echo '</div>';
+        }
+        echo '</div>';
+    };
+
     // Reusable renderer for a step-reach funnel card
-    $cfg_render_funnel = function($title, $sub_title, $rows, $color, $hint, $labels) {
+    $cfg_render_funnel = function($title, $subtitle, $rows, $color, $labels) {
         $max = max(1, !empty($rows) ? max(array_map('intval', array_column($rows, 'cnt'))) : 1);
         echo '<div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid '.$color.';">';
-        echo '<h3 style="color:'.$color.';">'.esc_html($title).' <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— '.esc_html($sub_title).'</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">'.esc_html($hint).'</span></h3>';
+        echo '<div style="margin-bottom:18px;"><div style="font-size:15px;font-weight:700;color:'.$color.';margin-bottom:3px;line-height:1.2;">'.esc_html($title).'</div><div style="font-size:11.5px;color:#9ca3af;line-height:1.4;">'.esc_html($subtitle).'</div></div>';
         if (empty($rows)) {
             echo '<p style="font-size:13px;color:#9ca3af;margin:0;">No data yet for this journey in the selected range.</p>';
         } else {
             foreach ($rows as $row) {
-                $lbl = $labels[$row['step_key']] ?? $row['step_key'];
-                $pct = round((int)$row['cnt'] / $max * 100);
-                echo '<div class="cfg-src-row" style="align-items:center;"><span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;">'.esc_html($lbl).'</span><div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:'.$pct.'%;background:'.$color.';"></div></div><span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;">'.(int)$row['cnt'].'</span></div>';
+                $lbl  = $labels[$row['step_key']] ?? $row['step_key'];
+                $cnt  = (int) $row['cnt'];
+                $pct  = round( $cnt / $max * 100 );
+                $is0  = $cnt === 0;
+                $lblc = $is0 ? '#cbd5e1' : '#374151';
+                $cntc = $is0 ? '#cbd5e1' : '#1d2327';
+                $op   = $is0 ? '0.18' : '1';
+                echo '<div class="cfg-src-row" style="align-items:center;">';
+                echo '<span style="width:280px;flex-shrink:0;font-size:12px;color:'.$lblc.';line-height:1.4;">'.esc_html($lbl).'</span>';
+                echo '<div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:'.max($pct,2).'%;background:'.$color.';opacity:'.$op.';"></div></div>';
+                echo '<span style="font-size:13px;font-weight:'.($is0?'500':'600').';color:'.$cntc.';width:32px;text-align:right;flex-shrink:0;">'.$cnt.'</span>';
+                echo '</div>';
             }
         }
         echo '</div>';
@@ -1382,34 +1455,28 @@ function cfg_render_analytics_inner( $range ) {
     <!-- ═══════════════════ IMPLANT ESTIMATOR TAB ═══════════════════ -->
     <div class="cfg-an-tab-content" data-an-tab="implant">
         <?php if ( $imp_has_landing ): ?>
-        <?php $cfg_render_funnel('Implant Estimator', 'Journey via Landing Page', $imp_steps_via_raw, '#6366f1', 'marketing page → form → complete · ' . $an_label, $imp_step_labels); ?>
+        <?php $cfg_render_funnel(
+            'Funnel — Visitors from Landing Page',
+            'How visitors arriving from a configured marketing page move through the implant estimator. ' . $an_label . '.',
+            $imp_steps_via_raw,
+            '#6366f1',
+            $imp_step_labels
+        ); ?>
         <?php endif; ?>
-        <?php $cfg_render_funnel('Implant Estimator', 'Direct Form Journey', $imp_steps_direct_raw, '#0891b2', ($imp_has_landing ? 'no landing page · ' : '') . 'form page → complete · ' . $an_label, $imp_step_labels); ?>
+        <?php $cfg_render_funnel(
+            'Funnel — Direct Visitors',
+            ($imp_has_landing ? 'Visitors who reached the estimator without going through a configured landing page. ' : 'Every visitor who reached the implant estimator. ') . $an_label . '.',
+            $imp_steps_direct_raw,
+            '#0891b2',
+            $imp_step_labels
+        ); ?>
 
-    <!-- Implant drop-off -->
-    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
-        <h3 style="color:#dc2626;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Where People Drop Off</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
-        <?php if (empty($imp_exits_raw)): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
-        <?php else:
-        $total_exits=array_sum(array_column($imp_exits_raw,'drop_offs'));
-        $exit_max=max(1,max(array_map('intval',array_column($imp_exits_raw,'drop_offs'))));
-        ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 16px;"><strong style="color:#1d2327;"><?= $total_exits ?></strong> session<?= $total_exits!==1?'s':'' ?> left without completing.</p>
-        <?php foreach ($imp_exits_raw as $row):
-            $n=(int)$row['drop_offs']; $share=round($n/$total_exits*100);
-            $bar_w=round($n/$exit_max*100); $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
-            $color=$share>=30?'#dc2626':($share>=15?'#f59e0b':'#6b7280');
-        ?>
-        <div class="cfg-src-row" style="align-items:center;">
-            <span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div></div>
-            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:38px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:48px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
-        </div>
-        <?php endforeach; endif; ?>
-    </div>
-
+        <?php $cfg_render_dropoff(
+            'Drop-off Points',
+            'The last step each visitor reached before abandoning the implant estimator. ' . $an_label . '.',
+            $imp_exits_raw,
+            $imp_step_labels
+        ); ?>
     </div><!-- /Implant tab -->
 
     <?php
@@ -1430,39 +1497,35 @@ function cfg_render_analytics_inner( $range ) {
     <!-- ═══════════════════ ALIGNER QUIZ TAB ═══════════════════ -->
     <div class="cfg-an-tab-content" data-an-tab="aligner">
         <?php if ( $alg_has_landing ): ?>
-        <?php $cfg_render_funnel('Aligner Quiz', 'Journey via Landing Page', $alg_steps_via_raw, '#6366f1', 'marketing page → form → complete · ' . $an_label, $alg_step_labels); ?>
+        <?php $cfg_render_funnel(
+            'Funnel — Visitors from Landing Page',
+            'How visitors arriving from a configured marketing page move through the aligner quiz. ' . $an_label . '.',
+            $alg_steps_via_raw,
+            '#6366f1',
+            $alg_step_labels
+        ); ?>
         <?php endif; ?>
-        <?php $cfg_render_funnel('Aligner Quiz', 'Direct Form Journey', $alg_steps_direct_raw, '#7c3aed', ($alg_has_landing ? 'no landing page · ' : '') . 'form page → complete · ' . $an_label, $alg_step_labels); ?>
+        <?php $cfg_render_funnel(
+            'Funnel — Direct Visitors',
+            ($alg_has_landing ? 'Visitors who reached the quiz without going through a configured landing page. ' : 'Every visitor who reached the aligner quiz. ') . $an_label . '.',
+            $alg_steps_direct_raw,
+            '#7c3aed',
+            $alg_step_labels
+        ); ?>
 
     <!-- Aligner drop-off -->
-    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
-        <h3 style="color:#dc2626;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Where People Drop Off</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">last step before leaving · <?= esc_html($an_label) ?></span></h3>
-        <?php if (empty($alg_exits_raw)): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No drop-off data yet.</p>
-        <?php else:
-        $alg_total_exits=array_sum(array_column($alg_exits_raw,'drop_offs'));
-        $alg_exit_max=max(1,max(array_map('intval',array_column($alg_exits_raw,'drop_offs'))));
-        ?>
-        <p style="font-size:12px;color:#6b7280;margin:0 0 16px;"><strong style="color:#1d2327;"><?= $alg_total_exits ?></strong> session<?= $alg_total_exits!==1?'s':'' ?> left without completing.</p>
-        <?php foreach ($alg_exits_raw as $row):
-            $n=(int)$row['drop_offs']; $share=round($n/$alg_total_exits*100);
-            $bar_w=round($n/$alg_exit_max*100); $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
-            $color=$share>=30?'#dc2626':($share>=15?'#f59e0b':'#6b7280');
-        ?>
-        <div class="cfg-src-row" style="align-items:center;">
-            <span style="width:260px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $bar_w ?>%;background:<?= $color ?>;"></div></div>
-            <span style="font-size:13px;font-weight:700;color:<?= $color ?>;width:38px;text-align:right;flex-shrink:0;"><?= $share ?>%</span>
-            <span style="font-size:11px;color:#9ca3af;width:48px;text-align:right;flex-shrink:0;"><?= $n ?> left</span>
-        </div>
-        <?php endforeach; endif; ?>
-    </div>
+        <?php $cfg_render_dropoff(
+            'Drop-off Points',
+            'The last step each visitor reached before abandoning the aligner quiz. ' . $an_label . '.',
+            $alg_exits_raw,
+            $alg_step_labels
+        ); ?>
     </div><!-- /Aligner tab -->
 
     <!-- ═══════════════════ CONTACT FORM TAB ═══════════════════ -->
     <div class="cfg-an-tab-content" data-an-tab="contact">
         <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #2271b1;">
-            <h3 style="color:#2271b1;">Contact Form <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Conversion Summary</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;"><?= esc_html($an_label) ?></span></h3>
+            <div style="margin-bottom:18px;"><div style="font-size:15px;font-weight:700;color:#2271b1;margin-bottom:3px;line-height:1.2;">Contact Form Conversion</div><div style="font-size:11.5px;color:#9ca3af;line-height:1.4;">Visitors who reached the form, started filling, and submitted. <?= esc_html($an_label) ?>.</div></div>
             <?php
             $cf_view  = $cr_30d['contact']['view']     ?? 0;
             $cf_start = $cr_30d['contact']['start']    ?? 0;
