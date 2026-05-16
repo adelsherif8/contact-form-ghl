@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.18
+ * Version:     2.6.19
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1097,8 +1097,10 @@ function cfg_render_analytics_inner( $range ) {
     if ( ! empty( $imp_comp_via ) )    $imp_steps_via_raw[]    = ['step_key' => '_complete', 'cnt' => $imp_comp_via];
     if ( ! empty( $alg_comp_via ) )    $alg_steps_via_raw[]    = ['step_key' => '_complete', 'cnt' => $alg_comp_via];
 
-    $imp_has_landing = ! empty( $imp_landing_cnt );
-    $alg_has_landing = ! empty( $alg_landing_cnt );
+    $imp_has_landing       = ! empty( $imp_landing_cnt );
+    $alg_has_landing       = ! empty( $alg_landing_cnt );
+    $imp_landing_configured = ! empty( array_filter( (array)( $s['imp_landing_pages'] ?? [] ) ) );
+    $alg_landing_configured = ! empty( array_filter( (array)( $s['alg_landing_pages'] ?? [] ) ) );
 
     // ── Fill in canonical steps with 0 counts so all questions are always visible ──
     $cfg_fill_funnel = function( $rows, $canonical, $top_keys = [], $bottom_keys = [] ) {
@@ -1509,6 +1511,7 @@ function cfg_render_analytics_inner( $range ) {
 
     <!-- ═══════════════════ IMPLANT ESTIMATOR TAB ═══════════════════ -->
     <div class="cfg-an-tab-content" data-an-tab="implant">
+        <?php if ( $imp_landing_configured ): ?>
         <?php if ( $imp_has_landing ): ?>
         <?php $cfg_render_funnel(
             'Funnel — Visitors from Landing Page',
@@ -1517,6 +1520,19 @@ function cfg_render_analytics_inner( $range ) {
             '#6366f1',
             $imp_step_labels
         ); ?>
+        <?php else: ?>
+        <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #6366f1;background:#f8fafc;">
+            <div style="font-size:15px;font-weight:700;color:#6366f1;margin-bottom:3px;">Funnel — Visitors from Landing Page</div>
+            <div style="font-size:11.5px;color:#9ca3af;margin-bottom:14px;">Landing pages are configured, but no landing-page visits have been tracked yet in this range.</div>
+            <div style="font-size:12.5px;color:#475569;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;line-height:1.6;">
+                <strong>Troubleshooting:</strong><br>
+                1. Visit the configured landing page <em>in the same browser tab</em>, then click through to the estimator. Tabs don't share session storage.<br>
+                2. View page source on the landing page and look for <code>&lt;!-- CFG Landing Tracker --&gt;</code> — it shows what the tracker sees.<br>
+                3. Make sure the landing page is NOT the same page as the estimator (they should be separate pages).<br>
+                4. Try in an incognito window if you've been testing — your old session may still be marked as "direct".
+            </div>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
         <?php $cfg_render_funnel(
             'Funnel — Direct Visitors',
@@ -1551,6 +1567,7 @@ function cfg_render_analytics_inner( $range ) {
 
     <!-- ═══════════════════ ALIGNER QUIZ TAB ═══════════════════ -->
     <div class="cfg-an-tab-content" data-an-tab="aligner">
+        <?php if ( $alg_landing_configured ): ?>
         <?php if ( $alg_has_landing ): ?>
         <?php $cfg_render_funnel(
             'Funnel — Visitors from Landing Page',
@@ -1559,6 +1576,19 @@ function cfg_render_analytics_inner( $range ) {
             '#6366f1',
             $alg_step_labels
         ); ?>
+        <?php else: ?>
+        <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #6366f1;background:#f8fafc;">
+            <div style="font-size:15px;font-weight:700;color:#6366f1;margin-bottom:3px;">Funnel — Visitors from Landing Page</div>
+            <div style="font-size:11.5px;color:#9ca3af;margin-bottom:14px;">Landing pages are configured, but no landing-page visits have been tracked yet in this range.</div>
+            <div style="font-size:12.5px;color:#475569;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:12px 14px;line-height:1.6;">
+                <strong>Troubleshooting:</strong><br>
+                1. Visit the configured landing page (e.g. the Invisalign page) <em>in the same browser tab</em>, then click through to the aligner quiz. Tabs don't share session storage.<br>
+                2. View page source on the landing page and look for <code>&lt;!-- CFG Landing Tracker --&gt;</code> — it shows what the tracker sees.<br>
+                3. Make sure the landing page is NOT the same page as the aligner quiz (they should be separate pages).<br>
+                4. Try in an incognito window if you've been testing — your old session may still be marked as "direct".
+            </div>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
         <?php $cfg_render_funnel(
             'Funnel — Direct Visitors',
@@ -10124,16 +10154,24 @@ add_action( 'wp_ajax_nopriv_cfg_track', 'cfg_ajax_track_event' );
 add_action( 'wp_footer', 'cfg_landing_page_tracker' );
 function cfg_landing_page_tracker() {
     if ( is_admin() ) return;
-    $page_id = get_the_ID();
-    if ( ! $page_id ) return;
 
-    $s = get_option( CFG_OPTION, [] ) + cfg_defaults();
-    $imp_pages = (array)( $s['imp_landing_pages'] ?? [] );
-    $alg_pages = (array)( $s['alg_landing_pages'] ?? [] );
+    // get_queried_object_id() is more reliable in wp_footer than get_the_ID() (which depends on the loop being active).
+    $page_id = (int) get_queried_object_id();
+    if ( ! $page_id ) $page_id = (int) get_the_ID();
+
+    $s         = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $imp_pages = array_map( 'intval', (array)( $s['imp_landing_pages'] ?? [] ) );
+    $alg_pages = array_map( 'intval', (array)( $s['alg_landing_pages'] ?? [] ) );
 
     $form_type = null;
-    if ( in_array( $page_id, array_map( 'intval', $imp_pages ), true ) )       $form_type = 'implant';
-    elseif ( in_array( $page_id, array_map( 'intval', $alg_pages ), true ) )   $form_type = 'aligner';
+    if ( $page_id && in_array( $page_id, $imp_pages, true ) )      $form_type = 'implant';
+    elseif ( $page_id && in_array( $page_id, $alg_pages, true ) )  $form_type = 'aligner';
+
+    // Admin-only debug breadcrumb — view-source on any page to confirm what the tracker sees.
+    if ( current_user_can( 'manage_options' ) ) {
+        echo "\n<!-- CFG Landing Tracker · page_id={$page_id} · implant_pages=" . wp_json_encode( $imp_pages ) . " · aligner_pages=" . wp_json_encode( $alg_pages ) . " · matched_form_type=" . ( $form_type ?: 'none' ) . " -->\n";
+    }
+
     if ( ! $form_type ) return;
 
     $sid_key     = 'cfg_sid_' . $form_type;
