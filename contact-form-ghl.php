@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.12
+ * Version:     2.6.13
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -910,9 +910,85 @@ function cfg_render_analytics_inner( $range ) {
         // Landing-page view counts (prepended after sorting)
         $alg_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='aligner' AND event_type='view' AND {$an_ev_where}");
         $imp_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='implant' AND event_type='view' AND {$an_ev_where}");
-        // Marketing-page landing counts (prepended above the view row when landing pages are configured)
+        // Marketing-page landing counts
         $alg_landing_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='aligner' AND event_type='landing' AND {$an_ev_where}");
         $imp_landing_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='implant' AND event_type='landing' AND {$an_ev_where}");
+
+        // ── Session-based journey split: sessions WITH landing event vs WITHOUT ──
+        $imp_landing_subq = "(SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='implant' AND event_type='landing' AND {$an_ev_where})";
+        $alg_landing_subq = "(SELECT DISTINCT session_id FROM {$ev_table} WHERE form_type='aligner' AND event_type='landing' AND {$an_ev_where})";
+
+        // Implant — DIRECT journey (sessions that did NOT hit a landing page)
+        $imp_steps_direct_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='step' AND {$an_ev_where}
+             AND session_id NOT IN {$imp_landing_subq}
+             GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+        );
+        $imp_view_direct = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='view' AND {$an_ev_where}
+             AND session_id NOT IN {$imp_landing_subq}"
+        );
+        $imp_comp_direct = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='complete' AND {$an_ev_where}
+             AND session_id NOT IN {$imp_landing_subq}"
+        );
+
+        // Implant — VIA-LANDING journey (sessions that DID hit a landing page)
+        $imp_steps_via_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='step' AND {$an_ev_where}
+             AND session_id IN {$imp_landing_subq}
+             GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+        );
+        $imp_view_via = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='view' AND {$an_ev_where}
+             AND session_id IN {$imp_landing_subq}"
+        );
+        $imp_comp_via = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='implant' AND event_type='complete' AND {$an_ev_where}
+             AND session_id IN {$imp_landing_subq}"
+        );
+
+        // Aligner — DIRECT journey
+        $alg_steps_direct_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type IN ('step','start') AND {$an_ev_where} AND step_key != ''
+             AND session_id NOT IN {$alg_landing_subq}
+             GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+        );
+        $alg_view_direct = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type='view' AND {$an_ev_where}
+             AND session_id NOT IN {$alg_landing_subq}"
+        );
+        $alg_comp_direct = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type='complete' AND {$an_ev_where}
+             AND session_id NOT IN {$alg_landing_subq}"
+        );
+
+        // Aligner — VIA-LANDING journey
+        $alg_steps_via_raw = $wpdb->get_results(
+            "SELECT step_key, COUNT(DISTINCT session_id) AS cnt FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type IN ('step','start') AND {$an_ev_where} AND step_key != ''
+             AND session_id IN {$alg_landing_subq}
+             GROUP BY step_key ORDER BY cnt DESC", ARRAY_A
+        );
+        $alg_view_via = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type='view' AND {$an_ev_where}
+             AND session_id IN {$alg_landing_subq}"
+        );
+        $alg_comp_via = (int)$wpdb->get_var(
+            "SELECT COUNT(DISTINCT session_id) FROM {$ev_table}
+             WHERE form_type='aligner' AND event_type='complete' AND {$an_ev_where}
+             AND session_id IN {$alg_landing_subq}"
+        );
     }
 
     // ── Override 'complete' with actual submission counts (cfg_submissions = source of truth) ──
@@ -939,23 +1015,21 @@ function cfg_render_analytics_inner( $range ) {
     $cr_30d['_all']['complete']   = $actual_range_all;
 
     // ── Sort steps into natural form order (not by count) ──
+    $imp_natural_order = ['intro','router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
+    $alg_cfg = cfg_aligner_get();
+    $alg_cfg_order = array_values(array_map(function($step,$i){ $fk=$step['field_key']??''; return $fk?:('step_'.$i); }, $alg_cfg, array_keys($alg_cfg)));
+
     if ( ! empty( $imp_steps_raw ) ) {
-        $imp_natural_order = ['intro','router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
         usort( $imp_steps_raw, function($a,$b) use($imp_natural_order) {
             $ai = array_search($a['step_key'],$imp_natural_order); $bi = array_search($b['step_key'],$imp_natural_order);
             return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
         });
     }
     if ( ! empty( $imp_exits_raw ) ) {
-        $imp_natural_order = ['intro','router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
         usort( $imp_exits_raw, function($a,$b) use($imp_natural_order) {
             $ai = array_search($a['step_key'],$imp_natural_order); $bi = array_search($b['step_key'],$imp_natural_order);
             return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
         });
-    }
-    $alg_cfg = cfg_aligner_get();
-    if ( ! empty( $alg_steps_raw ) || ! empty( $alg_exits_raw ) ) {
-        $alg_cfg_order = array_values(array_map(function($step,$i){ $fk=$step['field_key']??''; return $fk?:('step_'.$i); }, $alg_cfg, array_keys($alg_cfg)));
     }
     if ( ! empty( $alg_steps_raw ) ) {
         usort( $alg_steps_raw, function($a,$b) use($alg_cfg_order) {
@@ -970,28 +1044,68 @@ function cfg_render_analytics_inner( $range ) {
         });
     }
 
-    // ── Form-only journey: form page view → intro → steps → complete ──
-    if ( isset($imp_view_cnt) && $imp_view_cnt > 0 ) {
-        array_unshift( $imp_steps_raw, ['step_key' => '_view', 'cnt' => $imp_view_cnt] );
+    // ── Sort the session-split arrays into natural order ──
+    if ( ! empty( $imp_steps_direct_raw ) ) {
+        usort( $imp_steps_direct_raw, function($a,$b) use($imp_natural_order) {
+            $ai = array_search($a['step_key'],$imp_natural_order); $bi = array_search($b['step_key'],$imp_natural_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
     }
-    if ( isset($alg_view_cnt) && $alg_view_cnt > 0 ) {
-        array_unshift( $alg_steps_raw, ['step_key' => '_view', 'cnt' => $alg_view_cnt] );
+    if ( ! empty( $imp_steps_via_raw ) ) {
+        usort( $imp_steps_via_raw, function($a,$b) use($imp_natural_order) {
+            $ai = array_search($a['step_key'],$imp_natural_order); $bi = array_search($b['step_key'],$imp_natural_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
     }
-    // ── Full journey: marketing landing → form view → intro → steps → complete (only when landing pages configured) ──
-    $imp_steps_full = $imp_steps_raw;
-    $alg_steps_full = $alg_steps_raw;
-    if ( isset($imp_landing_cnt) && $imp_landing_cnt > 0 ) {
-        array_unshift( $imp_steps_full, ['step_key' => '_landing', 'cnt' => $imp_landing_cnt] );
+    if ( ! empty( $alg_steps_direct_raw ) && ! empty( $alg_cfg_order ) ) {
+        usort( $alg_steps_direct_raw, function($a,$b) use($alg_cfg_order) {
+            $ai = array_search($a['step_key'],$alg_cfg_order); $bi = array_search($b['step_key'],$alg_cfg_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
     }
-    if ( isset($alg_landing_cnt) && $alg_landing_cnt > 0 ) {
-        array_unshift( $alg_steps_full, ['step_key' => '_landing', 'cnt' => $alg_landing_cnt] );
+    if ( ! empty( $alg_steps_via_raw ) && ! empty( $alg_cfg_order ) ) {
+        usort( $alg_steps_via_raw, function($a,$b) use($alg_cfg_order) {
+            $ai = array_search($a['step_key'],$alg_cfg_order); $bi = array_search($b['step_key'],$alg_cfg_order);
+            return (($ai===false)?999:$ai) - (($bi===false)?999:$bi);
+        });
     }
-    $imp_has_full_journey = ! empty( $imp_landing_cnt );
-    $alg_has_full_journey = ! empty( $alg_landing_cnt );
+
+    // Prepend _view row to DIRECT journey, _landing + _view to VIA-LANDING journey
+    if ( ! empty( $imp_view_direct ) ) array_unshift( $imp_steps_direct_raw, ['step_key' => '_view', 'cnt' => $imp_view_direct] );
+    if ( ! empty( $alg_view_direct ) ) array_unshift( $alg_steps_direct_raw, ['step_key' => '_view', 'cnt' => $alg_view_direct] );
+    if ( ! empty( $imp_view_via ) )    array_unshift( $imp_steps_via_raw,    ['step_key' => '_view', 'cnt' => $imp_view_via] );
+    if ( ! empty( $alg_view_via ) )    array_unshift( $alg_steps_via_raw,    ['step_key' => '_view', 'cnt' => $alg_view_via] );
+    if ( ! empty( $imp_landing_cnt ) ) array_unshift( $imp_steps_via_raw,    ['step_key' => '_landing', 'cnt' => $imp_landing_cnt] );
+    if ( ! empty( $alg_landing_cnt ) ) array_unshift( $alg_steps_via_raw,    ['step_key' => '_landing', 'cnt' => $alg_landing_cnt] );
+
+    // Append complete row to each
+    if ( ! empty( $imp_comp_direct ) ) $imp_steps_direct_raw[] = ['step_key' => '_complete', 'cnt' => $imp_comp_direct];
+    if ( ! empty( $alg_comp_direct ) ) $alg_steps_direct_raw[] = ['step_key' => '_complete', 'cnt' => $alg_comp_direct];
+    if ( ! empty( $imp_comp_via ) )    $imp_steps_via_raw[]    = ['step_key' => '_complete', 'cnt' => $imp_comp_via];
+    if ( ! empty( $alg_comp_via ) )    $alg_steps_via_raw[]    = ['step_key' => '_complete', 'cnt' => $alg_comp_via];
+
+    $imp_has_landing = ! empty( $imp_landing_cnt );
+    $alg_has_landing = ! empty( $alg_landing_cnt );
 
     // ── HTML output ──
     ob_start();
     ?>
+    <style>
+    .cfg-an-tabnav{display:flex;gap:4px;border-bottom:1px solid #e5e7eb;margin-bottom:20px;flex-wrap:wrap;}
+    .cfg-an-tabnav button{background:none;border:none;padding:10px 18px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+    .cfg-an-tabnav button:hover{color:#1d2327;}
+    .cfg-an-tabnav button.active{color:#2271b1;border-bottom-color:#2271b1;}
+    .cfg-an-tab-content{display:none;}
+    .cfg-an-tab-content.active{display:block;}
+    </style>
+    <div class="cfg-an-tabnav">
+        <button type="button" data-an-tab="all" class="active">All Forms</button>
+        <button type="button" data-an-tab="implant">Implant Estimator<?php if ($imp_has_landing ?? false): ?> <span style="font-size:10px;color:#6366f1;">●</span><?php endif; ?></button>
+        <button type="button" data-an-tab="aligner">Aligner Quiz<?php if ($alg_has_landing ?? false): ?> <span style="font-size:10px;color:#6366f1;">●</span><?php endif; ?></button>
+        <button type="button" data-an-tab="contact">Contact Form</button>
+    </div>
+
+    <div class="cfg-an-tab-content active" data-an-tab="all">
     <div class="cfg-an-grid">
         <!-- Submissions chart -->
         <div class="cfg-an-card cfg-an-full">
@@ -1124,6 +1238,7 @@ function cfg_render_analytics_inner( $range ) {
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:14px 18px;font-size:13px;color:#92400e;margin-bottom:20px;">
         ⏳ Conversion tracking activates after your next site visit. Data will appear here once the first form view is recorded.
     </div>
+    </div><!-- /All Forms tab (no events branch) -->
     <?php else:
     // Helper
     if (!function_exists('cfg_ev_cell')):
@@ -1222,10 +1337,13 @@ function cfg_render_analytics_inner( $range ) {
         <?php endif; ?>
     </div>
 
+    </div><!-- /All Forms tab -->
+
     <?php
     $imp_step_labels = [
-        '_landing'=>'Marketing page (landing pages → estimator)',
-        '_view'  =>'Estimator page loaded — unique visitors (1 per person)',
+        '_landing'=>'Marketing page (landing page visit)',
+        '_view'  =>'Estimator page loaded',
+        '_complete'=>'Form submitted (lead captured)',
         'intro'  =>'Intro screen','router'=>'Clicked "Get My Estimate" → path selection','summary'=>'Summary (reached estimate)',
         'a1'=>'[Single] Where is the tooth located?','a2'=>'[Single] How long has the tooth been missing?',
         'a3'=>'[Single] Bone graft needed?','a4'=>'[Single] Describe your situation',
@@ -1235,45 +1353,31 @@ function cfg_render_analytics_inner( $range ) {
         'ins'=>'Do you have dental insurance?','offer'=>'Special offer screen','lead'=>'Contact / lead form',
         'result-single'=>'Result page (single tooth)','result-multiple'=>'Result page (multiple teeth)','result-fullarch'=>'Result page (full arch)',
     ];
+
+    // Reusable renderer for a step-reach funnel card
+    $cfg_render_funnel = function($title, $sub_title, $rows, $color, $hint, $labels) {
+        $max = max(1, !empty($rows) ? max(array_map('intval', array_column($rows, 'cnt'))) : 1);
+        echo '<div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid '.$color.';">';
+        echo '<h3 style="color:'.$color.';">'.esc_html($title).' <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— '.esc_html($sub_title).'</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">'.esc_html($hint).'</span></h3>';
+        if (empty($rows)) {
+            echo '<p style="font-size:13px;color:#9ca3af;margin:0;">No data yet for this journey in the selected range.</p>';
+        } else {
+            foreach ($rows as $row) {
+                $lbl = $labels[$row['step_key']] ?? $row['step_key'];
+                $pct = round((int)$row['cnt'] / $max * 100);
+                echo '<div class="cfg-src-row" style="align-items:center;"><span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;">'.esc_html($lbl).'</span><div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:'.$pct.'%;background:'.$color.';"></div></div><span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;">'.(int)$row['cnt'].'</span></div>';
+            }
+        }
+        echo '</div>';
+    };
     ?>
 
-    <!-- Implant step reach: FORM-ONLY journey -->
-    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #0891b2;">
-        <h3 style="color:#0891b2;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Form Conversion Journey</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">form page → complete · <?= esc_html($an_label) ?></span></h3>
-        <?php if (empty($imp_steps_raw)): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the implant estimator.</p>
-        <?php else:
-        $imp_max=max(1,max(array_map('intval',array_column($imp_steps_raw,'cnt'))));
-        foreach ($imp_steps_raw as $row):
-            $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
-            $pct=round((int)$row['cnt']/$imp_max*100);
-        ?>
-        <div class="cfg-src-row" style="align-items:center;">
-            <span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#0891b2;"></div></div>
-            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
-        </div>
-        <?php endforeach; endif; ?>
-    </div>
-
-    <?php if ( $imp_has_full_journey ): ?>
-    <!-- Implant step reach: FULL journey including landing pages -->
-    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #6366f1;">
-        <h3 style="color:#6366f1;">Implant Estimator <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Full Journey (Landing → Form → Complete)</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">marketing pages included · <?= esc_html($an_label) ?></span></h3>
-        <?php
-        $imp_max_f=max(1,max(array_map('intval',array_column($imp_steps_full,'cnt'))));
-        foreach ($imp_steps_full as $row):
-            $lbl=$imp_step_labels[$row['step_key']]??$row['step_key'];
-            $pct=round((int)$row['cnt']/$imp_max_f*100);
-        ?>
-        <div class="cfg-src-row" style="align-items:center;">
-            <span style="width:280px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#6366f1;"></div></div>
-            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
-        </div>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+    <!-- ═══════════════════ IMPLANT ESTIMATOR TAB ═══════════════════ -->
+    <div class="cfg-an-tab-content" data-an-tab="implant">
+        <?php if ( $imp_has_landing ): ?>
+        <?php $cfg_render_funnel('Implant Estimator', 'Journey via Landing Page', $imp_steps_via_raw, '#6366f1', 'marketing page → form → complete · ' . $an_label, $imp_step_labels); ?>
+        <?php endif; ?>
+        <?php $cfg_render_funnel('Implant Estimator', 'Direct Form Journey', $imp_steps_direct_raw, '#0891b2', ($imp_has_landing ? 'no landing page · ' : '') . 'form page → complete · ' . $an_label, $imp_step_labels); ?>
 
     <!-- Implant drop-off -->
     <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
@@ -1299,59 +1403,29 @@ function cfg_render_analytics_inner( $range ) {
         <?php endforeach; endif; ?>
     </div>
 
+    </div><!-- /Implant tab -->
+
     <?php
     $alg_step_labels=[
-        '_landing'=>'Marketing page (landing pages → quiz)',
-        '_view'=>'Quiz page loaded — unique visitors (1 per person)',
+        '_landing'=>'Marketing page (landing page visit)',
+        '_view'=>'Quiz page loaded',
+        '_complete'=>'Form submitted (lead captured)',
     ];
-    if (empty($alg_cfg)) $alg_cfg=cfg_aligner_get();
     foreach ($alg_cfg as $i => $step) {
         $fk=$step['field_key']??'';
         $lbl=mb_strimwidth($step['question']??$step['title']??('Step '.($i+1)),0,50,'…');
         $key=$fk ?: ('step_'.$i);
-        // step_0 = intro screen; the tracked event is 'start' (user clicked "Start Questions")
         if ($key==='step_0') $lbl='Intro screen (clicked "Start Questions")';
         $alg_step_labels[$key]=$lbl;
     }
     ?>
 
-    <!-- Aligner step reach: FORM-ONLY journey -->
-    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #7c3aed;">
-        <h3 style="color:#7c3aed;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Form Conversion Journey</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">form page → complete · <?= esc_html($an_label) ?></span></h3>
-        <?php if (empty($alg_steps_raw)): ?>
-        <p style="font-size:13px;color:#9ca3af;margin:0;">No step data yet — this will populate as users click through the aligner quiz.</p>
-        <?php else:
-        $alg_max=max(1,max(array_map('intval',array_column($alg_steps_raw,'cnt'))));
-        foreach ($alg_steps_raw as $row):
-            $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
-            $pct=round((int)$row['cnt']/$alg_max*100);
-        ?>
-        <div class="cfg-src-row" style="align-items:center;">
-            <span style="width:260px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#7c3aed;"></div></div>
-            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
-        </div>
-        <?php endforeach; endif; ?>
-    </div>
-
-    <?php if ( $alg_has_full_journey ): ?>
-    <!-- Aligner step reach: FULL journey including landing pages -->
-    <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #6366f1;">
-        <h3 style="color:#6366f1;">Aligner Quiz <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Full Journey (Landing → Form → Complete)</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;">marketing pages included · <?= esc_html($an_label) ?></span></h3>
-        <?php
-        $alg_max_f=max(1,max(array_map('intval',array_column($alg_steps_full,'cnt'))));
-        foreach ($alg_steps_full as $row):
-            $lbl=$alg_step_labels[$row['step_key']]??$row['step_key'];
-            $pct=round((int)$row['cnt']/$alg_max_f*100);
-        ?>
-        <div class="cfg-src-row" style="align-items:center;">
-            <span style="width:260px;flex-shrink:0;font-size:12px;color:#374151;line-height:1.4;"><?= esc_html($lbl) ?></span>
-            <div class="cfg-src-bar-bg" style="flex:1;"><div class="cfg-src-bar-fill" style="width:<?= $pct ?>%;background:#6366f1;"></div></div>
-            <span style="font-size:13px;font-weight:600;color:#1d2327;width:32px;text-align:right;flex-shrink:0;"><?= (int)$row['cnt'] ?></span>
-        </div>
-        <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+    <!-- ═══════════════════ ALIGNER QUIZ TAB ═══════════════════ -->
+    <div class="cfg-an-tab-content" data-an-tab="aligner">
+        <?php if ( $alg_has_landing ): ?>
+        <?php $cfg_render_funnel('Aligner Quiz', 'Journey via Landing Page', $alg_steps_via_raw, '#6366f1', 'marketing page → form → complete · ' . $an_label, $alg_step_labels); ?>
+        <?php endif; ?>
+        <?php $cfg_render_funnel('Aligner Quiz', 'Direct Form Journey', $alg_steps_direct_raw, '#7c3aed', ($alg_has_landing ? 'no landing page · ' : '') . 'form page → complete · ' . $an_label, $alg_step_labels); ?>
 
     <!-- Aligner drop-off -->
     <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #f87171;">
@@ -1376,6 +1450,39 @@ function cfg_render_analytics_inner( $range ) {
         </div>
         <?php endforeach; endif; ?>
     </div>
+    </div><!-- /Aligner tab -->
+
+    <!-- ═══════════════════ CONTACT FORM TAB ═══════════════════ -->
+    <div class="cfg-an-tab-content" data-an-tab="contact">
+        <div class="cfg-an-card" style="margin-bottom:20px;border-top:3px solid #2271b1;">
+            <h3 style="color:#2271b1;">Contact Form <span style="color:#9ca3af;font-weight:500;text-transform:none;letter-spacing:0;">— Conversion Summary</span> <span style="font-size:10px;font-weight:500;color:#9ca3af;text-transform:none;letter-spacing:0;margin-left:6px;"><?= esc_html($an_label) ?></span></h3>
+            <?php
+            $cf_view  = $cr_30d['contact']['view']     ?? 0;
+            $cf_start = $cr_30d['contact']['start']    ?? 0;
+            $cf_comp  = $cr_30d['contact']['complete'] ?? 0;
+            $cf_rate  = $cf_start > 0 ? round($cf_comp / $cf_start * 100) : null;
+            ?>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
+                <div style="background:#f8fafc;border-radius:10px;padding:16px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:#1d2327;line-height:1;"><?= $cf_view ?></div>
+                    <div style="font-size:10px;font-weight:600;color:#9ca3af;margin-top:6px;text-transform:uppercase;letter-spacing:.07em;">Page Loaded</div>
+                </div>
+                <div style="background:#f8fafc;border-radius:10px;padding:16px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:#1d2327;line-height:1;"><?= $cf_start ?></div>
+                    <div style="font-size:10px;font-weight:600;color:#9ca3af;margin-top:6px;text-transform:uppercase;letter-spacing:.07em;">Started Filling</div>
+                </div>
+                <div style="background:#eff6ff;border-radius:10px;padding:16px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:#2271b1;line-height:1;"><?= $cf_comp ?></div>
+                    <div style="font-size:10px;font-weight:600;color:#93c5fd;margin-top:6px;text-transform:uppercase;letter-spacing:.07em;">Submitted</div>
+                </div>
+            </div>
+            <?php if ( $cf_rate !== null ): ?>
+            <div style="font-size:13px;color:#374151;">Conversion rate: <strong style="color:<?= $cf_rate>=50?'#16a34a':($cf_rate>=25?'#f59e0b':'#dc2626') ?>;"><?= $cf_rate ?>%</strong> · <?= $cf_comp ?> of <?= $cf_start ?> people who started filling submitted</div>
+            <?php else: ?>
+            <div style="font-size:13px;color:#9ca3af;">No conversion data yet for this range.</div>
+            <?php endif; ?>
+        </div>
+    </div><!-- /Contact tab -->
 
     <?php endif; // ev_table_exists ?>
     <?php
@@ -6020,6 +6127,40 @@ function cfg_settings_page() {
                 cfgAnalyticsLoad('custom', from, to);
             });
         }
+    })();
+
+    /* ── Per-form analytics sub-tabs (All Forms / Implant / Aligner / Contact) ── */
+    (function(){
+        var body = document.getElementById('cfg-analytics-body');
+        if (!body) return;
+        function applyAnSubtab(name) {
+            var nav   = body.querySelector('.cfg-an-tabnav');
+            if (!nav) return;
+            var btn = nav.querySelector('button[data-an-tab="'+name+'"]');
+            if (!btn) { name = 'all'; btn = nav.querySelector('button[data-an-tab="all"]'); }
+            if (!btn) return;
+            nav.querySelectorAll('button[data-an-tab]').forEach(function(b){
+                b.classList.toggle('active', b.getAttribute('data-an-tab') === name);
+            });
+            body.querySelectorAll('.cfg-an-tab-content').forEach(function(c){
+                c.classList.toggle('active', c.getAttribute('data-an-tab') === name);
+            });
+            try { sessionStorage.setItem('cfg_an_subtab', name); } catch(e){}
+        }
+        // Delegated click handler (survives AJAX innerHTML replacements)
+        body.addEventListener('click', function(e){
+            var btn = e.target && e.target.closest && e.target.closest('.cfg-an-tabnav button[data-an-tab]');
+            if (!btn) return;
+            applyAnSubtab(btn.getAttribute('data-an-tab'));
+        });
+        function restore() {
+            var saved = null;
+            try { saved = sessionStorage.getItem('cfg_an_subtab'); } catch(e){}
+            if (saved) applyAnSubtab(saved);
+        }
+        restore();
+        // Re-apply after AJAX refresh swaps the inner HTML
+        new MutationObserver(restore).observe(body, { childList: true });
     })();
 
     /* ── Tab restore (must run after cfgTab is defined) ── */
