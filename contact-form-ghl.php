@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.17
+ * Version:     2.6.18
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -822,15 +822,21 @@ function cfg_render_analytics_inner( $range ) {
     $an_days    = max( 1, (int) round( ( strtotime($an_to) - strtotime($an_from) ) / 86400 ) + 1 );
 
     $daily = $wpdb->get_results(
-        "SELECT DATE(created_at) AS day, COUNT(*) AS cnt FROM {$an_table}
-         WHERE {$an_where} GROUP BY DATE(created_at) ORDER BY day ASC", ARRAY_A
+        "SELECT DATE(created_at) AS day, form_type, COUNT(*) AS cnt FROM {$an_table}
+         WHERE {$an_where} GROUP BY DATE(created_at), form_type ORDER BY day ASC", ARRAY_A
     );
-    $daily_map = [];
-    foreach ( $daily as $row ) $daily_map[$row['day']] = (int)$row['cnt'];
+    $daily_by_form_map = [];
+    foreach ( $daily as $row ) $daily_by_form_map[$row['day']][$row['form_type']] = (int)$row['cnt'];
     $daily_filled = [];
     for ( $i = 0; $i < $an_days; $i++ ) {
-        $d = date('Y-m-d', strtotime("+{$i} days", strtotime($an_from)));
-        $daily_filled[] = [ 'day' => date('M j', strtotime($d)), 'cnt' => $daily_map[$d] ?? 0 ];
+        $d     = date('Y-m-d', strtotime("+{$i} days", strtotime($an_from)));
+        $forms = $daily_by_form_map[$d] ?? [];
+        $daily_filled[] = [
+            'day'      => date('M j', strtotime($d)),
+            'day_full' => date('D, M j Y', strtotime($d)),
+            'cnt'      => array_sum( $forms ),
+            'forms'    => $forms,
+        ];
     }
     $max_daily = max( 1, max( array_column($daily_filled,'cnt') ) );
 
@@ -1168,11 +1174,44 @@ function cfg_render_analytics_inner( $range ) {
                 </div>
             </div>
             <div class="cfg-bar-chart">
-            <?php foreach ( $daily_filled as $d ): ?>
-                <div class="cfg-bar-col" title="<?= esc_attr($d['day']) ?>: <?= $d['cnt'] ?> submission<?= $d['cnt'] !== 1 ? 's' : '' ?>">
-                    <div class="cfg-bar" style="height:<?= $d['cnt'] > 0 ? round($d['cnt']/$max_daily*100) : 4 ?>%;background:<?= $d['cnt'] > 0 ? '#2271b1' : '#e5e7eb' ?>;"></div>
+            <?php
+            $form_colors = ['contact' => '#2271b1', 'aligner' => '#7c3aed', 'implant' => '#0891b2'];
+            $form_names  = ['contact' => 'Contact Form', 'aligner' => 'Aligner Quiz', 'implant' => 'Implant Estimator'];
+            foreach ( $daily_filled as $d ):
+                $bar_pct = $d['cnt'] > 0 ? round( $d['cnt'] / $max_daily * 100 ) : 0;
+            ?>
+                <div class="cfg-bar-col">
+                    <div class="cfg-bar-tip">
+                        <div style="font-weight:700;margin-bottom:4px;"><?= esc_html($d['day_full']) ?></div>
+                        <div style="color:#9ca3af;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Total: <strong style="color:#fff;font-size:13px;letter-spacing:0;text-transform:none;"><?= (int)$d['cnt'] ?></strong></div>
+                        <?php foreach ( ['contact', 'aligner', 'implant'] as $ft ): $c = $d['forms'][$ft] ?? 0; ?>
+                        <div class="cfg-bar-tip-row" style="color:<?= $c>0?'#fff':'#6b7280' ?>;">
+                            <span><span class="cfg-bar-tip-dot" style="background:<?= $form_colors[$ft] ?>;<?= $c===0?'opacity:.4;':'' ?>"></span><?= esc_html($form_names[$ft]) ?></span>
+                            <strong><?= $c ?></strong>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ( $d['cnt'] === 0 ): ?>
+                        <div class="cfg-bar" style="height:4px;background:#e5e7eb;"></div>
+                    <?php else: ?>
+                        <div class="cfg-bar-stack" style="height:<?= $bar_pct ?>%;">
+                            <?php foreach ( ['contact', 'aligner', 'implant'] as $ft ):
+                                $c = $d['forms'][$ft] ?? 0;
+                                if ( $c <= 0 ) continue;
+                            ?>
+                            <div style="flex:<?= $c ?>;background:<?= $form_colors[$ft] ?>;"></div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
+            </div>
+            <!-- Legend -->
+            <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:#6b7280;align-items:center;">
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#2271b1;"></span>Contact Form</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#7c3aed;"></span>Aligner Quiz</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:8px;height:8px;border-radius:50%;background:#0891b2;"></span>Implant Estimator</span>
+                <span style="color:#9ca3af;margin-left:auto;">Hover any day for breakdown</span>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:10px;color:#9ca3af;margin-top:4px;">
                 <?php $an_mid = (int)floor((count($daily_filled)-1)/2); ?>
@@ -6032,10 +6071,17 @@ function cfg_settings_page() {
     .cfg-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
     .cfg-an-card{background:#fff;border:1px solid #e8eaed;border-radius:12px;padding:22px 24px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
     .cfg-an-card h3{margin:0 0 18px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;}
-    .cfg-bar-chart{display:flex;align-items:flex-end;gap:2px;height:70px;margin-bottom:6px;}
-    .cfg-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;}
+    .cfg-bar-chart{display:flex;align-items:stretch;gap:2px;height:90px;margin-bottom:6px;}
+    .cfg-bar-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;min-width:0;position:relative;cursor:default;}
     .cfg-bar{width:100%;background:#2271b1;border-radius:3px 3px 0 0;min-height:4px;transition:opacity .15s;}
-    .cfg-bar:hover{opacity:.75;}
+    .cfg-bar-stack{width:100%;display:flex;flex-direction:column-reverse;overflow:hidden;border-radius:3px 3px 0 0;min-height:4px;transition:opacity .15s;}
+    .cfg-bar-stack > div{min-height:2px;width:100%;}
+    .cfg-bar-col:hover .cfg-bar-stack,.cfg-bar-col:hover .cfg-bar{opacity:.85;}
+    .cfg-bar-tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 12px;border-radius:8px;font-size:11.5px;line-height:1.45;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;z-index:10;min-width:170px;text-align:left;box-shadow:0 4px 12px rgba(0,0,0,.18);}
+    .cfg-bar-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#111827;}
+    .cfg-bar-col:hover .cfg-bar-tip{opacity:1;}
+    .cfg-bar-tip-row{display:flex;justify-content:space-between;gap:14px;margin-top:3px;}
+    .cfg-bar-tip-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
     .cfg-src-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
     .cfg-src-bar-bg{flex:1;background:#f3f4f6;border-radius:6px;height:10px;overflow:hidden;}
     .cfg-src-bar-fill{height:100%;border-radius:6px;}
