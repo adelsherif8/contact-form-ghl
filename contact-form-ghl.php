@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.10
+ * Version:     2.6.11
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -271,8 +271,10 @@ function cfg_defaults() {
         'alg_hide_page_header'    => '0',
         'alg_page_top_padding'    => '3',
         'alg_page_bottom_padding' => '3',
+        'alg_landing_pages'       => [],
 
         // ── Implant Cost Estimator ────────────────────────────────────────
+        'imp_landing_pages'    => [],
         'imp_accent_color'     => '#1e3a5f',
         'imp_success_url'      => '',
         'imp_currency'         => '$',
@@ -908,6 +910,9 @@ function cfg_render_analytics_inner( $range ) {
         // Landing-page view counts (prepended after sorting)
         $alg_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='aligner' AND event_type='view' AND {$an_ev_where}");
         $imp_view_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='implant' AND event_type='view' AND {$an_ev_where}");
+        // Marketing-page landing counts (prepended above the view row when landing pages are configured)
+        $alg_landing_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='aligner' AND event_type='landing' AND {$an_ev_where}");
+        $imp_landing_cnt = (int)$wpdb->get_var("SELECT COUNT(DISTINCT session_id) FROM {$ev_table} WHERE form_type='implant' AND event_type='landing' AND {$an_ev_where}");
     }
 
     // ── Override 'complete' with actual submission counts (cfg_submissions = source of truth) ──
@@ -971,6 +976,13 @@ function cfg_render_analytics_inner( $range ) {
     }
     if ( isset($alg_view_cnt) && $alg_view_cnt > 0 ) {
         array_unshift( $alg_steps_raw, ['step_key' => '_view', 'cnt' => $alg_view_cnt] );
+    }
+    // Prepend marketing-page landing row when configured landing pages received visits
+    if ( isset($imp_landing_cnt) && $imp_landing_cnt > 0 ) {
+        array_unshift( $imp_steps_raw, ['step_key' => '_landing', 'cnt' => $imp_landing_cnt] );
+    }
+    if ( isset($alg_landing_cnt) && $alg_landing_cnt > 0 ) {
+        array_unshift( $alg_steps_raw, ['step_key' => '_landing', 'cnt' => $alg_landing_cnt] );
     }
 
     // ── HTML output ──
@@ -1208,7 +1220,8 @@ function cfg_render_analytics_inner( $range ) {
 
     <?php
     $imp_step_labels = [
-        '_view'  =>'Landing page — unique visitors (1 per person)',
+        '_landing'=>'Marketing page (landing pages → estimator)',
+        '_view'  =>'Estimator page loaded — unique visitors (1 per person)',
         'intro'  =>'Intro screen','router'=>'Clicked "Get My Estimate" → path selection','summary'=>'Summary (reached estimate)',
         'a1'=>'[Single] Where is the tooth located?','a2'=>'[Single] How long has the tooth been missing?',
         'a3'=>'[Single] Bone graft needed?','a4'=>'[Single] Describe your situation',
@@ -1264,7 +1277,10 @@ function cfg_render_analytics_inner( $range ) {
     </div>
 
     <?php
-    $alg_step_labels=['_view'=>'Landing page — unique visitors (1 per person)'];
+    $alg_step_labels=[
+        '_landing'=>'Marketing page (landing pages → quiz)',
+        '_view'=>'Quiz page loaded — unique visitors (1 per person)',
+    ];
     if (empty($alg_cfg)) $alg_cfg=cfg_aligner_get();
     foreach ($alg_cfg as $i => $step) {
         $fk=$step['field_key']??'';
@@ -2102,6 +2118,8 @@ function cfg_sanitize( $input ) {
     }
     if ( ! empty( $secs_new ) ) $input['imp_result_sections'] = json_encode( $secs_new, JSON_UNESCAPED_UNICODE );
 
+    $array_int_fields = [ 'imp_landing_pages', 'alg_landing_pages' ];
+
     // ── General loop ──
     foreach ( $defaults as $key => $default ) {
         if ( in_array( $key, $bool_fields ) ) {
@@ -2115,6 +2133,10 @@ function cfg_sanitize( $input ) {
         } elseif ( in_array( $key, $json_fields ) ) {
             $decoded = json_decode( $input[ $key ] ?? '', true );
             $clean[ $key ] = $decoded !== null ? json_encode( $decoded, JSON_UNESCAPED_UNICODE ) : $default;
+        } elseif ( in_array( $key, $array_int_fields ) ) {
+            $raw = $input[ $key ] ?? [];
+            if ( ! is_array( $raw ) ) $raw = [];
+            $clean[ $key ] = array_values( array_filter( array_map( 'absint', $raw ) ) );
         } else {
             $clean[ $key ] = sanitize_text_field( $input[ $key ] ?? $default );
         }
@@ -3082,6 +3104,20 @@ function cfg_settings_page() {
                 <label>Page Bottom Padding (rem)</label>
                 <input type="number" step="0.5" name="<?= CFG_OPTION ?>[alg_page_bottom_padding]" value="<?= esc_attr( $s['alg_page_bottom_padding'] ?? '3' ) ?>" placeholder="3" style="width:100px;"/>
             </div>
+            <div class="cfg-field cfg-full">
+                <label>Landing Pages <span style="font-weight:400;color:#9ca3af;">— marketing pages that lead to this form</span></label>
+                <?php
+                $alg_lp = (array)( $s['alg_landing_pages'] ?? [] );
+                $alg_lp = array_map( 'intval', $alg_lp );
+                $alg_all_pages = get_pages( [ 'sort_column' => 'post_title', 'sort_order' => 'ASC' ] );
+                ?>
+                <select name="<?= CFG_OPTION ?>[alg_landing_pages][]" multiple size="6" style="width:100%;max-width:520px;padding:6px;border:1px solid #8c8f94;border-radius:4px;font-size:13px;">
+                    <?php foreach ( $alg_all_pages as $p ): ?>
+                    <option value="<?= (int)$p->ID ?>" <?= in_array( (int)$p->ID, $alg_lp, true ) ? 'selected' : '' ?>><?= esc_html( $p->post_title ) ?> <span style="color:#9ca3af;">(/<?= esc_html( $p->post_name ) ?>)</span></option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="cfg-desc">Hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> to select multiple. Visitors who land on these pages will be tracked as part of the aligner journey funnel in Analytics.</span>
+            </div>
         </div>
 
         <div class="cfg-section-title" style="margin-top:24px;">Form Steps</div>
@@ -3460,6 +3496,20 @@ function cfg_settings_page() {
                 <label>Success Redirect URL <span class="cfg-badge">optional</span></label>
                 <input type="url" name="<?= CFG_OPTION ?>[imp_success_url]" value="<?= esc_url( $s['imp_success_url'] ) ?>" placeholder="/thank-you"/>
                 <span class="cfg-desc">Leave blank to show results inline.</span>
+            </div>
+            <div class="cfg-field cfg-full">
+                <label>Landing Pages <span style="font-weight:400;color:#9ca3af;">— marketing pages that lead to this estimator</span></label>
+                <?php
+                $imp_lp = (array)( $s['imp_landing_pages'] ?? [] );
+                $imp_lp = array_map( 'intval', $imp_lp );
+                $imp_all_pages = get_pages( [ 'sort_column' => 'post_title', 'sort_order' => 'ASC' ] );
+                ?>
+                <select name="<?= CFG_OPTION ?>[imp_landing_pages][]" multiple size="6" style="width:100%;max-width:520px;padding:6px;border:1px solid #8c8f94;border-radius:4px;font-size:13px;">
+                    <?php foreach ( $imp_all_pages as $p ): ?>
+                    <option value="<?= (int)$p->ID ?>" <?= in_array( (int)$p->ID, $imp_lp, true ) ? 'selected' : '' ?>><?= esc_html( $p->post_title ) ?> <span style="color:#9ca3af;">(/<?= esc_html( $p->post_name ) ?>)</span></option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="cfg-desc">Hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> to select multiple. Visitors who land on these pages will be tracked as part of the implant journey funnel in Analytics.</span>
             </div>
         </div>
 
@@ -9629,6 +9679,45 @@ add_action( 'wp_ajax_nopriv_cfg_review_submit', 'cfg_review_ajax_submit' );
 add_action( 'wp_ajax_cfg_track',        'cfg_ajax_track_event' );
 add_action( 'wp_ajax_nopriv_cfg_track', 'cfg_ajax_track_event' );
 
+add_action( 'wp_footer', 'cfg_landing_page_tracker' );
+function cfg_landing_page_tracker() {
+    if ( is_admin() ) return;
+    $page_id = get_the_ID();
+    if ( ! $page_id ) return;
+
+    $s = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $imp_pages = (array)( $s['imp_landing_pages'] ?? [] );
+    $alg_pages = (array)( $s['alg_landing_pages'] ?? [] );
+
+    $form_type = null;
+    if ( in_array( $page_id, array_map( 'intval', $imp_pages ), true ) )       $form_type = 'implant';
+    elseif ( in_array( $page_id, array_map( 'intval', $alg_pages ), true ) )   $form_type = 'aligner';
+    if ( ! $form_type ) return;
+
+    $sid_key     = 'cfg_sid_' . $form_type;
+    $landing_key = 'cfg_landing_' . $form_type;
+    $ajax_url    = admin_url( 'admin-ajax.php' );
+    ?>
+    <script>
+    (function(){
+        try {
+            var sid = sessionStorage.getItem('<?= esc_js($sid_key) ?>');
+            if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('<?= esc_js($sid_key) ?>', sid); }
+            if (sessionStorage.getItem('<?= esc_js($landing_key) ?>')) return;
+            sessionStorage.setItem('<?= esc_js($landing_key) ?>', '1');
+            var fd = new FormData();
+            fd.append('action','cfg_track');
+            fd.append('form_type','<?= esc_js($form_type) ?>');
+            fd.append('event_type','landing');
+            fd.append('step_key', String(<?= (int)$page_id ?>));
+            fd.append('session_id', sid);
+            fetch('<?= esc_js($ajax_url) ?>', { method:'POST', body: fd, credentials:'same-origin' }).catch(function(){});
+        } catch(e) {}
+    })();
+    </script>
+    <?php
+}
+
 function cfg_ajax_track_event() {
     global $wpdb;
     $form_type  = sanitize_key( $_POST['form_type']  ?? '' );
@@ -9636,7 +9725,7 @@ function cfg_ajax_track_event() {
     $step_key   = sanitize_text_field( $_POST['step_key']   ?? '' );
     $session_id = sanitize_text_field( $_POST['session_id'] ?? '' );
     $allowed_forms  = [ 'contact', 'aligner', 'implant' ];
-    $allowed_events = [ 'view', 'start', 'step', 'complete' ];
+    $allowed_events = [ 'view', 'start', 'step', 'complete', 'landing' ];
     if ( ! in_array( $form_type, $allowed_forms, true ) || ! in_array( $event_type, $allowed_events, true ) ) {
         wp_send_json_error(); return;
     }
