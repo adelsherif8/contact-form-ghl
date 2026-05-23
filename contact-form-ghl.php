@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.19
+ * Version:     2.6.20
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1028,7 +1028,8 @@ function cfg_render_analytics_inner( $range ) {
     $cr_30d['_all']['complete']   = $actual_range_all;
 
     // ── Sort steps into natural form order (not by count) ──
-    $imp_natural_order = ['intro','router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
+    // Note: 'intro' is intentionally excluded — it's the page's initial state, captured by the 'view' event.
+    $imp_natural_order = ['router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
     $alg_cfg = cfg_aligner_get();
     $alg_cfg_order = array_values(array_map(function($step,$i){ $fk=$step['field_key']??''; return $fk?:('step_'.$i); }, $alg_cfg, array_keys($alg_cfg)));
 
