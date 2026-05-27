@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.20
+ * Version:     2.6.21
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7686,13 +7686,14 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
                 echo '<input type="hidden" name="alg_nonce" value="' . $nonce . '"/>';
                 echo '<input type="hidden" name="alg_answers" id="' . $uid . '-ans" value=""/>';
                 if ( $honeypot ) echo '<input type="text" name="alg_hp" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0;height:0;overflow:hidden;"/>';
+                $alg_lbl_style = 'display:block;margin-bottom:0.35rem;font-size:0.72rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.07em;text-transform:uppercase;';
                 echo '<div class="' . $uid . '-fgrid" style="margin-bottom:0.875rem;">';
-                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.72rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.07em;text-transform:uppercase;">First Name <span style="color:' . $accent . '">*</span></label><input type="text" name="firstName" required placeholder="Jane" class="' . $uid . '-input"/></div>';
-                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.72rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.07em;text-transform:uppercase;">Last Name <span style="color:' . $accent . '">*</span></label><input type="text" name="lastName" required placeholder="Smith" class="' . $uid . '-input"/></div>';
+                echo '<div><label for="' . $uid . '-firstName" style="' . $alg_lbl_style . '">First Name <span style="color:' . $accent . '">*</span></label><input id="' . $uid . '-firstName" type="text" name="firstName" autocomplete="given-name" required placeholder="Jane" class="' . $uid . '-input"/></div>';
+                echo '<div><label for="' . $uid . '-lastName" style="' . $alg_lbl_style . '">Last Name <span style="color:' . $accent . '">*</span></label><input id="' . $uid . '-lastName" type="text" name="lastName" autocomplete="family-name" required placeholder="Smith" class="' . $uid . '-input"/></div>';
                 echo '</div>';
                 echo '<div class="' . $uid . '-fgrid" style="margin-bottom:1.75rem;">';
-                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.72rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.07em;text-transform:uppercase;">Phone <span style="color:' . $accent . '">*</span></label><input type="tel" name="phone" required placeholder="Phone number" class="' . $uid . '-input"/></div>';
-                echo '<div><label style="display:block;margin-bottom:0.35rem;font-size:0.72rem;font-weight:700;color:' . esc_attr($s['muted_color']) . ';letter-spacing:0.07em;text-transform:uppercase;">Email <span style="color:' . $accent . '">*</span></label><input type="email" name="email" required placeholder="jane@example.com" class="' . $uid . '-input"/></div>';
+                echo '<div><label for="' . $uid . '-phone" style="' . $alg_lbl_style . '">Phone <span style="color:' . $accent . '">*</span></label><input id="' . $uid . '-phone" type="tel" name="phone" autocomplete="tel" required placeholder="Phone number" class="' . $uid . '-input"/></div>';
+                echo '<div><label for="' . $uid . '-email" style="' . $alg_lbl_style . '">Email <span style="color:' . $accent . '">*</span></label><input id="' . $uid . '-email" type="email" name="email" autocomplete="email" required placeholder="jane@example.com" class="' . $uid . '-input"/></div>';
                 echo '</div>';
                 echo '<div id="' . $uid . '-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.7rem 0.9rem;color:#dc2626;font-size:0.85rem;margin-bottom:1rem;"></div>';
                 echo '<button type="submit" id="' . $uid . '-sbtn" class="' . $uid . '-btn" style="width:100%;font-size:1rem;padding:0.95rem;"><span id="' . $uid . '-slbl">' . esc_html( $step['btn_text'] ?? 'Submit' ) . '</span></button>';
@@ -8424,8 +8425,8 @@ $render_path = function( $qs, $path_end_next ) use ( $opt, $qpanel, $uid ) {
             echo $qpanel( $q['id'], $q['title'], $sub,
                 '<div class="die-text-q-wrap">'
                 . ( $type === 'textarea'
-                    ? '<textarea id="' . esc_attr($q['id']) . '-txt" rows="3" class="die-text-input" onchange="window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',this.value,this.value,\'' . esc_js($next) . '\')"></textarea>'
-                    : '<input type="text" id="' . esc_attr($q['id']) . '-txt" class="die-text-input" placeholder="Type your answer..." />'
+                    ? '<textarea id="' . esc_attr($q['id']) . '-txt" rows="3" class="die-text-input" aria-label="' . esc_attr($q['title']) . '" onchange="window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',this.value,this.value,\'' . esc_js($next) . '\')"></textarea>'
+                    : '<input type="text" id="' . esc_attr($q['id']) . '-txt" class="die-text-input" aria-label="' . esc_attr($q['title']) . '" placeholder="Type your answer..." />'
                   )
                 . ( $type === 'text'
                     ? '<button class="die-next-btn" onclick="var el=document.getElementById(\'' . esc_attr($q['id']) . '-txt\');window[uid+\'Sel\'](this,\'' . esc_js($q['field']) . '\',el.value,el.value,\'' . esc_js($next) . '\')">Continue &#x2192;</button>'
@@ -9671,13 +9672,13 @@ function cfg_review_shortcode( $atts = [] ) {
     <h2>How was your experience?</h2>
     <p class="rvf-subtitle">Tell us a little about yourself to get started.</p>
     <div class="rvf-field" id="<?= $uid ?>-f-name">
-      <label>Your Name *</label>
-      <input type="text" id="<?= $uid ?>-name" placeholder="Jane Smith"/>
+      <label for="<?= $uid ?>-name">Your Name *</label>
+      <input type="text" id="<?= $uid ?>-name" name="name" autocomplete="name" placeholder="Jane Smith"/>
       <div class="rvf-err">Please enter your name.</div>
     </div>
     <div class="rvf-field" id="<?= $uid ?>-f-email">
-      <label>Email Address *</label>
-      <input type="email" id="<?= $uid ?>-email" placeholder="jane@example.com"/>
+      <label for="<?= $uid ?>-email">Email Address *</label>
+      <input type="email" id="<?= $uid ?>-email" name="email" autocomplete="email" placeholder="jane@example.com"/>
       <div class="rvf-err">Please enter a valid email.</div>
     </div>
     <div class="rvf-stars-wrap" id="<?= $uid ?>-stars">
@@ -9704,13 +9705,13 @@ function cfg_review_shortcode( $atts = [] ) {
     <div class="rvf-bubbles" id="<?= $uid ?>-staff-wrap"><?= $staff_html ?></div>
     <?php endif; ?>
     <div class="rvf-field" id="<?= $uid ?>-f-liked">
-      <label>What did you like most? *</label>
-      <input type="text" id="<?= $uid ?>-liked" placeholder="e.g. How gentle the doctor was"/>
+      <label for="<?= $uid ?>-liked">What did you like most? *</label>
+      <input type="text" id="<?= $uid ?>-liked" name="liked" placeholder="e.g. How gentle the doctor was"/>
       <div class="rvf-err">Please tell us what you liked.</div>
     </div>
     <div class="rvf-field">
-      <label>Anything else to mention? <span>(optional)</span></label>
-      <textarea id="<?= $uid ?>-extra" placeholder="Any other thoughts…" rows="2"></textarea>
+      <label for="<?= $uid ?>-extra">Anything else to mention? <span>(optional)</span></label>
+      <textarea id="<?= $uid ?>-extra" name="extra" placeholder="Any other thoughts…" rows="2"></textarea>
     </div>
     <div class="rvf-toggle-row">
       <span class="rvf-toggle-label">Length</span>
@@ -9735,7 +9736,8 @@ function cfg_review_shortcode( $atts = [] ) {
   <div class="rvf-panel rvf-card" id="<?= $uid ?>-s3g">
     <h2>Your review is ready!</h2>
     <p class="rvf-subtitle">Feel free to edit it below, then copy and share on your preferred platform.</p>
-    <textarea class="rvf-review-box" id="<?= $uid ?>-review-out" rows="5"></textarea>
+    <label for="<?= $uid ?>-review-out" class="screen-reader-text" style="position:absolute;left:-9999px;">Generated review text — feel free to edit</label>
+    <textarea class="rvf-review-box" id="<?= $uid ?>-review-out" name="review" rows="5" aria-label="Generated review text — feel free to edit"></textarea>
     <div class="rvf-review-actions">
       <button type="button" class="rvf-regen-btn" id="<?= $uid ?>-regen"><i class="fa-solid fa-rotate"></i> Regenerate</button>
       <button type="button" class="rvf-copy-btn" id="<?= $uid ?>-copy"><i class="fa-solid fa-copy"></i> Copy Text</button>
@@ -9750,12 +9752,12 @@ function cfg_review_shortcode( $atts = [] ) {
     <h2>We're sorry to hear that.</h2>
     <p class="rvf-subtitle">Your feedback goes directly to our team and stays completely private.</p>
     <div class="rvf-field">
-      <label>Phone Number <span>(optional — so we can follow up)</span></label>
-      <input type="tel" id="<?= $uid ?>-phone" placeholder="+1 (555) 000-0000"/>
+      <label for="<?= $uid ?>-phone">Phone Number <span>(optional — so we can follow up)</span></label>
+      <input type="tel" id="<?= $uid ?>-phone" name="phone" autocomplete="tel" placeholder="+1 (555) 000-0000"/>
     </div>
     <div class="rvf-field" id="<?= $uid ?>-f-fbk">
-      <label>What can we do better? *</label>
-      <textarea id="<?= $uid ?>-feedback" rows="4" placeholder="Please share what went wrong…"></textarea>
+      <label for="<?= $uid ?>-feedback">What can we do better? *</label>
+      <textarea id="<?= $uid ?>-feedback" name="feedback" rows="4" placeholder="Please share what went wrong…"></textarea>
       <div class="rvf-err">Please share your feedback before submitting.</div>
     </div>
     <button type="button" class="rvf-btn" id="<?= $uid ?>-s2b-next"><i class="fa-solid fa-paper-plane"></i> Submit Feedback</button>
