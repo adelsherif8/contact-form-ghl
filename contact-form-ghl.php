@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.21
+ * Version:     2.6.22
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -5063,7 +5063,7 @@ function cfg_settings_page() {
                     <tr><td><span class="og-field">implant_teethCount</span></td><td>Teeth Count</td><td><em>2</em>, <em>3</em> … <em>7</em></td></tr>
                     <tr><td><span class="og-field">implant_archSelection</span></td><td>Arch Selection</td><td><em>upper</em>, <em>lower</em>, or <em>both</em></td></tr>
                     <tr><td><span class="og-field">implant_insurance</span></td><td>Has Dental Insurance</td><td><em>yes</em> or <em>no</em></td></tr>
-                    <tr><td><span class="og-field">implant_range</span></td><td>Estimated Price Range</td><td><em>$9,750 – $13,500 — 2 implants</em></td></tr>
+                    <tr><td><span class="og-field">implant_range</span></td><td>Estimated Price Range</td><td><em>9,750 – 13,500</em> (number-only, no currency or suffix — for clean SMS / email use)</td></tr>
                 </table>
                 <div class="og-tip"><strong>Note:</strong> Field keys are prefixed with <code class="og-code">implant_</code> followed by the quiz field name exactly as configured in the estimator settings. Only fields with a non-empty answer are sent — blank answers are skipped. <strong>These fields are created automatically on the first form submission</strong> — no manual setup needed.</div>
             </div>
@@ -9391,6 +9391,19 @@ function cfg_implant_ajax_submit() {
     $range = sanitize_text_field( $_POST['range'] ?? '' );
     $range_type = sanitize_text_field( $_POST['rangeType'] ?? '' );
 
+    // Build a clean range string for the GHL custom field: strip currency prefix
+    // ("CAD $", "$", etc.) and suffix after em-dash (" — for both arches", " — 5 implants").
+    // GHL field shows only the numeric price range, e.g. "3,000 – 6,000".
+    $range_for_ghl = $range;
+    $range_for_ghl = preg_replace( '/\x{2014}.*$/u', '', $range_for_ghl );   // drop em-dash suffix
+    $range_for_ghl = preg_replace( '/[^\d,]+/u', ' ', $range_for_ghl );      // keep digits and commas only
+    $range_for_ghl = trim( preg_replace( '/\s+/', ' ', $range_for_ghl ) );
+    if ( preg_match( '/^([\d,]+)\s+([\d,]+)$/', $range_for_ghl, $m ) ) {
+        $range_for_ghl = $m[1] . ' – ' . $m[2];
+    } elseif ( $range_for_ghl === '' ) {
+        $range_for_ghl = $range; // fallback if regex didn't match
+    }
+
     $path_qs = $flow === 'multiple' ? $multi_qs : ( $flow === 'fullarch' ? $arch_qs : $single_qs );
     $all_qs  = $path_qs;
     if ( $ins_q ) $all_qs[] = $ins_q;
@@ -9402,7 +9415,7 @@ function cfg_implant_ajax_submit() {
     $answers  = $_POST['answer']  ?? [];
     $custom   = [];
     $custom[] = [ 'key' => 'implant_flow',   'field_value' => $flow ];
-    $custom[] = [ 'key' => 'implant_range',  'field_value' => $range ];
+    $custom[] = [ 'key' => 'implant_range',  'field_value' => $range_for_ghl ];
     $custom[] = [ 'key' => 'latest_form_date','field_value' => current_time( 'M j, Y g:i A' ) ];
     foreach ( $all_qs as $q ) {
         $raw_field = $q['field'] ?? '';
