@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.22
+ * Version:     2.6.23
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -8916,7 +8916,15 @@ $_sections_col = $result_sections_html
   };
 
   /* ── HELPERS ── */
-  function fmt(n){ return config.currency + n.toLocaleString('en-US'); }
+  // Build a clean range label: currency prefix appears ONCE at the start,
+  // only the symbol ($/£/€/¥/₹) is repeated on the second value.
+  // e.g. currency="CAD $" -> "CAD $20,000 – $40,000" (not "CAD $20,000 – CAD $40,000")
+  function fmtRange(min, max) {
+    var cur = config.currency || '$';
+    var symMatch = cur.match(/[$£€¥₹]/);
+    var sym = symMatch ? symMatch[0] : '';
+    return cur + min.toLocaleString('en-US') + ' \u2013 ' + sym + max.toLocaleString('en-US');
+  }
 
   function getRange() {
     var p = config.prices;
@@ -8924,7 +8932,7 @@ $_sections_col = $result_sections_html
       var arch = s.answers['archSelection'] || '';
       var multi = arch === 'both' ? 2 : 1;
       var archSuffix = arch === 'both' ? 'for both arches' : arch === 'upper' ? 'upper arch' : arch === 'lower' ? 'lower arch' : config.result_suffix_fullarch;
-      return {label: fmt(p.arch_min * multi)+' \u2013 '+fmt(p.arch_max * multi), suffix: ' \u2014 '+archSuffix};
+      return {label: fmtRange(p.arch_min * multi, p.arch_max * multi), suffix: ' \u2014 '+archSuffix};
     }
     var graftVal = getGraftVal(s.flow);
     var addGraft = config.graftDisplay === 'included' && (graftVal === 'yes' || graftVal === 'not-sure');
@@ -8936,7 +8944,7 @@ $_sections_col = $result_sections_html
         bMin = p.multi_min;
         bMax = p.multi_max;
         if (addGraft) { bMin += p.graft_min; bMax += p.graft_max; }
-        return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 multiple implants'};
+        return {label: fmtRange(bMin, bMax), suffix: ' \u2014 multiple implants'};
       }
       bMin = p.single_min * count;
       bMax = p.single_max * count;
@@ -8944,11 +8952,11 @@ $_sections_col = $result_sections_html
       if (bMin > p.multi_max) bMin = p.multi_max;
       if (bMax > p.multi_max) bMax = p.multi_max;
       if (addGraft) { bMin += p.graft_min; bMax += p.graft_max; }
-      return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 '+count+' implants'};
+      return {label: fmtRange(bMin, bMax), suffix: ' \u2014 '+count+' implants'};
     }
     bMin = p.single_min; bMax = p.single_max;
     if (addGraft) { bMin += p.graft_min; bMax += p.graft_max; }
-    return {label: fmt(bMin)+' \u2013 '+fmt(bMax), suffix: ' \u2014 '+config.result_suffix_single};
+    return {label: fmtRange(bMin, bMax), suffix: ' \u2014 '+config.result_suffix_single};
   }
 
   /* ── SHOW PANEL ── */
