@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.23
+ * Version:     2.6.24
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2233,9 +2233,14 @@ add_action( 'wp_footer', function () {
         }
 
         window.cfgPhoneValid = function(el) {
-            if (!el || !el._cfgIti) return true;         // no ITI = no validation
-            if (!el.value.trim()) return true;            // empty handled by required check
-            if (!window.intlTelInputUtils) return true;  // utils still loading — allow submit
+            if (!el || !el._cfgIti) return true;          // no ITI on this field = skip validation
+            if (!el.value.trim()) return true;             // empty: handled by required attr
+            if (!window.intlTelInputUtils) {
+                // Utils haven't loaded yet — fall back to a strict server-side-friendly check:
+                // require a minimum of 7 digits and reject anything with letters.
+                var digits = el.value.replace(/\D/g, '');
+                return digits.length >= 7 && digits.length <= 15 && !/[a-z]/i.test(el.value);
+            }
             return el._cfgIti.isValidNumber();
         };
 
@@ -2244,17 +2249,18 @@ add_action( 'wp_footer', function () {
             el.dataset.itiDone = '1';
 
             var iti = window.intlTelInput(el, {
-                initialCountry:   'auto',
+                initialCountry:    'auto',
                 geoIpLookup: function(cb) {
                     fetch('https://ipapi.co/json/')
                         .then(function(r){ return r.json(); })
-                        .then(function(d){ cb(d.country_code || 'us'); })
-                        .catch(function(){ cb('us'); });
+                        .then(function(d){ cb(d.country_code || 'ca'); })
+                        .catch(function(){ cb('ca'); });
                 },
-                separateDialCode: true,
-                autoPlaceholder:  'polite',
-                formatOnDisplay:  true,
-                utilsScript:      ITI_UTILS,
+                preferredCountries: ['ca', 'us', 'gb'],
+                separateDialCode:   true,
+                autoPlaceholder:    'polite',
+                formatOnDisplay:    true,
+                utilsScript:        ITI_UTILS,
             });
             el._cfgIti = iti;
 
@@ -6512,8 +6518,8 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     </section>
     <?php endif; ?>
 
-    <section style="padding:<?= $s['show_hero'] === '1' ? '3.5rem' : $tp ?> 1.5rem 3.5rem;">
-        <div style="max-width:660px;margin:0 auto;">
+    <section style="<?= $embed ? '' : 'padding:'.($s['show_hero'] === '1' ? '3.5rem' : $tp).' 1.5rem 3.5rem;' ?>">
+        <div style="<?= $embed ? '' : 'max-width:660px;margin:0 auto;' ?>">
             <div class="cfg-card" style="<?= $card_style ?>">
                 <form id="cfg-form" novalidate>
                     <input type="hidden" id="cfg_nonce" value="<?= esc_attr( $nonce ) ?>"/>
