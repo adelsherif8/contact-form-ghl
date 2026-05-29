@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.25
+ * Version:     2.6.26
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2235,13 +2235,22 @@ add_action( 'wp_footer', function () {
         window.cfgPhoneValid = function(el) {
             if (!el || !el._cfgIti) return true;          // no ITI on this field = skip validation
             if (!el.value.trim()) return true;             // empty: handled by required attr
-            if (!window.intlTelInputUtils) {
-                // Utils haven't loaded yet — fall back to a strict server-side-friendly check:
-                // require a minimum of 7 digits and reject anything with letters.
-                var digits = el.value.replace(/\D/g, '');
-                return digits.length >= 7 && digits.length <= 15 && !/[a-z]/i.test(el.value);
+            if (/[a-z]/i.test(el.value)) return false;     // letters never valid in a phone number
+            var digits = el.value.replace(/\D/g, '');
+            // Universal sanity: every valid E.164 number on Earth is 7–15 digits.
+            if (digits.length < 7 || digits.length > 15) return false;
+            // If intl-tel-input utils are loaded, accept ANY valid international format —
+            // not just the selected country. A user can paste an Egyptian number while
+            // Canada is selected and it will still pass.
+            if (window.intlTelInputUtils) {
+                if (el._cfgIti.isValidNumber()) return true;
+                try {
+                    if (intlTelInputUtils.isValidNumber('+' + digits)) return true;
+                } catch(e) {}
+                return false;
             }
-            return el._cfgIti.isValidNumber();
+            // utils not loaded → digit-count sanity check above is enough
+            return true;
         };
 
         function cfgInitPhone(el) {
