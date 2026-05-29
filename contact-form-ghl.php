@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.26
+ * Version:     2.6.27
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7627,6 +7627,12 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 /* Inputs */
 .<?= $uid ?>-input{width:100%!important;padding:0.75rem 1rem!important;border:1px solid <?= esc_attr($s['border_color']) ?>!important;border-radius:<?= $ir ?>!important;font-size:0.9rem!important;outline:none!important;font-family:inherit!important;color:<?= $tc ?>!important;background:<?= $bg ?>!important;transition:border-color 0.2s,box-shadow 0.2s!important;box-sizing:border-box!important;}
 .<?= $uid ?>-input:focus{border-color:<?= $accent ?>!important;box-shadow:0 0 0 3px <?= $accent ?>22!important;}
+/* Field error state — red border, optional message below */
+.cfg-field-error .<?= $uid ?>-input,.cfg-field-error input,.cfg-field-error .iti{border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.12)!important;}
+.cfg-field-error .iti input[type=tel]{border-color:#dc2626!important;}
+.cfg-field-msg{display:block;margin-top:.35rem;font-size:.72rem;color:#dc2626;font-weight:600;line-height:1.4;}
+@keyframes cfgShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}50%{transform:translateX(6px);}75%{transform:translateX(-3px);}}
+.cfg-shake{animation:cfgShake .35s ease;}
 .<?= $uid ?>-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;}
 /* Sidebar */
 #<?= $uid ?>-sidebar{position:sticky;top:2rem;}
@@ -7976,23 +7982,48 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 
     var form=document.getElementById(uid+'-form');
     if(form){
+        var errBox=document.getElementById(uid+'-err');
+        var sbtn=document.getElementById(uid+'-sbtn');
+        var slbl=document.getElementById(uid+'-slbl');
+        function showErr(m){ errBox.textContent=m; errBox.style.display='block'; try{ errBox.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+        function fieldWrap(el){ var p=el.parentNode; while(p && p.tagName==='DIV' && p.parentNode && p.parentNode.classList && p.parentNode.classList.contains(uid+'-fgrid')===false && p.parentNode.tagName==='DIV') break; return (p && p.tagName==='DIV') ? p : el; }
+        function markFieldError(el, msg){ var w=fieldWrap(el); if(!w) return; w.classList.add('cfg-field-error'); w.classList.remove('cfg-shake'); void w.offsetWidth; w.classList.add('cfg-shake'); var m=w.querySelector('.cfg-field-msg'); if(!m){ m=document.createElement('span'); m.className='cfg-field-msg'; w.appendChild(m); } m.textContent=msg; }
+        function clearFieldError(el){ var w=fieldWrap(el); if(!w) return; w.classList.remove('cfg-field-error'); var m=w.querySelector('.cfg-field-msg'); if(m) m.remove(); }
+        function fieldLabel(el){ var id=el.id; if(id){ var l=form.querySelector('label[for="'+id+'"]'); if(l) return l.textContent.trim().replace(/\s*\*\s*$/,''); } return el.placeholder||'This field'; }
+        form.querySelectorAll('input,textarea,select').forEach(function(el){ el.addEventListener('input',function(){ clearFieldError(el); }); el.addEventListener('change',function(){ clearFieldError(el); }); });
         form.addEventListener('submit',function(e){
             e.preventDefault();
-            var fn=(form.querySelector('[name="firstName"]')||{}).value||'';
-            var ln=(form.querySelector('[name="lastName"]') ||{}).value||'';
-            var ph=(form.querySelector('[name="phone"]')    ||{}).value||'';
-            var em=(form.querySelector('[name="email"]')    ||{}).value||'';
-            var errBox=document.getElementById(uid+'-err');
-            var sbtn=document.getElementById(uid+'-sbtn');
-            var slbl=document.getElementById(uid+'-slbl');
-            function showErr(m){ errBox.textContent=m; errBox.style.display='block'; }
             errBox.style.display='none';
-            if(!fn.trim()){ showErr('First name is required.'); return; }
-            if(!ln.trim()){ showErr('Last name is required.'); return; }
-            if(!ph.trim()){ showErr('Phone number is required.'); return; }
+            var invalid=[];
+            // Required: First Name, Last Name, Phone, Email
+            ['firstName','lastName','phone','email'].forEach(function(nm){
+                var el=form.querySelector('[name="'+nm+'"]'); if(!el) return;
+                clearFieldError(el);
+                if(!el.value.trim()){ markFieldError(el, fieldLabel(el)+' is required.'); invalid.push(el); }
+            });
+            // Email format
+            var emEl=form.querySelector('input[type="email"]');
+            if(emEl && emEl.value.trim() && invalid.indexOf(emEl)===-1){
+                if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emEl.value.trim())){
+                    markFieldError(emEl, 'Please enter a valid email address (e.g. you@example.com).');
+                    invalid.push(emEl);
+                }
+            }
+            // Phone format (any international format)
             var phEl=form.querySelector('input[type="tel"]');
-            if(phEl && !window.cfgPhoneValid(phEl)){ showErr('Please enter a valid phone number.'); return; }
-            if(!em.trim()){ showErr('Please enter your email address.'); return; }
+            if(phEl && phEl.value.trim() && invalid.indexOf(phEl)===-1 && !window.cfgPhoneValid(phEl)){
+                markFieldError(phEl, 'Please enter a valid phone number.');
+                invalid.push(phEl);
+            }
+            if(invalid.length){
+                showErr(invalid.length===1 ? 'Please fix the highlighted field below.' : 'Please fix the '+invalid.length+' highlighted fields below.');
+                try{ invalid[0].focus({preventScroll:true}); invalid[0].scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){}
+                return;
+            }
+            var fn=form.querySelector('[name="firstName"]').value;
+            var ln=form.querySelector('[name="lastName"]').value;
+            var ph=form.querySelector('[name="phone"]').value;
+            var em=form.querySelector('[name="email"]').value;
             var ansEl=document.getElementById(uid+'-ans');
             if(ansEl) ansEl.value=JSON.stringify(answers);
             sbtn.disabled=true; slbl.textContent='Sending\u2026';
@@ -8363,6 +8394,12 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
 /* Inputs */
 #<?= $uid ?>-app .imp-input{width:100%;padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:var(--ir);font-size:.875rem;outline:none;transition:border-color .2s,box-shadow .2s;background:hsl(var(--card));color:hsl(var(--foreground));}
 #<?= $uid ?>-app .imp-input:focus{border-color:hsl(var(--primary));box-shadow:0 0 0 3px hsl(var(--primary)/.12);}
+/* Field error state */
+#<?= $uid ?>-app .cfg-field-error .imp-input,#<?= $uid ?>-app .cfg-field-error .iti{border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.12)!important;}
+#<?= $uid ?>-app .cfg-field-error .iti input[type=tel]{border-color:#dc2626!important;}
+#<?= $uid ?>-app .cfg-field-msg{display:block;margin-top:.35rem;font-size:.72rem;color:#dc2626;font-weight:600;line-height:1.4;}
+@keyframes <?= $uid ?>_shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}50%{transform:translateX(6px);}75%{transform:translateX(-3px);}}
+#<?= $uid ?>-app .cfg-shake{animation:<?= $uid ?>_shake .35s ease;}
 /* Text question type */
 #<?= $uid ?>-app .die-text-q-wrap{display:flex;flex-direction:column;gap:12px;padding:4px 0;}
 #<?= $uid ?>-app .die-text-input{width:100%;padding:12px 16px;border:1px solid hsl(var(--border));border-radius:var(--ir);font-size:1rem;font-family:inherit;box-sizing:border-box;}
@@ -9325,17 +9362,73 @@ $_sections_col = $result_sections_html
 
   /* ── FORM SUBMIT ── */
   var isSubmitting = false;
+
+  // Per-field error helpers for the implant lead form
+  function _impFieldWrap(el){ var p=el.parentNode; return (p && p.tagName==='DIV') ? p : el; }
+  function _impMarkErr(el, msg){
+    var w = _impFieldWrap(el); if (!w) return;
+    w.classList.add('cfg-field-error');
+    w.classList.remove('cfg-shake'); void w.offsetWidth; w.classList.add('cfg-shake');
+    var m = w.querySelector('.cfg-field-msg');
+    if (!m) { m = document.createElement('span'); m.className = 'cfg-field-msg'; w.appendChild(m); }
+    m.textContent = msg;
+  }
+  function _impClearErr(el){
+    var w = _impFieldWrap(el); if (!w) return;
+    w.classList.remove('cfg-field-error');
+    var m = w.querySelector('.cfg-field-msg'); if (m) m.remove();
+  }
+  function _impFieldLabel(el){
+    var id = el.id;
+    if (id) { var l = document.querySelector('label[for="'+id+'"]'); if (l) return l.textContent.trim().replace(/\s*\*\s*$/, ''); }
+    return el.placeholder || 'This field';
+  }
+  // Auto-clear errors as user types in any lead-form field
+  ['-firstName','-lastName','-email','-phone'].forEach(function(suffix){
+    var el = document.getElementById(uid + suffix);
+    if (!el) return;
+    el.addEventListener('input',  function(){ _impClearErr(el); });
+    el.addEventListener('change', function(){ _impClearErr(el); });
+  });
+
   function handleSubmit(e) {
     e.preventDefault();
     if (isSubmitting) return;
+
+    var fnEl = document.getElementById(uid + '-firstName');
+    var lnEl = document.getElementById(uid + '-lastName');
+    var emEl = document.getElementById(uid + '-email');
+    var phEl = document.getElementById(uid + '-phone');
+
+    var invalid = [];
+    [['firstName',fnEl],['lastName',lnEl],['email',emEl],['phone',phEl]].forEach(function(pair){
+      var el = pair[1]; if (!el) return;
+      _impClearErr(el);
+      if (!el.value.trim()) { _impMarkErr(el, _impFieldLabel(el) + ' is required.'); invalid.push(el); }
+    });
+    // Email format
+    if (emEl && emEl.value.trim() && invalid.indexOf(emEl) === -1) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emEl.value.trim())) {
+        _impMarkErr(emEl, 'Please enter a valid email address (e.g. you@example.com).');
+        invalid.push(emEl);
+      }
+    }
+    // Phone format (international)
+    if (phEl && phEl.value.trim() && invalid.indexOf(phEl) === -1 && !window.cfgPhoneValid(phEl)) {
+      _impMarkErr(phEl, 'Please enter a valid phone number.');
+      invalid.push(phEl);
+    }
+    if (invalid.length) {
+      try { invalid[0].focus({preventScroll:true}); invalid[0].scrollIntoView({behavior:'smooth',block:'center'}); } catch(e) {}
+      return;
+    }
+
     isSubmitting = true;
-    var fn = document.getElementById(uid + '-firstName').value.trim();
-    var ln = document.getElementById(uid + '-lastName').value.trim();
-    var em = document.getElementById(uid + '-email').value.trim();
-    var ph = document.getElementById(uid + '-phone').value.trim();
-    if (!fn || !ln || !em || !ph) { isSubmitting = false; return; }
-    var phElL = document.getElementById(uid + '-phone');
-    if (phElL && !window.cfgPhoneValid(phElL)) { isSubmitting = false; return; }
+    var fn = fnEl.value.trim();
+    var ln = lnEl.value.trim();
+    var em = emEl.value.trim();
+    var ph = phEl.value.trim();
+    var phElL = phEl;
     <?php if($honeypot): ?>
     var hp = document.getElementById(uid + '-hp');
     if (hp && hp.value) { isSubmitting = false; return; }
