@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.24
+ * Version:     2.6.25
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -6500,6 +6500,12 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     #cfg-wrap button[type=submit]:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
     #cfg-wrap button[type=submit]:disabled{opacity:0.65;cursor:not-allowed;}
     select#cfg_treatment{height:100%;}
+    /* Field error highlight: red border + tiny inline message under the field */
+    #cfg-wrap .cfg-field-error input,#cfg-wrap .cfg-field-error select,#cfg-wrap .cfg-field-error textarea,#cfg-wrap .cfg-field-error .iti{border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.12)!important;}
+    #cfg-wrap .cfg-field-error .iti input[type=tel]{border-color:#dc2626!important;}
+    #cfg-wrap .cfg-field-msg{display:block;margin-top:.35rem;font-size:.75rem;color:#dc2626;font-weight:500;line-height:1.4;}
+    @keyframes cfgShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}50%{transform:translateX(6px);}75%{transform:translateX(-3px);}}
+    #cfg-wrap .cfg-shake{animation:cfgShake .35s ease;}
     @media(max-width:600px){.cfg-row2{grid-template-columns:1fr !important;}#cfg-wrap .cfg-card{padding:1.25rem !important;}}
     </style>
 
@@ -6614,8 +6620,47 @@ function cfg_shortcode( $atts = [], $embed = false ) {
         var errBox = document.getElementById('cfg-error');
         var okBox  = document.getElementById('cfg-success');
 
-        function showErr(msg){ errBox.textContent=msg; errBox.style.display='block'; okBox.style.display='none'; }
+        function showErr(msg){ errBox.textContent=msg; errBox.style.display='block'; okBox.style.display='none'; try{ errBox.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
         function hideErr(){ errBox.style.display='none'; }
+
+        // Per-field error helpers
+        function fieldWrap(el){
+            // Use the closest grid cell (.cfg-row2 > div) or the immediate parent div around label+input
+            var p = el.parentNode;
+            return (p && p.tagName === 'DIV') ? p : el;
+        }
+        function markFieldError(el, msg) {
+            var wrap = fieldWrap(el);
+            if (!wrap) return;
+            wrap.classList.add('cfg-field-error');
+            wrap.classList.remove('cfg-shake'); void wrap.offsetWidth; wrap.classList.add('cfg-shake');
+            var msgEl = wrap.querySelector('.cfg-field-msg');
+            if (!msgEl) { msgEl = document.createElement('span'); msgEl.className = 'cfg-field-msg'; wrap.appendChild(msgEl); }
+            msgEl.textContent = msg;
+        }
+        function clearFieldError(el) {
+            var wrap = fieldWrap(el);
+            if (!wrap) return;
+            wrap.classList.remove('cfg-field-error');
+            var msgEl = wrap.querySelector('.cfg-field-msg');
+            if (msgEl) msgEl.remove();
+        }
+        // Auto-clear errors as the user starts fixing them
+        form.querySelectorAll('input,select,textarea').forEach(function(el){
+            el.addEventListener('input',  function(){ clearFieldError(el); });
+            el.addEventListener('change', function(){ clearFieldError(el); });
+        });
+
+        // Friendly label for a given input — uses the associated <label>, falls back to placeholder
+        function fieldLabel(el) {
+            var id = el.id;
+            if (id) {
+                var l = form.querySelector('label[for="'+id+'"]');
+                if (l) return l.textContent.trim().replace(/\s*\*\s*$/, '');
+            }
+            if (el.placeholder) return el.placeholder;
+            return 'This field';
+        }
 
         var _up = new URLSearchParams(window.location.search);
         var _ss = {}; try { _ss = JSON.parse(sessionStorage.getItem('scad_tracking_params') || '{}'); } catch(e) {}
@@ -6663,14 +6708,48 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
         form.addEventListener('submit', function(e){
             e.preventDefault(); hideErr();
-            var reqEls = form.querySelectorAll('input[required],select[required],textarea[required]');
-            for (var ri=0; ri<reqEls.length; ri++) { if (!reqEls[ri].value.trim()) { showErr('Please fill in all required fields.'); reqEls[ri].focus(); return; } }
+            var invalid = [];
+
+            // 1) Required field check (skip checkboxes; terms handled separately)
+            form.querySelectorAll('input[required],select[required],textarea[required]').forEach(function(el){
+                if (el.type === 'checkbox') return;
+                clearFieldError(el);
+                if (!el.value.trim()) { markFieldError(el, fieldLabel(el) + ' is required.'); invalid.push(el); }
+            });
+
+            // 2) Email format
+            var emEl = form.querySelector('input[type="email"]');
+            if (emEl && emEl.value.trim() && invalid.indexOf(emEl) === -1) {
+                clearFieldError(emEl);
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emEl.value.trim())) {
+                    markFieldError(emEl, 'Please enter a valid email address (e.g. you@example.com).');
+                    invalid.push(emEl);
+                }
+            }
+
+            // 3) Phone format — country-specific via intl-tel-input
             var phEl = form.querySelector('input[type="tel"]');
-            if (phEl && !window.cfgPhoneValid(phEl)) { showErr('Please enter a valid phone number.'); return; }
+            if (phEl && phEl.value.trim() && invalid.indexOf(phEl) === -1 && !window.cfgPhoneValid(phEl)) {
+                clearFieldError(phEl);
+                markFieldError(phEl, 'Please enter a valid phone number for the selected country.');
+                invalid.push(phEl);
+            }
+
+            // 4) Terms checkbox
             if (HAS_TERMS) {
                 var terms = form.querySelector('[name="terms"]');
-                if (!terms||!terms.checked){ showErr('Please agree to the terms before submitting.'); return; }
+                if (!terms || !terms.checked) {
+                    if (terms) markFieldError(terms, 'You must agree to the terms before submitting.');
+                    if (terms) invalid.push(terms);
+                }
             }
+
+            if (invalid.length) {
+                showErr(invalid.length === 1 ? 'Please fix the highlighted field below.' : 'Please fix the ' + invalid.length + ' highlighted fields below.');
+                try { invalid[0].focus({preventScroll:true}); invalid[0].scrollIntoView({behavior:'smooth',block:'center'}); } catch(e) {}
+                return;
+            }
+
             if (RC_KEY && typeof grecaptcha !== 'undefined') {
                 grecaptcha.ready(function(){ grecaptcha.execute(RC_KEY,{action:'submit'}).then(doSubmit); });
             } else { doSubmit(''); }
