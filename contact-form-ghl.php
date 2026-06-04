@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.28
+ * Version:     2.6.29
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -389,6 +389,7 @@ function cfg_defaults() {
         'imp_hide_header'       => '0',
         'imp_show_price'        => '1',
         'imp_single_price'      => '0',
+        'imp_single_price_value' => '5000',
         'imp_show_insurance'    => '1',
         'imp_no_price_title'    => 'Your Estimate Is Ready',
         'imp_no_price_subtitle' => 'Book a free consultation and our team will walk you through your personalised treatment options and costs.',
@@ -3945,13 +3946,20 @@ function cfg_settings_page() {
 
         <div class="imp-sw-row">
             <div class="imp-sw-info">
-                <strong>Display Single Price (midpoint)</strong>
-                <span>When on, shows a single value (e.g. <code>$4,500</code>) instead of a range (<code>$3,000 – $6,000</code>). The midpoint of the min/max is used.</span>
+                <strong>Display Single Price (instead of range)</strong>
+                <span>When on, shows the single value you set below (e.g. <code>$5,000</code>) instead of a price range (<code>$3,000 – $6,000</code>).</span>
             </div>
             <label class="imp-sw">
-                <input type="checkbox" id="imp_single_price" name="<?= CFG_OPTION ?>[imp_single_price]" value="1" <?= checked( $s['imp_single_price'], '1', false ) ?>/>
+                <input type="checkbox" id="imp_single_price" name="<?= CFG_OPTION ?>[imp_single_price]" value="1" <?= checked( $s['imp_single_price'], '1', false ) ?> onchange="document.getElementById('imp-single-value-row').style.display=this.checked?'flex':'none';"/>
                 <span class="imp-sw-slider"></span>
             </label>
+        </div>
+        <div id="imp-single-value-row" class="cfg-grid" style="display:<?= $s['imp_single_price'] === '1' ? 'flex' : 'none' ?>;gap:14px;margin:6px 0 14px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;align-items:flex-end;">
+            <div class="cfg-field" style="flex:1;max-width:240px;">
+                <label>Single Price Value</label>
+                <input type="text" name="<?= CFG_OPTION ?>[imp_single_price_value]" value="<?= esc_attr( $s['imp_single_price_value'] ?? '5000' ) ?>" maxlength="10" placeholder="5000"/>
+                <span class="cfg-desc">The exact value to show as the price (without currency or commas — e.g. <code>5000</code> renders as <code><?= esc_html( $s['imp_currency'] ?? '$' ) ?>5,000</code>). Used for every path when single-price mode is on.</span>
+            </div>
         </div>
 
         <!-- ════════════════════════════════════════════════════ -->
@@ -8967,7 +8975,8 @@ $_sections_col = $result_sections_html
     resultCtaUrl:       '<?= esc_js( ! empty( $s['imp_cta_book_url'] ) ? $s['imp_cta_book_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : '' ) ) ?>',
     contactRedirectUrl: '<?= esc_js( $s['imp_contact_btn_url'] ?? '' ) ?>',
     graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>',
-    singlePrice:  <?= ( ($s['imp_single_price'] ?? '0') === '1' ) ? 'true' : 'false' ?>,
+    singlePrice:      <?= ( ($s['imp_single_price'] ?? '0') === '1' ) ? 'true' : 'false' ?>,
+    singlePriceValue: <?= (int) preg_replace('/[^0-9]/', '', (string)($s['imp_single_price_value'] ?? '5000')) ?>,
     offerEnabled: <?= $offer_enabled ? 'true' : 'false' ?>,
     offerGhlKey:  '<?= esc_js( $offer_ghl_key ) ?>'
   };
@@ -9066,9 +9075,10 @@ $_sections_col = $result_sections_html
   function fmtRange(min, max) {
     var cur = config.currency || '$';
     if (config.singlePrice) {
-      // Round midpoint to nearest $100 for a clean number
-      var mid = Math.round((min + max) / 2 / 100) * 100;
-      return cur + mid.toLocaleString('en-US');
+      // Use the configured single price value (admin sets it explicitly in settings)
+      var val = parseInt(config.singlePriceValue, 10);
+      if (isNaN(val) || val <= 0) val = Math.round((min + max) / 2 / 100) * 100; // fallback to midpoint
+      return cur + val.toLocaleString('en-US');
     }
     var symMatch = cur.match(/[$£€¥₹]/);
     var sym = symMatch ? symMatch[0] : '';
