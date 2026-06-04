@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.27
+ * Version:     2.6.28
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -388,6 +388,7 @@ function cfg_defaults() {
         'imp_contact_btn2_url'     => '',
         'imp_hide_header'       => '0',
         'imp_show_price'        => '1',
+        'imp_single_price'      => '0',
         'imp_show_insurance'    => '1',
         'imp_no_price_title'    => 'Your Estimate Is Ready',
         'imp_no_price_subtitle' => 'Book a free consultation and our team will walk you through your personalised treatment options and costs.',
@@ -2398,7 +2399,7 @@ function cfg_sanitize( $input ) {
         'spam_honeypot',
         'bm_show_hero','bm_show_cta','bm_show_card3','bm_show_card4',
         'ty_social_show','ty_show_image',
-        'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_show_insurance',
+        'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_single_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
         'imp_offer_enabled',
         'alg_hide_page_header',
@@ -3938,6 +3939,17 @@ function cfg_settings_page() {
             </div>
             <label class="imp-sw">
                 <input type="checkbox" id="imp_show_price" name="<?= CFG_OPTION ?>[imp_show_price]" value="1" <?= checked( $s['imp_show_price'], '1', false ) ?> onchange="document.getElementById('imp-price-rows').style.display=this.checked?'block':'none';document.getElementById('imp-noprice-rows').style.display=this.checked?'none':'block'"/>
+                <span class="imp-sw-slider"></span>
+            </label>
+        </div>
+
+        <div class="imp-sw-row">
+            <div class="imp-sw-info">
+                <strong>Display Single Price (midpoint)</strong>
+                <span>When on, shows a single value (e.g. <code>$4,500</code>) instead of a range (<code>$3,000 – $6,000</code>). The midpoint of the min/max is used.</span>
+            </div>
+            <label class="imp-sw">
+                <input type="checkbox" id="imp_single_price" name="<?= CFG_OPTION ?>[imp_single_price]" value="1" <?= checked( $s['imp_single_price'], '1', false ) ?>/>
                 <span class="imp-sw-slider"></span>
             </label>
         </div>
@@ -8955,6 +8967,7 @@ $_sections_col = $result_sections_html
     resultCtaUrl:       '<?= esc_js( ! empty( $s['imp_cta_book_url'] ) ? $s['imp_cta_book_url'] : ( ! empty( $s['imp_success_url'] ) ? $s['imp_success_url'] : '' ) ) ?>',
     contactRedirectUrl: '<?= esc_js( $s['imp_contact_btn_url'] ?? '' ) ?>',
     graftDisplay: '<?= esc_js( $s['imp_graft_display'] ?? 'addon' ) ?>',
+    singlePrice:  <?= ( ($s['imp_single_price'] ?? '0') === '1' ) ? 'true' : 'false' ?>,
     offerEnabled: <?= $offer_enabled ? 'true' : 'false' ?>,
     offerGhlKey:  '<?= esc_js( $offer_ghl_key ) ?>'
   };
@@ -9052,6 +9065,11 @@ $_sections_col = $result_sections_html
   // e.g. currency="CAD $" -> "CAD $20,000 – $40,000" (not "CAD $20,000 – CAD $40,000")
   function fmtRange(min, max) {
     var cur = config.currency || '$';
+    if (config.singlePrice) {
+      // Round midpoint to nearest $100 for a clean number
+      var mid = Math.round((min + max) / 2 / 100) * 100;
+      return cur + mid.toLocaleString('en-US');
+    }
     var symMatch = cur.match(/[$£€¥₹]/);
     var sym = symMatch ? symMatch[0] : '';
     return cur + min.toLocaleString('en-US') + ' \u2013 ' + sym + max.toLocaleString('en-US');
