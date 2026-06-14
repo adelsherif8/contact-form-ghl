@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.31
+ * Version:     2.6.32
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -392,6 +392,8 @@ function cfg_defaults() {
         'imp_contact_btn2_label'   => 'Call Instead',
         'imp_contact_btn2_url'     => '',
         // Optional toggle-controlled blocks on the contact step (off by default)
+        'imp_contact_progress_show' => '0',
+        'imp_contact_progress_text' => 'Last step ✓',
         'imp_contact_consent_show'  => '0',
         'imp_contact_consent_text'  => '',
         'imp_contact_trust_show'    => '0',
@@ -2414,7 +2416,7 @@ function cfg_sanitize( $input ) {
         'ty_social_show','ty_show_image',
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_single_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
-        'imp_intro_trust_show','imp_intro_micro_show','imp_contact_consent_show','imp_contact_trust_show',
+        'imp_intro_trust_show','imp_intro_micro_show','imp_contact_progress_show','imp_contact_consent_show','imp_contact_trust_show',
         'imp_offer_enabled',
         'alg_hide_page_header',
     ];
@@ -4785,6 +4787,14 @@ function cfg_settings_page() {
                 </div>
                 <!-- ── Optional toggle-controlled blocks ── -->
                 <div class="cfg-field cfg-full" style="margin-top:6px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                        <input type="checkbox" name="<?= CFG_OPTION ?>[imp_contact_progress_show]" value="1" <?= checked( $s['imp_contact_progress_show'], '1', false ) ?>/>
+                        Show "Last step" progress badge
+                    </label>
+                    <p class="cfg-desc" style="margin:0 0 6px;">Off by default. A small pill above the heading that signals the user has reached the final step — e.g. <em>Last step ✓</em>.</p>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_contact_progress_text]" value="<?= esc_attr( $s['imp_contact_progress_text'] ) ?>" placeholder="Last step ✓"/>
+                </div>
+                <div class="cfg-field cfg-full" style="margin-top:4px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
                     <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
                         <input type="checkbox" name="<?= CFG_OPTION ?>[imp_contact_consent_show]" value="1" <?= checked( $s['imp_contact_consent_show'], '1', false ) ?>/>
                         Show consent / privacy line
@@ -8837,6 +8847,11 @@ if ( $show_insurance && $ins_q ) {
         <div style="flex:1;min-width:0;">
           <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:1.25rem 1.5rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <div style="margin-bottom:1.5rem;">
+              <?php if ( ( $s['imp_contact_progress_show'] ?? '0' ) === '1' && ! empty( $s['imp_contact_progress_text'] ) ): ?>
+                <div style="display:inline-flex;align-items:center;gap:.4rem;margin-bottom:.625rem;padding:.3rem .75rem;background:hsl(var(--primary)/.1);color:hsl(var(--primary));border-radius:9999px;font-family:Inter,sans-serif;font-weight:600;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;">
+                  <?= esc_html( $s['imp_contact_progress_text'] ) ?>
+                </div>
+              <?php endif; ?>
               <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;color:hsl(var(--foreground));font-size:1.5rem;line-height:1.3;margin:0 0 .5rem;"><?= esc_html( $s['imp_contact_title'] ) ?></h2>
               <p style="font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.875rem;"><?= esc_html( $s['imp_contact_subtitle'] ) ?></p>
             </div>
