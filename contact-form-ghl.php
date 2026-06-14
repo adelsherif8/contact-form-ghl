@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.30
+ * Version:     2.6.31
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -302,6 +302,11 @@ function cfg_defaults() {
         'imp_intro_bullets'    => "Takes under 2 minutes\nNo obligation — 100% free\nInstant, personalised estimate",
         'imp_intro_btn'        => 'Get My Estimate',
         'imp_intro_btn_url'    => '',
+        // Optional toggle-controlled blocks on the intro screen (off by default)
+        'imp_intro_trust_show' => '0',
+        'imp_intro_trust_text' => '',
+        'imp_intro_micro_show' => '0',
+        'imp_intro_micro_text' => '',
         'imp_router_title'     => 'What are you looking to replace?',
         'imp_router_sub'       => 'Select the option that best describes your situation.',
         'imp_router_opts'  => json_encode([
@@ -386,6 +391,12 @@ function cfg_defaults() {
         'imp_contact_btn2_enabled' => '0',
         'imp_contact_btn2_label'   => 'Call Instead',
         'imp_contact_btn2_url'     => '',
+        // Optional toggle-controlled blocks on the contact step (off by default)
+        'imp_contact_consent_show'  => '0',
+        'imp_contact_consent_text'  => '',
+        'imp_contact_trust_show'    => '0',
+        'imp_contact_trust_text'    => '',
+        'imp_contact_trust_quote'   => '',
         'imp_hide_header'       => '0',
         'imp_show_price'        => '1',
         'imp_single_price'      => '0',
@@ -2392,6 +2403,7 @@ function cfg_sanitize( $input ) {
         'bm_hero_subheading','bm_card1_body','bm_card2_body','bm_card3_body','bm_card4_body','bm_cta_body','ty_body',
         'imp_intro_subtitle','imp_intro_bullets','imp_financing_text','imp_disclaimer','imp_result_subtitle','imp_contact_subtitle','imp_no_price_subtitle',
         'imp_offer_subtext','imp_offer_bullets',
+        'imp_contact_consent_text',
     ];
     $bool_fields = [
         'show_hero','req_first_name','req_last_name','req_email','req_phone',
@@ -2402,6 +2414,7 @@ function cfg_sanitize( $input ) {
         'ty_social_show','ty_show_image',
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_single_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
+        'imp_intro_trust_show','imp_intro_micro_show','imp_contact_consent_show','imp_contact_trust_show',
         'imp_offer_enabled',
         'alg_hide_page_header',
     ];
@@ -4495,6 +4508,23 @@ function cfg_settings_page() {
                     <input type="url" name="<?= CFG_OPTION ?>[imp_intro_btn_url]" value="<?= esc_attr( $s['imp_intro_btn_url'] ) ?>" placeholder="https://… (optional, overrides quiz start)"/>
                     <span class="cfg-desc">If set, clicking the button navigates to this URL instead of launching the quiz.</span>
                 </div>
+                <!-- ── Optional toggle-controlled blocks ── -->
+                <div class="cfg-field cfg-full" style="margin-top:6px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                        <input type="checkbox" name="<?= CFG_OPTION ?>[imp_intro_trust_show]" value="1" <?= checked( $s['imp_intro_trust_show'], '1', false ) ?>/>
+                        Show trust strip
+                    </label>
+                    <p class="cfg-desc" style="margin:0 0 6px;">Off by default. Renders under the intro bullets — e.g. <em>★ 5.0 · 90+ Google reviews · Your Practice Name, City</em>.</p>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_intro_trust_text]" value="<?= esc_attr( $s['imp_intro_trust_text'] ) ?>" placeholder="★ 5.0 · 90+ Google reviews · Mill Street Dental Studio, Georgetown ON"/>
+                </div>
+                <div class="cfg-field cfg-full" style="margin-top:4px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                        <input type="checkbox" name="<?= CFG_OPTION ?>[imp_intro_micro_show]" value="1" <?= checked( $s['imp_intro_micro_show'], '1', false ) ?>/>
+                        Show microcopy under the CTA
+                    </label>
+                    <p class="cfg-desc" style="margin:0 0 6px;">Off by default. Reassurance line directly under the CTA button — e.g. <em>No payment info required. No commitment. Just clarity.</em></p>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_intro_micro_text]" value="<?= esc_attr( $s['imp_intro_micro_text'] ) ?>" placeholder="No payment info required. No commitment. Just clarity."/>
+                </div>
             </div>
         </div>
 
@@ -4752,6 +4782,24 @@ function cfg_settings_page() {
                     <label>Redirect URL after submit <span style="font-weight:400;color:#9ca3af;">— optional</span></label>
                     <input type="url" name="<?= CFG_OPTION ?>[imp_contact_btn_url]" value="<?= esc_attr( $s['imp_contact_btn_url'] ) ?>" placeholder="https://… (overrides global Success URL)"/>
                     <span class="cfg-desc">Where to send the patient after they submit their details. Overrides the global Success Redirect URL for this step only.</span>
+                </div>
+                <!-- ── Optional toggle-controlled blocks ── -->
+                <div class="cfg-field cfg-full" style="margin-top:6px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                        <input type="checkbox" name="<?= CFG_OPTION ?>[imp_contact_consent_show]" value="1" <?= checked( $s['imp_contact_consent_show'], '1', false ) ?>/>
+                        Show consent / privacy line
+                    </label>
+                    <p class="cfg-desc" style="margin:0 0 6px;">Off by default. Compliance microcopy under the submit button (CASL / GDPR). Plain text — line breaks become real line breaks.</p>
+                    <textarea name="<?= CFG_OPTION ?>[imp_contact_consent_text]" rows="3" placeholder="🔒 Your information is private and never sold. By continuing, you agree to receive your estimate and related messages by text and email. Reply STOP anytime."><?= esc_textarea( $s['imp_contact_consent_text'] ) ?></textarea>
+                </div>
+                <div class="cfg-field cfg-full" style="margin-top:4px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                        <input type="checkbox" name="<?= CFG_OPTION ?>[imp_contact_trust_show]" value="1" <?= checked( $s['imp_contact_trust_show'], '1', false ) ?>/>
+                        Show trust strip under the form
+                    </label>
+                    <p class="cfg-desc" style="margin:0 0 6px;">Off by default. One line + optional quote under the form — e.g. <em>★ 5.0 · 90+ Google reviews</em> with a short testimonial.</p>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_contact_trust_text]" value="<?= esc_attr( $s['imp_contact_trust_text'] ) ?>" placeholder="★ 5.0 · 90+ Google reviews" style="margin-bottom:6px;"/>
+                    <input type="text" name="<?= CFG_OPTION ?>[imp_contact_trust_quote]" value="<?= esc_attr( $s['imp_contact_trust_quote'] ) ?>" placeholder='"Honest explanations without pressure." — The Mill Street team'/>
                 </div>
             </div>
 
@@ -8582,6 +8630,12 @@ header,#header,.header,#site-header,.site-header,#masthead,.masthead,
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
             <?php endif; ?>
+            <?php if ( ( $s['imp_intro_micro_show'] ?? '0' ) === '1' && ! empty( $s['imp_intro_micro_text'] ) ): ?>
+              <div style="margin-top:.6rem;font-size:.82rem;color:<?= esc_attr( $s['muted_color'] ) ?>;line-height:1.5;"><?= esc_html( $s['imp_intro_micro_text'] ) ?></div>
+            <?php endif; ?>
+            <?php if ( ( $s['imp_intro_trust_show'] ?? '0' ) === '1' && ! empty( $s['imp_intro_trust_text'] ) ): ?>
+              <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px solid <?= esc_attr( $s['border_color'] ) ?>;font-size:.85rem;color:<?= esc_attr( $s['muted_color'] ) ?>;font-weight:600;letter-spacing:.01em;"><?= esc_html( $s['imp_intro_trust_text'] ) ?></div>
+            <?php endif; ?>
           </div>
         </div>
         <div id="<?= $uid ?>-intro-card" style="display:none;"></div>
@@ -8824,7 +8878,21 @@ if ( $show_insurance && $ins_q ) {
               </a>
             </div>
             <?php endif; ?>
-            <p style="margin-top:1rem;font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.5);font-size:.75rem;text-align:center;">Your information is kept private and never sold.</p>
+            <?php if ( ( $s['imp_contact_consent_show'] ?? '0' ) === '1' && ! empty( $s['imp_contact_consent_text'] ) ): ?>
+              <div style="margin-top:.875rem;padding:.7rem .9rem;background:hsl(var(--muted)/.25);border:1px solid hsl(var(--border));border-radius:var(--br);font-family:Inter,sans-serif;color:hsl(var(--muted-foreground));font-size:.75rem;line-height:1.55;"><?= nl2br( esc_html( $s['imp_contact_consent_text'] ) ) ?></div>
+            <?php else: ?>
+              <p style="margin-top:1rem;font-family:Inter,sans-serif;color:hsl(var(--muted-foreground)/.5);font-size:.75rem;text-align:center;">Your information is kept private and never sold.</p>
+            <?php endif; ?>
+            <?php if ( ( $s['imp_contact_trust_show'] ?? '0' ) === '1' && ( ! empty( $s['imp_contact_trust_text'] ) || ! empty( $s['imp_contact_trust_quote'] ) ) ): ?>
+              <div style="margin-top:1rem;padding-top:.9rem;border-top:1px solid hsl(var(--border));text-align:center;font-family:Inter,sans-serif;">
+                <?php if ( ! empty( $s['imp_contact_trust_text'] ) ): ?>
+                  <div style="font-size:.85rem;color:hsl(var(--foreground));font-weight:600;letter-spacing:.01em;"><?= esc_html( $s['imp_contact_trust_text'] ) ?></div>
+                <?php endif; ?>
+                <?php if ( ! empty( $s['imp_contact_trust_quote'] ) ): ?>
+                  <div style="margin-top:.4rem;font-size:.78rem;color:hsl(var(--muted-foreground));font-style:italic;line-height:1.55;"><?= esc_html( $s['imp_contact_trust_quote'] ) ?></div>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
         <?= $sidebar ?>
