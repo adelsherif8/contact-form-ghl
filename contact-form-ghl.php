@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.29
+ * Version:     2.6.30
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -3533,6 +3533,20 @@ function cfg_settings_page() {
                             <div class="cfg-field"><label>Button Text</label><input type="text" class="alg-f-btn-text" style="width:100%;"/></div>
                             <div class="cfg-field cfg-full"><label>Subtitle / Description</label><textarea class="alg-f-subtitle" rows="2" style="width:100%;"></textarea></div>
                             <div class="cfg-field cfg-full"><label>Bullet Points <span style="font-weight:400;color:#666;">(one per line)</span></label><textarea class="alg-f-bullets" rows="3" style="width:100%;"></textarea></div>
+                            <div class="cfg-field cfg-full" style="margin-top:6px;padding:10px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;">
+                                <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                                    <input type="checkbox" class="alg-f-intro-trust-show" style="margin:0;"/> Show trust strip
+                                </label>
+                                <p style="margin:0 0 6px;font-size:11px;color:#6b7280;">Off by default. A small line under the bullets, e.g. <em>★ 5.0 · 90+ Google reviews · Your Practice Name</em>.</p>
+                                <input type="text" class="alg-f-intro-trust-text" placeholder="★ 5.0 · 90+ Google reviews · Your Practice, City" style="width:100%;"/>
+                            </div>
+                            <div class="cfg-field cfg-full" style="margin-top:4px;padding:10px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;">
+                                <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                                    <input type="checkbox" class="alg-f-intro-micro-show" style="margin:0;"/> Show microcopy under the CTA
+                                </label>
+                                <p style="margin:0 0 6px;font-size:11px;color:#6b7280;">Off by default. Reassurance line directly under the button, e.g. <em>No payment info required. No commitment. Just clarity.</em></p>
+                                <input type="text" class="alg-f-intro-micro-text" placeholder="No payment info required. No commitment. Just clarity." style="width:100%;"/>
+                            </div>
                         </div>
                     </div>
                     <div class="alg-fields-yesno">
@@ -3573,6 +3587,21 @@ function cfg_settings_page() {
                             <div class="cfg-field"><label>Title</label><input type="text" class="alg-f-title" style="width:100%;"/></div>
                             <div class="cfg-field"><label>Button Text</label><input type="text" class="alg-f-btn-text" style="width:100%;"/></div>
                             <div class="cfg-field cfg-full"><label>Subtitle</label><textarea class="alg-f-subtitle" rows="2" style="width:100%;"></textarea></div>
+                            <div class="cfg-field cfg-full" style="margin-top:6px;padding:10px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;">
+                                <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                                    <input type="checkbox" class="alg-f-contact-consent-show" style="margin:0;"/> Show consent / privacy line
+                                </label>
+                                <p style="margin:0 0 6px;font-size:11px;color:#6b7280;">Off by default. Compliance microcopy under the form (CASL / GDPR). Plain text — line breaks become real line breaks.</p>
+                                <textarea class="alg-f-contact-consent-text" rows="3" placeholder="🔒 Your information is private and never sold. By continuing, you agree to receive your estimate and related messages by text and email. Reply STOP anytime." style="width:100%;"></textarea>
+                            </div>
+                            <div class="cfg-field cfg-full" style="margin-top:4px;padding:10px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;">
+                                <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:6px;">
+                                    <input type="checkbox" class="alg-f-contact-trust-show" style="margin:0;"/> Show trust strip under the form
+                                </label>
+                                <p style="margin:0 0 6px;font-size:11px;color:#6b7280;">Off by default. One line + optional quote, e.g. <em>★ 5.0 · 90+ Google reviews</em> with a short testimonial.</p>
+                                <input type="text" class="alg-f-contact-trust-text" placeholder="★ 5.0 · 90+ Google reviews" style="width:100%;margin-bottom:6px;"/>
+                                <input type="text" class="alg-f-contact-trust-quote" placeholder="&quot;Honest explanations without pressure.&quot; — The Mill Street team" style="width:100%;"/>
+                            </div>
                         </div>
                         <p class="cfg-desc" style="margin-top:8px;">Contact form always collects: First Name, Last Name, Phone, Email. All quiz answers are sent to GHL as custom fields and tags.</p>
                     </div>
@@ -3606,7 +3635,10 @@ function cfg_settings_page() {
 
                 function sf(sel, val) {
                     if (val === undefined || val === null) return;
-                    card.querySelectorAll(sel).forEach(function(el){ el.value = val; });
+                    card.querySelectorAll(sel).forEach(function(el){
+                        if (el.type === 'checkbox') el.checked = val === '1' || val === true || val === 1;
+                        else el.value = val;
+                    });
                 }
                 sf('.alg-f-title',    step.title    || step.question || '');
                 sf('.alg-f-subtitle', step.type === 'yesno' || step.type === 'image' ? (step.hint || '') : (step.subtitle || ''));
@@ -3615,6 +3647,16 @@ function cfg_settings_page() {
                 sf('.alg-f-question', step.question || '');
                 sf('.alg-f-hint',     step.hint     || '');
                 sf('.alg-f-key',      step.field_key|| '');
+                // New optional toggle-controlled blocks (intro + contact only)
+                sf('.alg-f-intro-trust-show',    step.trust_show    || '');
+                sf('.alg-f-intro-trust-text',    step.trust_text    || '');
+                sf('.alg-f-intro-micro-show',    step.micro_show    || '');
+                sf('.alg-f-intro-micro-text',    step.micro_text    || '');
+                sf('.alg-f-contact-trust-show',  step.trust_show    || '');
+                sf('.alg-f-contact-trust-text',  step.trust_text    || '');
+                sf('.alg-f-contact-trust-quote', step.trust_quote   || '');
+                sf('.alg-f-contact-consent-show',step.consent_show  || '');
+                sf('.alg-f-contact-consent-text',step.consent_text  || '');
 
                 if (type === 'image' && step.choices) {
                     var cc = card.querySelector('.alg-choices-container');
@@ -3748,11 +3790,18 @@ function cfg_settings_page() {
                     var type = card.querySelector('.alg-f-type').value;
                     var step = {type:type};
                     function gf(sel){ var el = card.querySelector(sel); return el ? el.value : ''; }
+                    function gc(sel){ var el = card.querySelector(sel); return el && el.checked ? '1' : '0'; }
                     if (type === 'intro' || type === 'content') {
                         step.title    = gf('.alg-f-title');
                         step.subtitle = gf('.alg-f-subtitle');
                         step.bullets  = gf('.alg-f-bullets');
                         step.btn_text = gf('.alg-f-btn-text');
+                        if (type === 'intro') {
+                            step.trust_show = gc('.alg-f-intro-trust-show');
+                            step.trust_text = gf('.alg-f-intro-trust-text');
+                            step.micro_show = gc('.alg-f-intro-micro-show');
+                            step.micro_text = gf('.alg-f-intro-micro-text');
+                        }
                     } else if (type === 'yesno') {
                         step.question  = gf('.alg-f-question');
                         step.hint      = gf('.alg-f-hint');
@@ -3771,6 +3820,11 @@ function cfg_settings_page() {
                         step.title    = gf('.alg-f-title');
                         step.subtitle = gf('.alg-f-subtitle');
                         step.btn_text = gf('.alg-f-btn-text');
+                        step.trust_show  = gc('.alg-f-contact-trust-show');
+                        step.trust_text  = gf('.alg-f-contact-trust-text');
+                        step.trust_quote = gf('.alg-f-contact-trust-quote');
+                        step.consent_show = gc('.alg-f-contact-consent-show');
+                        step.consent_text = gf('.alg-f-contact-consent-text');
                     }
                     steps.push(step);
                 });
@@ -7732,6 +7786,14 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
                 }
                 echo '<button class="' . $uid . '-btn" style="font-size:1rem;padding:0.95rem 2.5rem;" onclick="' . $uid . 'go(' . ( $i + 1 ) . ')">' . esc_html( $step['btn_text'] ?? 'Start' ) . ' <i class="fa-solid fa-arrow-right" style="font-size:0.85em;"></i></button>';
                 echo '<div style="margin-top:0.75rem;font-size:0.78rem;color:' . esc_attr($s['muted_color']) . ';">Personalized based on your answers &middot; Free &middot; No obligation</div>';
+                // Optional microcopy (off by default)
+                if ( ( $step['micro_show'] ?? '0' ) === '1' && ! empty( $step['micro_text'] ) ) {
+                    echo '<div style="margin-top:0.4rem;font-size:0.78rem;color:' . esc_attr($s['muted_color']) . ';line-height:1.55;">' . esc_html( $step['micro_text'] ) . '</div>';
+                }
+                // Optional trust strip (off by default)
+                if ( ( $step['trust_show'] ?? '0' ) === '1' && ! empty( $step['trust_text'] ) ) {
+                    echo '<div style="margin-top:1rem;padding-top:0.9rem;border-top:1px solid ' . esc_attr($s['border_color']) . ';font-size:0.78rem;color:' . esc_attr($s['muted_color']) . ';font-weight:600;letter-spacing:0.01em;">' . esc_html( $step['trust_text'] ) . '</div>';
+                }
             }
 
             // ── YES / NO ───────────────────────────────────────────
@@ -7817,6 +7879,21 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
                 echo '</div>';
                 echo '<div id="' . $uid . '-err" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:0.7rem 0.9rem;color:#dc2626;font-size:0.85rem;margin-bottom:1rem;"></div>';
                 echo '<button type="submit" id="' . $uid . '-sbtn" class="' . $uid . '-btn" style="width:100%;font-size:1rem;padding:0.95rem;"><span id="' . $uid . '-slbl">' . esc_html( $step['btn_text'] ?? 'Submit' ) . '</span></button>';
+                // Optional CASL/privacy consent line under the submit (off by default)
+                if ( ( $step['consent_show'] ?? '0' ) === '1' && ! empty( $step['consent_text'] ) ) {
+                    echo '<div style="margin-top:0.85rem;padding:0.7rem 0.9rem;background:rgba(0,0,0,0.025);border:1px solid ' . esc_attr($s['border_color']) . ';border-radius:8px;font-size:0.75rem;color:' . esc_attr($s['muted_color']) . ';line-height:1.55;">' . nl2br( esc_html( $step['consent_text'] ) ) . '</div>';
+                }
+                // Optional trust strip + quote under the form (off by default)
+                if ( ( $step['trust_show'] ?? '0' ) === '1' && ( ! empty( $step['trust_text'] ) || ! empty( $step['trust_quote'] ) ) ) {
+                    echo '<div style="margin-top:1rem;padding-top:0.9rem;border-top:1px solid ' . esc_attr($s['border_color']) . ';text-align:center;">';
+                    if ( ! empty( $step['trust_text'] ) ) {
+                        echo '<div style="font-size:0.8rem;color:' . esc_attr($s['muted_color']) . ';font-weight:600;letter-spacing:0.01em;">' . esc_html( $step['trust_text'] ) . '</div>';
+                    }
+                    if ( ! empty( $step['trust_quote'] ) ) {
+                        echo '<div style="margin-top:0.4rem;font-size:0.78rem;color:' . esc_attr($s['muted_color']) . ';font-style:italic;line-height:1.55;">' . esc_html( $step['trust_quote'] ) . '</div>';
+                    }
+                    echo '</div>';
+                }
                 echo '</form>';
             }
 
