@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.32
+ * Version:     2.6.33
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2365,10 +2365,55 @@ add_action( 'wp_footer', function () {
             });
         }).observe(document.body, { childList:true, subtree:true });
 
-        // Before any form submit — replace value with full E.164 international number
+        // Try to auto-detect the actual country of a typed number by validating
+        // against a list of common dial codes. Switches the dropdown if a match is found.
+        // This handles the case where a user types an Egyptian number while the
+        // dropdown is still on the default (Canada / geo-detected) country.
+        window.cfgPhoneAutoDetectCountry = function(el) {
+            if (!el || !el._cfgIti || !window.intlTelInputUtils) return;
+            var iti = el._cfgIti;
+            var val = (el.value || '').trim();
+            if (!val) return;
+            // Already valid for the selected country → don't override
+            try { if (iti.isValidNumber()) return; } catch(e) { return; }
+            // Already starts with + → let intl-tel-input parse it via setNumber
+            if (val.charAt(0) === '+') {
+                try { iti.setNumber(val); } catch(e) {}
+                return;
+            }
+            var digits = val.replace(/\D/g, '');
+            if (digits.length < 7) return;
+            // Strip any leading zero (national trunk prefix used in many countries
+            // e.g. Egypt "01009955929" → international "201009955929")
+            var stripped = digits.replace(/^0+/, '');
+            // Common countries to test, in priority order
+            var candidates = [
+                'eg','gb','us','ca','de','fr','au','in','mx','br',
+                'ae','sa','it','es','nl','jp','cn','ru','za','ng',
+                'pk','bd','ph','id','tr','pl','se','ch','be','at',
+                'ie','nz','sg','my','th','vn','ar','co','cl','pe'
+            ];
+            for (var i = 0; i < candidates.length; i++) {
+                var iso = candidates[i];
+                try {
+                    if (intlTelInputUtils.isValidNumber(stripped, iso)) {
+                        iti.setCountry(iso);
+                        // Set the local-format value so getNumber() produces the
+                        // correct international E.164 form with the right dial code
+                        el.value = stripped;
+                        return;
+                    }
+                } catch(e) {}
+            }
+        };
+
+        // Before any form submit — auto-detect country if necessary, then replace
+        // the input value with full E.164 international format.
         document.addEventListener('submit', function(e){
             var ph = e.target.querySelector('input[type="tel"]');
-            if (ph && ph._cfgIti) ph.value = ph._cfgIti.getNumber() || ph.value;
+            if (!ph || !ph._cfgIti) return;
+            window.cfgPhoneAutoDetectCountry(ph);
+            ph.value = ph._cfgIti.getNumber() || ph.value;
         }, true);
     })();
     </script>
