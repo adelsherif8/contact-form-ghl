@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.34
+ * Version:     2.6.35
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -2385,6 +2385,116 @@ add_action( 'wp_footer', function () {
 add_action( 'admin_init', function () {
     register_setting( CFG_SLUG, CFG_OPTION, [ 'sanitize_callback' => 'cfg_sanitize' ] );
 } );
+
+// ═══════════════════════════════════════════════════════════════
+//  Auto-provision the "Patient Type" custom field in GHL.
+//  Runs once per site the first time an admin loads any admin page
+//  after upgrading to v2.6.35+. Skips silently if the API key or
+//  location ID isn't configured yet — will retry next admin visit.
+// ═══════════════════════════════════════════════════════════════
+add_action( 'admin_init', 'cfg_auto_provision_patient_type_field' );
+function cfg_auto_provision_patient_type_field() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+    if ( get_option( 'cfg_patient_type_field_v1' ) === '1' ) return;
+
+    $s           = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $api_key     = trim( $s['ghl_api_key']     ?? '' );
+    $location_id = trim( $s['ghl_location_id'] ?? '' );
+
+    // No credentials yet → try again on the next admin page load
+    if ( $api_key === '' || $location_id === '' ) return;
+
+    $headers = [
+        'Authorization' => 'Bearer ' . $api_key,
+        'Content-Type'  => 'application/json',
+        'Version'       => '2021-07-28',
+    ];
+    $base = 'https://services.leadconnectorhq.com';
+
+    // ── 1) Check whether the field already exists ──
+    $r = wp_remote_get( "{$base}/locations/{$location_id}/customFields", [ 'headers' => $headers, 'timeout' => 15 ] );
+    if ( is_wp_error( $r ) ) return; // network hiccup — try next admin visit
+    $code = wp_remote_retrieve_response_code( $r );
+    // Auth failure: mark as done so we don't retry with the same bad token every request
+    if ( $code === 401 || $code === 403 ) { update_option( 'cfg_patient_type_field_v1', '1' ); return; }
+    if ( $code < 200 || $code >= 300 ) return;
+
+    $body      = json_decode( wp_remote_retrieve_body( $r ), true );
+    $existing  = null;
+    foreach ( ( $body['customFields'] ?? [] ) as $f ) {
+        $bare = strtolower( preg_replace( '/^contact\./', '', $f['fieldKey'] ?? '' ) );
+        if ( $bare === 'patient_type' ) { $existing = $f; break; }
+    }
+
+    // Options we want on the field
+    $desired_options = [ 'New patient', 'Existing patient' ];
+
+    if ( $existing ) {
+        // Field exists — make sure it's a SINGLE_OPTIONS dropdown with the right options.
+        $cur_type = $existing['dataType'] ?? 'TEXT';
+        $cur_opts = $existing['options']  ?? [];
+        $needs_options_update = $cur_type === 'SINGLE_OPTIONS' && ! empty( array_diff( $desired_options, $cur_opts ) );
+        if ( $cur_type === 'SINGLE_OPTIONS' && $needs_options_update ) {
+            // Merge options (preserve any custom options an admin might have added later)
+            $merged = array_values( array_unique( array_merge( $cur_opts, $desired_options ) ) );
+            wp_remote_request( "{$base}/locations/{$location_id}/customFields/{$existing['id']}", [
+                'method'  => 'PUT',
+                'headers' => $headers,
+                'body'    => wp_json_encode( [ 'name' => 'Patient Type', 'dataType' => 'SINGLE_OPTIONS', 'options' => $merged ] ),
+                'timeout' => 15,
+            ] );
+        }
+        // Whether it was already correct or we just fixed it, we're done
+        update_option( 'cfg_patient_type_field_v1', '1' );
+        return;
+    }
+
+    // ── 2) Resolve or create the "Contact Form" folder ──
+    $parent_id = null;
+    $fr = wp_remote_get( "{$base}/locations/{$location_id}/customFieldsFolders", [ 'headers' => $headers, 'timeout' => 15 ] );
+    if ( ! is_wp_error( $fr ) && wp_remote_retrieve_response_code( $fr ) < 300 ) {
+        $fb = json_decode( wp_remote_retrieve_body( $fr ), true );
+        foreach ( ( $fb['folders'] ?? [] ) as $folder ) {
+            if ( strtolower( trim( $folder['name'] ?? '' ) ) === 'contact form' ) { $parent_id = $folder['id']; break; }
+        }
+    }
+    if ( ! $parent_id ) {
+        $cr = wp_remote_post( "{$base}/locations/{$location_id}/customFieldsFolders", [
+            'headers' => $headers,
+            'body'    => wp_json_encode( [ 'name' => 'Contact Form' ] ),
+            'timeout' => 15,
+        ] );
+        if ( ! is_wp_error( $cr ) ) {
+            $cb = json_decode( wp_remote_retrieve_body( $cr ), true );
+            $parent_id = $cb['folder']['id'] ?? $cb['id'] ?? null;
+        }
+    }
+
+    // ── 3) Create the SINGLE_OPTIONS field ──
+    $payload = [
+        'name'     => 'Patient Type',
+        'fieldKey' => 'patient_type',
+        'dataType' => 'SINGLE_OPTIONS',
+        'options'  => $desired_options,
+        'position' => 0,
+    ];
+    if ( $parent_id ) $payload['parentId'] = $parent_id;
+
+    $cr = wp_remote_post( "{$base}/locations/{$location_id}/customFields", [
+        'headers' => $headers,
+        'body'    => wp_json_encode( $payload ),
+        'timeout' => 15,
+    ] );
+    $ccode = is_wp_error( $cr ) ? 0 : wp_remote_retrieve_response_code( $cr );
+
+    // Mark the migration done if we succeeded OR the field already exists (400 duplicate).
+    // Any other failure: leave the flag off so we retry on the next admin page load.
+    if ( ( $ccode >= 200 && $ccode < 300 ) || $ccode === 400 ) {
+        update_option( 'cfg_patient_type_field_v1', '1' );
+        // Bust the UTM key map cache in case anything relies on it
+        delete_option( 'cfg_utm_key_map_' . md5( $location_id ) );
+    }
+}
 
 function cfg_sanitize( $input ) {
     $defaults = cfg_defaults();
