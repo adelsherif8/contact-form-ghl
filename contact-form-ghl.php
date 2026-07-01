@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.33
+ * Version:     2.6.34
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -190,6 +190,8 @@ function cfg_defaults() {
         'req_phone'              => '1',
         'req_treatment'          => '1',
         'show_treatment'         => '1',
+        'req_patient_type'       => '1',
+        'show_patient_type'      => '1',
         'show_terms'             => '1',
         'show_back_link'         => '1',
         'phone_number'           => '(661) 259-4474',
@@ -582,6 +584,7 @@ function cfg_ghl_ensure_fields( $api_key, $location_id, $s ) {
 
     $treatment_opts = array_values( array_filter( array_map( 'trim', explode( "\n", $s['treatment_options'] ?? '' ) ) ) );
     $make_field( 'Treatment Type',   'treatment_type',   $cf_folder, 'SINGLE_OPTIONS', $treatment_opts );
+    $make_field( 'Patient Type',     'patient_type',     $cf_folder, 'SINGLE_OPTIONS', [ 'New patient', 'Existing patient' ] );
     $make_field( 'Automation Tester','automation_tester',$cf_folder );
     $make_field( 'Latest Form Date', 'latest_form_date', $router_folder );
     foreach ( $imp_fields as $key => $name ) $make_field( $name, $key, $imp_folder );
@@ -771,6 +774,7 @@ function cfg_ghl_field_definitions( $s ) {
     // Each field has: name, key, folder (GHL folder name to put it in)
     $cf = array_map( fn($f) => $f + ['folder' => 'Contact Form'],    [
         [ 'name' => 'Treatment Type',    'key' => 'treatment_type' ],
+        [ 'name' => 'Patient Type',      'key' => 'patient_type' ],
         [ 'name' => 'Automation Tester', 'key' => 'automation_tester' ],
     ] );
     $router = array_map( fn($f) => $f + ['folder' => 'Router'], [
@@ -2365,55 +2369,10 @@ add_action( 'wp_footer', function () {
             });
         }).observe(document.body, { childList:true, subtree:true });
 
-        // Try to auto-detect the actual country of a typed number by validating
-        // against a list of common dial codes. Switches the dropdown if a match is found.
-        // This handles the case where a user types an Egyptian number while the
-        // dropdown is still on the default (Canada / geo-detected) country.
-        window.cfgPhoneAutoDetectCountry = function(el) {
-            if (!el || !el._cfgIti || !window.intlTelInputUtils) return;
-            var iti = el._cfgIti;
-            var val = (el.value || '').trim();
-            if (!val) return;
-            // Already valid for the selected country → don't override
-            try { if (iti.isValidNumber()) return; } catch(e) { return; }
-            // Already starts with + → let intl-tel-input parse it via setNumber
-            if (val.charAt(0) === '+') {
-                try { iti.setNumber(val); } catch(e) {}
-                return;
-            }
-            var digits = val.replace(/\D/g, '');
-            if (digits.length < 7) return;
-            // Strip any leading zero (national trunk prefix used in many countries
-            // e.g. Egypt "01009955929" → international "201009955929")
-            var stripped = digits.replace(/^0+/, '');
-            // Common countries to test, in priority order
-            var candidates = [
-                'eg','gb','us','ca','de','fr','au','in','mx','br',
-                'ae','sa','it','es','nl','jp','cn','ru','za','ng',
-                'pk','bd','ph','id','tr','pl','se','ch','be','at',
-                'ie','nz','sg','my','th','vn','ar','co','cl','pe'
-            ];
-            for (var i = 0; i < candidates.length; i++) {
-                var iso = candidates[i];
-                try {
-                    if (intlTelInputUtils.isValidNumber(stripped, iso)) {
-                        iti.setCountry(iso);
-                        // Set the local-format value so getNumber() produces the
-                        // correct international E.164 form with the right dial code
-                        el.value = stripped;
-                        return;
-                    }
-                } catch(e) {}
-            }
-        };
-
-        // Before any form submit — auto-detect country if necessary, then replace
-        // the input value with full E.164 international format.
+        // Before any form submit — replace value with full E.164 international number
         document.addEventListener('submit', function(e){
             var ph = e.target.querySelector('input[type="tel"]');
-            if (!ph || !ph._cfgIti) return;
-            window.cfgPhoneAutoDetectCountry(ph);
-            ph.value = ph._cfgIti.getNumber() || ph.value;
+            if (ph && ph._cfgIti) ph.value = ph._cfgIti.getNumber() || ph.value;
         }, true);
     })();
     </script>
@@ -2454,7 +2413,7 @@ function cfg_sanitize( $input ) {
     ];
     $bool_fields = [
         'show_hero','req_first_name','req_last_name','req_email','req_phone',
-        'req_treatment','show_treatment','show_terms','show_back_link',
+        'req_treatment','show_treatment','req_patient_type','show_patient_type','show_terms','show_back_link',
         'card_border','card_shadow',
         'spam_honeypot',
         'bm_show_hero','bm_show_cta','bm_show_card3','bm_show_card4',
@@ -3046,11 +3005,12 @@ function cfg_settings_page() {
 
         <div class="cfg-section-title">Field Settings</div>
         <?php foreach ( [
-            'req_first_name' => 'First Name required',
-            'req_last_name'  => 'Last Name required',
-            'req_email'      => 'Email required',
-            'req_phone'      => 'Phone required',
-            'req_treatment'  => 'Treatment Type required',
+            'req_first_name'   => 'First Name required',
+            'req_last_name'    => 'Last Name required',
+            'req_email'        => 'Email required',
+            'req_phone'        => 'Phone required',
+            'req_treatment'    => 'Treatment Type required',
+            'req_patient_type' => 'Patient Type required',
         ] as $key => $lbl ): ?>
         <div class="cfg-toggle-row">
             <input type="checkbox" id="<?= $key ?>" name="<?= CFG_OPTION ?>[<?= $key ?>]" value="1" <?= checked( $s[ $key ], '1', false ) ?>/>
@@ -3060,6 +3020,10 @@ function cfg_settings_page() {
         <div class="cfg-toggle-row">
             <input type="checkbox" id="show_treatment" name="<?= CFG_OPTION ?>[show_treatment]" value="1" <?= checked( $s['show_treatment'], '1', false ) ?>/>
             <label for="show_treatment">Show Treatment Type dropdown</label>
+        </div>
+        <div class="cfg-toggle-row">
+            <input type="checkbox" id="show_patient_type" name="<?= CFG_OPTION ?>[show_patient_type]" value="1" <?= checked( $s['show_patient_type'], '1', false ) ?>/>
+            <label for="show_patient_type">Show New / Existing patient bubbles</label>
         </div>
         <div class="cfg-toggle-row">
             <input type="checkbox" id="show_terms" name="<?= CFG_OPTION ?>[show_terms]" value="1" <?= checked( $s['show_terms'], '1', false ) ?>/>
@@ -5220,6 +5184,7 @@ function cfg_settings_page() {
                 <table class="og-table">
                     <tr><th>Field Key (exact)</th><th>Suggested Label</th><th>Example value</th></tr>
                     <tr><td><span class="og-field">treatment_type</span></td><td>Treatment Type</td><td><em>Invisalign</em>, <em>Implants</em>, <em>General</em> — set by the treatment dropdown on the form</td></tr>
+                    <tr><td><span class="og-field">patient_type</span></td><td>Patient Type</td><td><em>New patient</em> or <em>Existing patient</em> — set by the bubble select on the form</td></tr>
                 </table>
                 <div class="og-tip"><strong>Note:</strong> The treatment dropdown options are fully configurable in the Contact Form settings tab. The value sent to GHL is exactly the option label the patient selected.</div>
             </div>
@@ -5611,7 +5576,7 @@ function cfg_settings_page() {
 
                         // Checker fields score 999 so they always win unambiguously
                         var groupKeys = {
-                            'contact_form':    ['cfg_checker_contact_form','treatment_type','automation_tester'],
+                            'contact_form':    ['cfg_checker_contact_form','treatment_type','patient_type','automation_tester'],
                             'router':          ['cfg_checker_router','latest_form_date'],
                             'invisalign_form': ['cfg_checker_invisalign_form','prev_orthodontic','dental_work','teeth_alignment','bite_issues','has_insurance'],
                             'implants_form':   ['cfg_checker_implants_form','implant_flow','implant_range','implant_toothlocation','implant_timemissing','implant_bonegraft',
@@ -6182,6 +6147,7 @@ function cfg_settings_page() {
                 'insurance'         => 'Insurance',
                 // Contact form
                 'treatment'         => 'Treatment Interest',
+                'patient_type'      => 'Patient Type',
                 // Aligner answers (dynamic keys)
                 // UTM
                 'utm_campaign'      => 'UTM Campaign',
@@ -6686,6 +6652,11 @@ function cfg_shortcode( $atts = [], $embed = false ) {
     #cfg-wrap button[type=submit]:hover{<?= $s['btn_hover_bg_color'] ? 'background:' . esc_attr( $s['btn_hover_bg_color'] ) . '!important;' . ( $s['btn_hover_text_color'] ? 'color:' . esc_attr( $s['btn_hover_text_color'] ) . '!important;' : '' ) : 'filter:brightness(1.1);' ?>}
     #cfg-wrap button[type=submit]:disabled{opacity:0.65;cursor:not-allowed;}
     select#cfg_treatment{height:100%;}
+    /* Bubble radio group — used for the New/Existing Patient field */
+    #cfg-wrap .cfg-bubble{position:relative;}
+    #cfg-wrap .cfg-bubble:hover{border-color:<?= $pri ?>!important;background:<?= $pri ?>0a!important;}
+    #cfg-wrap .cfg-bubble.is-active{background:<?= $pri ?>!important;color:#fff!important;border-color:<?= $pri ?>!important;}
+    #cfg-wrap .cfg-bubble input[data-bubble-radio]:focus-visible + span{outline:2px solid <?= $pri ?>;outline-offset:2px;border-radius:2px;}
     /* Field error highlight: red border + tiny inline message under the field */
     #cfg-wrap .cfg-field-error input,#cfg-wrap .cfg-field-error select,#cfg-wrap .cfg-field-error textarea,#cfg-wrap .cfg-field-error .iti{border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.12)!important;}
     #cfg-wrap .cfg-field-error .iti input[type=tel]{border-color:#dc2626!important;}
@@ -6752,6 +6723,20 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                             <option value="" disabled selected>Select a treatment…</option>
                             <?php foreach ( $treatments as $opt ): ?><option value="<?= esc_attr( $opt ) ?>"><?= esc_html( $opt ) ?></option><?php endforeach; ?>
                         </select>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ( $s['show_patient_type'] === '1' ): ?>
+                    <div id="cfg-patient-wrap" data-field-key="patient_type" style="margin-bottom:1.25rem;">
+                        <span style="<?= $label_style ?>">Are you a new or existing patient? <?php if ( $s['req_patient_type'] === '1' ): ?><span style="color:<?= $pri ?>">*</span><?php endif; ?></span>
+                        <div class="cfg-bubble-group" role="radiogroup" aria-label="Patient type" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                            <?php foreach ( [ 'New patient', 'Existing patient' ] as $pt_opt ): ?>
+                            <label class="cfg-bubble" style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.75rem 1rem;border:1.5px solid <?= $bc ?>;border-radius:9999px;font-size:0.875rem;font-weight:<?= $bw ?>;color:<?= $tc ?>;background:<?= $bg ?>;cursor:pointer;transition:all 0.15s;user-select:none;">
+                                <input type="radio" name="patient_type" value="<?= esc_attr( $pt_opt ) ?>" <?= $s['req_patient_type'] === '1' ? 'required' : '' ?> style="position:absolute;opacity:0;width:0;height:0;" data-bubble-radio/>
+                                <span data-bubble-label><?= esc_html( $pt_opt ) ?></span>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                     <?php endif; ?>
 
@@ -6837,6 +6822,30 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             el.addEventListener('change', function(){ clearFieldError(el); });
         });
 
+        // Bubble radios (New / Existing patient) — reflect the selection with a CSS class
+        // and clear the group's error state when any option is chosen.
+        (function(){
+            var bubbleWrap = form.querySelector('.cfg-bubble-group');
+            if (!bubbleWrap) return;
+            var radios = bubbleWrap.querySelectorAll('input[data-bubble-radio]');
+            function syncBubbleActive(){
+                radios.forEach(function(r){
+                    var lbl = r.closest('.cfg-bubble');
+                    if (!lbl) return;
+                    lbl.classList.toggle('is-active', !!r.checked);
+                });
+            }
+            radios.forEach(function(r){
+                r.addEventListener('change', function(){
+                    syncBubbleActive();
+                    // Clear the field-error class on the surrounding wrap (id=cfg-patient-wrap)
+                    var wrap = form.querySelector('#cfg-patient-wrap');
+                    if (wrap) { wrap.classList.remove('cfg-field-error','cfg-shake'); var m=wrap.querySelector('.cfg-field-msg'); if (m) m.remove(); }
+                });
+            });
+            syncBubbleActive();
+        })();
+
         // Friendly label for a given input — uses the associated <label>, falls back to placeholder
         function fieldLabel(el) {
             var id = el.id;
@@ -6867,6 +6876,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                 email:              (form.querySelector('[name="email"]')     || {}).value || '',
                 phone:              (form.querySelector('[name="phone"]')     || {}).value || '',
                 treatment:          (form.querySelector('[name="treatment"]') || {value:''}).value || '',
+                patient_type:       (form.querySelector('[name="patient_type"]:checked') || {value:''}).value || '',
                 utmcampaign_custom: _getParam('utmcampaign_custom'),
                 utmmedium_custom:   _getParam('utmmedium_custom'),
                 utmcontent_custom:  _getParam('utmcontent_custom'),
@@ -6896,11 +6906,34 @@ function cfg_shortcode( $atts = [], $embed = false ) {
             e.preventDefault(); hideErr();
             var invalid = [];
 
-            // 1) Required field check (skip checkboxes; terms handled separately)
+            // 1) Required field check (skip checkboxes; skip radios — they're validated as a group below; terms handled separately)
             form.querySelectorAll('input[required],select[required],textarea[required]').forEach(function(el){
-                if (el.type === 'checkbox') return;
+                if (el.type === 'checkbox' || el.type === 'radio') return;
                 clearFieldError(el);
                 if (!el.value.trim()) { markFieldError(el, fieldLabel(el) + ' is required.'); invalid.push(el); }
+            });
+
+            // 1b) Required radio groups — must have at least one option checked
+            var seenRadioGroups = {};
+            form.querySelectorAll('input[type="radio"][required]').forEach(function(r){
+                if (seenRadioGroups[r.name]) return;
+                seenRadioGroups[r.name] = true;
+                var anyChecked = !!form.querySelector('input[type="radio"][name="'+r.name+'"]:checked');
+                if (anyChecked) return;
+                // Prefer the wrapping container (e.g. #cfg-patient-wrap) for the error visual
+                var wrap = r.closest('[data-field-key]') || r.closest('.cfg-bubble-group') || r.parentNode;
+                if (!wrap) return;
+                wrap.classList.add('cfg-field-error');
+                wrap.classList.remove('cfg-shake'); void wrap.offsetWidth; wrap.classList.add('cfg-shake');
+                if (!wrap.querySelector('.cfg-field-msg')) {
+                    var m = document.createElement('span');
+                    m.className = 'cfg-field-msg';
+                    m.textContent = r.name === 'patient_type'
+                        ? 'Please select whether you are a new or existing patient.'
+                        : 'Please select an option.';
+                    wrap.appendChild(m);
+                }
+                invalid.push(r);
             });
 
             // 2) Email format
@@ -7430,11 +7463,16 @@ function cfg_ajax_submit() {
     }
 
     // ── Sanitise inputs ──────────────────────────────────────
-    $first     = sanitize_text_field( $_POST['firstName'] ?? '' );
-    $last      = sanitize_text_field( $_POST['lastName']  ?? '' );
-    $email     = sanitize_email(      $_POST['email']     ?? '' );
-    $phone     = sanitize_text_field( $_POST['phone']     ?? '' );
-    $treatment = sanitize_text_field( $_POST['treatment'] ?? '' );
+    $first        = sanitize_text_field( $_POST['firstName']    ?? '' );
+    $last         = sanitize_text_field( $_POST['lastName']     ?? '' );
+    $email        = sanitize_email(      $_POST['email']        ?? '' );
+    $phone        = sanitize_text_field( $_POST['phone']        ?? '' );
+    $treatment    = sanitize_text_field( $_POST['treatment']    ?? '' );
+    $patient_type = sanitize_text_field( $_POST['patient_type'] ?? '' );
+    // Whitelist patient_type to prevent arbitrary values from being pushed to GHL
+    if ( $patient_type !== '' && ! in_array( $patient_type, [ 'New patient', 'Existing patient' ], true ) ) {
+        $patient_type = '';
+    }
 
     // ── Validate ─────────────────────────────────────────────
     if ( $s['req_first_name'] === '1' && empty( $first ) )       wp_send_json_error( 'First name is required.' );
@@ -7443,6 +7481,8 @@ function cfg_ajax_submit() {
     if ( $s['req_phone']      === '1' && empty( $phone ) )       wp_send_json_error( 'Phone number is required.' );
     if ( $s['req_treatment']  === '1' && $s['show_treatment'] === '1' && empty( $treatment ) )
         wp_send_json_error( 'Please select a treatment type.' );
+    if ( $s['req_patient_type'] === '1' && $s['show_patient_type'] === '1' && empty( $patient_type ) )
+        wp_send_json_error( 'Please select whether you are a new or existing patient.' );
 
     if ( empty( $s['ghl_api_key'] ) || empty( $s['ghl_location_id'] ) ) {
         wp_send_json_error( 'The form is not fully configured yet. Please contact us directly.' );
@@ -7454,6 +7494,9 @@ function cfg_ajax_submit() {
     $custom_fields[] = [ 'key' => 'latest_form_date',  'field_value' => current_time( 'M j, Y g:i A' ) ];
     if ( ! empty( $treatment ) ) {
         $custom_fields[] = [ 'key' => 'treatment_type', 'field_value' => $treatment ];
+    }
+    if ( ! empty( $patient_type ) ) {
+        $custom_fields[] = [ 'key' => 'patient_type', 'field_value' => $patient_type ];
     }
     foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
         $val = sanitize_text_field( $_POST[ $k ] ?? '' );
@@ -7493,6 +7536,7 @@ function cfg_ajax_submit() {
     $ghl_ok = ( $code === 200 || $code === 201 );
     $entry_meta = array_filter( [
         'treatment'    => $treatment,
+        'patient_type' => $patient_type,
         'utm_campaign' => sanitize_text_field( $_POST['utmcampaign_custom'] ?? '' ),
         'utm_medium'   => sanitize_text_field( $_POST['utmmedium_custom']   ?? '' ),
         'utm_content'  => sanitize_text_field( $_POST['utmcontent_custom']  ?? '' ),
