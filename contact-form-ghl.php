@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.37
+ * Version:     2.6.38
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7626,12 +7626,14 @@ function cfg_ajax_submit() {
     // (Riverwalk in particular) don't accept the lowercase form, so we push with the
     // exact case the fields were created with.
     $utm_key_map = [
-        'utmcampaign_custom' => 'UTMCampaign_custom',
-        'utmmedium_custom'   => 'UTMMedium_custom',
-        'utmcontent_custom'  => 'UTMContent_custom',
-        'utmkeyword_custom'  => 'UTMKeyword_custom',
-        'utmterm_custom'     => 'UTMTerm_custom',
-        'gclid_custom'       => 'GCLID_custom',
+        // GHL normalizes fieldKey to lowercase on create — even if the field was
+        // originally created with mixed case. Push in lowercase to match what's stored.
+        'utmcampaign_custom' => 'utmcampaign_custom',
+        'utmmedium_custom'   => 'utmmedium_custom',
+        'utmcontent_custom'  => 'utmcontent_custom',
+        'utmkeyword_custom'  => 'utmkeyword_custom',
+        'utmterm_custom'     => 'utmterm_custom',
+        'gclid_custom'       => 'gclid_custom',
     ];
     foreach ( $utm_key_map as $post_key => $ghl_key ) {
         $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
@@ -8545,12 +8547,14 @@ function cfg_aligner_ajax_submit() {
     }
     // Push UTMs with the same mixed-case field keys the plugin auto-provisions
     $_utm_map = [
-        'utmcampaign_custom' => 'UTMCampaign_custom',
-        'utmmedium_custom'   => 'UTMMedium_custom',
-        'utmcontent_custom'  => 'UTMContent_custom',
-        'utmkeyword_custom'  => 'UTMKeyword_custom',
-        'utmterm_custom'     => 'UTMTerm_custom',
-        'gclid_custom'       => 'GCLID_custom',
+        // GHL normalizes fieldKey to lowercase on create — even if the field was
+        // originally created with mixed case. Push in lowercase to match what's stored.
+        'utmcampaign_custom' => 'utmcampaign_custom',
+        'utmmedium_custom'   => 'utmmedium_custom',
+        'utmcontent_custom'  => 'utmcontent_custom',
+        'utmkeyword_custom'  => 'utmkeyword_custom',
+        'utmterm_custom'     => 'utmterm_custom',
+        'gclid_custom'       => 'gclid_custom',
     ];
     foreach ( $_utm_map as $post_key => $ghl_key ) {
         $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
@@ -10048,12 +10052,14 @@ function cfg_implant_ajax_submit() {
         $custom[] = [ 'key' => $offer_ghl_key, 'field_value' => $offer_choice ];
     }
     $_utm_map = [
-        'utmcampaign_custom' => 'UTMCampaign_custom',
-        'utmmedium_custom'   => 'UTMMedium_custom',
-        'utmcontent_custom'  => 'UTMContent_custom',
-        'utmkeyword_custom'  => 'UTMKeyword_custom',
-        'utmterm_custom'     => 'UTMTerm_custom',
-        'gclid_custom'       => 'GCLID_custom',
+        // GHL normalizes fieldKey to lowercase on create — even if the field was
+        // originally created with mixed case. Push in lowercase to match what's stored.
+        'utmcampaign_custom' => 'utmcampaign_custom',
+        'utmmedium_custom'   => 'utmmedium_custom',
+        'utmcontent_custom'  => 'utmcontent_custom',
+        'utmkeyword_custom'  => 'utmkeyword_custom',
+        'utmterm_custom'     => 'utmterm_custom',
+        'gclid_custom'       => 'gclid_custom',
     ];
     foreach ( $_utm_map as $post_key => $ghl_key ) {
         $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
