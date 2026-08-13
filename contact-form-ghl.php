@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.36
+ * Version:     2.6.37
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7620,9 +7620,22 @@ function cfg_ajax_submit() {
     if ( ! empty( $patient_type ) ) {
         $custom_fields[] = [ 'key' => 'patient_type', 'field_value' => $patient_type ];
     }
-    foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
-        $val = sanitize_text_field( $_POST[ $k ] ?? '' );
-        if ( $val !== '' ) $custom_fields[] = [ 'key' => $k, 'field_value' => $val ];
+    // UTM / GCLID → GHL. The JS sends lowercase POST keys, but the fields in GHL
+    // were auto-provisioned with mixed-case keys (UTMCampaign_custom, GCLID_custom, etc.).
+    // GHL matching is supposed to be case-insensitive on fieldKey but some sub-accounts
+    // (Riverwalk in particular) don't accept the lowercase form, so we push with the
+    // exact case the fields were created with.
+    $utm_key_map = [
+        'utmcampaign_custom' => 'UTMCampaign_custom',
+        'utmmedium_custom'   => 'UTMMedium_custom',
+        'utmcontent_custom'  => 'UTMContent_custom',
+        'utmkeyword_custom'  => 'UTMKeyword_custom',
+        'utmterm_custom'     => 'UTMTerm_custom',
+        'gclid_custom'       => 'GCLID_custom',
+    ];
+    foreach ( $utm_key_map as $post_key => $ghl_key ) {
+        $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
+        if ( $val !== '' ) $custom_fields[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -8530,9 +8543,18 @@ function cfg_aligner_ajax_submit() {
     foreach ( $answers as $key => $val ) {
         $custom[] = [ 'key' => sanitize_key( $key ), 'field_value' => sanitize_text_field( $val ) ];
     }
-    foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
-        $val = sanitize_text_field( $_POST[ $k ] ?? '' );
-        if ( $val !== '' ) $custom[] = [ 'key' => $k, 'field_value' => $val ];
+    // Push UTMs with the same mixed-case field keys the plugin auto-provisions
+    $_utm_map = [
+        'utmcampaign_custom' => 'UTMCampaign_custom',
+        'utmmedium_custom'   => 'UTMMedium_custom',
+        'utmcontent_custom'  => 'UTMContent_custom',
+        'utmkeyword_custom'  => 'UTMKeyword_custom',
+        'utmterm_custom'     => 'UTMTerm_custom',
+        'gclid_custom'       => 'GCLID_custom',
+    ];
+    foreach ( $_utm_map as $post_key => $ghl_key ) {
+        $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
@@ -10025,9 +10047,17 @@ function cfg_implant_ajax_submit() {
     if ( $offer_choice !== '' && $offer_ghl_key !== '' ) {
         $custom[] = [ 'key' => $offer_ghl_key, 'field_value' => $offer_choice ];
     }
-    foreach ( [ 'utmcampaign_custom', 'utmmedium_custom', 'utmcontent_custom', 'utmkeyword_custom', 'utmterm_custom', 'gclid_custom' ] as $k ) {
-        $val = sanitize_text_field( $_POST[ $k ] ?? '' );
-        if ( $val !== '' ) $custom[] = [ 'key' => $k, 'field_value' => $val ];
+    $_utm_map = [
+        'utmcampaign_custom' => 'UTMCampaign_custom',
+        'utmmedium_custom'   => 'UTMMedium_custom',
+        'utmcontent_custom'  => 'UTMContent_custom',
+        'utmkeyword_custom'  => 'UTMKeyword_custom',
+        'utmterm_custom'     => 'UTMTerm_custom',
+        'gclid_custom'       => 'GCLID_custom',
+    ];
+    foreach ( $_utm_map as $post_key => $ghl_key ) {
+        $val = sanitize_text_field( $_POST[ $post_key ] ?? '' );
+        if ( $val !== '' ) $custom[] = [ 'key' => $ghl_key, 'field_value' => $val ];
     }
 
     $payload = [
