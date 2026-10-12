@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.38
+ * Version:     2.6.39
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7881,6 +7881,36 @@ add_action( 'admin_init', function () {
             update_option( CFG_ALG_OPTION, $reordered );
         }
         update_option( 'cfg_alg_std_order_v1', '1' );
+    }
+
+    // One-time migration: fix mismatched images on the teeth_alignment step.
+    // Admin media picks have landed where "Very/Moderately/Slightly crowded" choices
+    // point at bite-issue images (open bite, crossbite, admin-ajax=overbite), which
+    // confuses visitors who then see those same images on the next (bite) question.
+    // Any crowded choice whose image URL doesn't name a crowding asset gets reset.
+    if ( get_option( 'cfg_alg_fix_crowded_imgs_v1', '0' ) !== '1' ) {
+        $saved = get_option( CFG_ALG_OPTION );
+        if ( is_array( $saved ) ) {
+            $crowding_url = plugin_dir_url( __FILE__ ) . 'assets/images/Crowding-Teeth-300x300-1.webp';
+            $crowded_labels = [ 'Very crowded', 'Moderately crowded', 'Slightly crowded' ];
+            $changed = false;
+            foreach ( $saved as &$step ) {
+                if ( ( $step['field_key'] ?? '' ) !== 'teeth_alignment' ) continue;
+                if ( empty( $step['choices'] ) || ! is_array( $step['choices'] ) ) continue;
+                foreach ( $step['choices'] as &$choice ) {
+                    $label = $choice['label'] ?? '';
+                    if ( ! in_array( $label, $crowded_labels, true ) ) continue;
+                    $img = $choice['img'] ?? '';
+                    if ( $img && stripos( $img, 'Crowding' ) !== false ) continue;
+                    $choice['img'] = $crowding_url;
+                    $changed = true;
+                }
+                unset( $choice );
+            }
+            unset( $step );
+            if ( $changed ) update_option( CFG_ALG_OPTION, $saved );
+        }
+        update_option( 'cfg_alg_fix_crowded_imgs_v1', '1' );
     }
 } );
 
