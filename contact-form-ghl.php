@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.40
+ * Version:     2.6.41
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7590,6 +7590,20 @@ function cfg_nocache_form_pages() {
     }
 }
 
+// Logged-out nonces are the same public value for every visitor, so on these anonymous lead forms
+// they only guard against cross-site posts. CDNs can serve days-old pages with expired nonces, so
+// when the nonce is stale we fall back to an equivalent same-origin check (honeypot still applies).
+function cfg_verify_public_nonce( $value, $action ) {
+    if ( is_string( $value ) && $value !== '' && wp_verify_nonce( $value, $action ) ) return true;
+    $site = strtolower( preg_replace( '/^www\./i', '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) );
+    foreach ( [ 'HTTP_ORIGIN', 'HTTP_REFERER' ] as $h ) {
+        if ( empty( $_SERVER[ $h ] ) ) continue;
+        $host = strtolower( preg_replace( '/^www\./i', '', (string) wp_parse_url( wp_unslash( $_SERVER[ $h ] ), PHP_URL_HOST ) ) );
+        return $site !== '' && $host === $site;
+    }
+    return false;
+}
+
 function cfg_fresh_nonce_js() {
     return "window.cfgFreshNonce=window.cfgFreshNonce||function(url,key,fallback){return fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=cfg_fresh_nonce',cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){return (d&&d.success&&d.data&&d.data[key])||fallback;}).catch(function(){return fallback;});};";
 }
@@ -7598,7 +7612,7 @@ add_action( 'wp_ajax_cfg_submit',        'cfg_ajax_submit' );
 add_action( 'wp_ajax_nopriv_cfg_submit', 'cfg_ajax_submit' );
 
 function cfg_ajax_submit() {
-    if ( ! isset( $_POST['cfg_nonce'] ) || ! wp_verify_nonce( $_POST['cfg_nonce'], 'cfg_submit' ) ) {
+    if ( ! cfg_verify_public_nonce( $_POST['cfg_nonce'] ?? '', 'cfg_submit' ) ) {
         wp_send_json_error( 'Security check failed. Please refresh and try again.' );
     }
 
@@ -8583,7 +8597,7 @@ add_action( 'wp_ajax_cfg_aligner_submit',        'cfg_aligner_ajax_submit' );
 add_action( 'wp_ajax_nopriv_cfg_aligner_submit', 'cfg_aligner_ajax_submit' );
 
 function cfg_aligner_ajax_submit() {
-    if ( ! isset( $_POST['alg_nonce'] ) || ! wp_verify_nonce( $_POST['alg_nonce'], 'cfg_aligner_submit' ) ) {
+    if ( ! cfg_verify_public_nonce( $_POST['alg_nonce'] ?? '', 'cfg_aligner_submit' ) ) {
         wp_send_json_error( 'Security check failed. Please refresh and try again.' );
     }
 
@@ -10053,7 +10067,7 @@ add_action( 'wp_ajax_cfg_implant_submit',        'cfg_implant_ajax_submit' );
 add_action( 'wp_ajax_nopriv_cfg_implant_submit', 'cfg_implant_ajax_submit' );
 
 function cfg_implant_ajax_submit() {
-    if ( ! isset( $_POST['imp_nonce'] ) || ! wp_verify_nonce( $_POST['imp_nonce'], 'cfg_implant_submit' ) ) {
+    if ( ! cfg_verify_public_nonce( $_POST['imp_nonce'] ?? '', 'cfg_implant_submit' ) ) {
         wp_send_json_error( 'Security check failed. Please refresh and try again.' );
     }
 
@@ -10945,7 +10959,9 @@ function cfg_ajax_track_event() {
 }
 
 function cfg_review_ajax_submit() {
-    check_ajax_referer( 'cfg_review_submit', 'nonce' );
+    if ( ! cfg_verify_public_nonce( $_POST['nonce'] ?? '', 'cfg_review_submit' ) ) {
+        wp_send_json_error( 'Security check failed. Please refresh and try again.' );
+    }
 
     $rv  = cfg_review_get();
     $s   = cfg_get();
