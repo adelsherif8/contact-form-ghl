@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.39
+ * Version:     2.6.40
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -7007,10 +7007,14 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                 gclid_custom:       _getParam('gclid_custom')
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
-            fetch(AJAX, {
-                method:  'POST',
-                headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                body:    Object.keys(payload).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(payload[k])).join('&')
+            <?= cfg_fresh_nonce_js() ?>
+            window.cfgFreshNonce(AJAX, 'cfg_submit', NONCE).then(function(n){
+                payload.cfg_nonce = n;
+                return fetch(AJAX, {
+                    method:  'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body:    Object.keys(payload).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(payload[k])).join('&')
+                });
             })
             .then(function(r){ return r.json(); })
             .then(function(d){
@@ -7261,10 +7265,14 @@ function cfg_embed_shortcode_OLD_UNUSED() {
                 gclid_custom:       _getParam('gclid_custom')
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
-            fetch(AJAX, {
-                method:  'POST',
-                headers: {'Content-Type':'application/x-www-form-urlencoded'},
-                body:    Object.keys(payload).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(payload[k])).join('&')
+            <?= cfg_fresh_nonce_js() ?>
+            window.cfgFreshNonce(AJAX, 'cfg_submit', NONCE).then(function(n){
+                payload.cfg_nonce = n;
+                return fetch(AJAX, {
+                    method:  'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body:    Object.keys(payload).map(k=>encodeURIComponent(k)+'='+encodeURIComponent(payload[k])).join('&')
+                });
             })
             .then(function(r){ return r.json(); })
             .then(function(d){
@@ -7548,6 +7556,44 @@ function cfg_thank_you_shortcode() {
 // ═══════════════════════════════════════════════════════════════
 //  AJAX HANDLER
 // ═══════════════════════════════════════════════════════════════
+// Pages with these forms are often full-page cached (Cloudflare/Sucuri/LiteSpeed) for days,
+// which freezes an expired nonce into the HTML. Forms fetch a fresh one from admin-ajax at submit time.
+add_action( 'wp_ajax_cfg_fresh_nonce',        'cfg_ajax_fresh_nonce' );
+add_action( 'wp_ajax_nopriv_cfg_fresh_nonce', 'cfg_ajax_fresh_nonce' );
+function cfg_ajax_fresh_nonce() {
+    nocache_headers();
+    wp_send_json_success( [
+        'cfg_submit'         => wp_create_nonce( 'cfg_submit' ),
+        'cfg_aligner_submit' => wp_create_nonce( 'cfg_aligner_submit' ),
+        'cfg_implant_submit' => wp_create_nonce( 'cfg_implant_submit' ),
+        'cfg_review_submit'  => wp_create_nonce( 'cfg_review_submit' ),
+    ] );
+}
+
+// Keep CDNs/page caches from storing pages that contain a form, so visitors never get a stale form.
+add_action( 'template_redirect', 'cfg_nocache_form_pages', 1 );
+function cfg_nocache_form_pages() {
+    if ( is_admin() || ! is_singular() ) return;
+    $id   = get_queried_object_id();
+    $hay  = (string) get_post_field( 'post_content', $id ) . (string) get_post_meta( $id, '_elementor_data', true );
+    $tags = [ 'contact_form_ghl', 'contact_form_embed', 'aligner_form_ghl', 'implant_estimator_ghl', 'cfg_review_form', 'review_form_ghl' ];
+    foreach ( $tags as $t ) {
+        if ( strpos( $hay, '[' . $t ) !== false ) {
+            if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+            nocache_headers();
+            header( 'Cache-Control: no-store, no-cache, must-revalidate, max-age=0, private', true );
+            header( 'CDN-Cache-Control: no-store', true );
+            header( 'Cloudflare-CDN-Cache-Control: no-store', true );
+            do_action( 'litespeed_control_set_nocache', 'contact-form-ghl form page' );
+            return;
+        }
+    }
+}
+
+function cfg_fresh_nonce_js() {
+    return "window.cfgFreshNonce=window.cfgFreshNonce||function(url,key,fallback){return fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=cfg_fresh_nonce',cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){return (d&&d.success&&d.data&&d.data[key])||fallback;}).catch(function(){return fallback;});};";
+}
+
 add_action( 'wp_ajax_cfg_submit',        'cfg_ajax_submit' );
 add_action( 'wp_ajax_nopriv_cfg_submit', 'cfg_ajax_submit' );
 
@@ -8443,7 +8489,8 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
             function _gp(k){var v='';_up.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss[k]||'';}
             var _fd=new FormData(form);
             ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){ _fd.append(k,_gp(k)); });
-            fetch(ajaxUrl,{method:'POST',body:_fd})
+            <?= cfg_fresh_nonce_js() ?>
+            window.cfgFreshNonce(ajaxUrl, 'cfg_aligner_submit', _fd.get('alg_nonce')).then(function(n){ _fd.set('alg_nonce', n); return fetch(ajaxUrl,{method:'POST',body:_fd}); })
             .then(function(r){ return r.json(); })
             .then(function(res){
                 if(res.success){
@@ -9930,7 +9977,8 @@ $_sections_col = $result_sections_html
         navigate(panel);
       }
     }
-    fetch(config.ajaxUrl, { method:'POST', body:fd })
+    <?= cfg_fresh_nonce_js() ?>
+    window.cfgFreshNonce(config.ajaxUrl, 'cfg_implant_submit', config.nonce).then(function(n){ fd.set('imp_nonce', n); return fetch(config.ajaxUrl, { method:'POST', body:fd }); })
       .then(function(r){ return r.json(); })
       .then(function(d){
         isSubmitting = false;
@@ -10807,7 +10855,8 @@ function submitToServer(path, cb){
   fd.append('feedback',   d.feedback);
   fd.append('tone',       d.tone);
   fd.append('length',     d.length);
-  fetch(rvConfig.ajaxUrl, { method:'POST', body:fd })
+  <?= cfg_fresh_nonce_js() ?>
+  window.cfgFreshNonce(rvConfig.ajaxUrl, 'cfg_review_submit', rvConfig.nonce).then(function(n){ fd.set('nonce', n); return fetch(rvConfig.ajaxUrl, { method:'POST', body:fd }); })
     .then(function(r){ return r.json(); })
     .catch(function(){})
     .finally(function(){ if(cb) cb(); });
