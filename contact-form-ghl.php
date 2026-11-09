@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.41
+ * Version:     2.6.42
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -294,6 +294,12 @@ function cfg_defaults() {
         'imp_arch_max'         => '30000',
         'imp_graft_min'        => '650',
         'imp_graft_max'        => '1100',
+        // Extraction fee note (off by default — enable per clinic when extractions are billed separately)
+        'imp_extract_enabled'   => '0',
+        'imp_extract_single_min'=> '100',
+        'imp_extract_single_max'=> '300',
+        'imp_extract_arch_min'  => '100',
+        'imp_extract_arch_max'  => '300',
         'imp_show_full_arch'   => '1',
         'imp_show_financing'   => '1',
         'imp_financing_text'   => 'Flexible financing available — ask us about monthly payment plans.',
@@ -2543,7 +2549,7 @@ function cfg_sanitize( $input ) {
         'imp_show_full_arch','imp_show_financing','imp_hide_header','imp_show_price','imp_single_price','imp_show_insurance',
         'imp_cta_book_enabled','imp_cta_call_enabled','imp_contact_btn2_enabled',
         'imp_intro_trust_show','imp_intro_micro_show','imp_contact_progress_show','imp_contact_consent_show','imp_contact_trust_show',
-        'imp_offer_enabled',
+        'imp_offer_enabled','imp_extract_enabled',
         'alg_hide_page_header',
     ];
     $json_fields = ['imp_router_opts','imp_single_qs','imp_multi_qs','imp_arch_qs','imp_ins_q','imp_result_sections','imp_single_includes','imp_fullarch_includes'];
@@ -4756,6 +4762,22 @@ function cfg_settings_page() {
                         <input type="radio" name="<?= CFG_OPTION ?>[imp_graft_display]" value="addon" <?= checked('addon',$gd,false) ?> style="margin-top:2px;accent-color:#3b82f6;" onchange="impGraftStyleUpdate(this)"/>
                         <div><strong style="font-size:13px;">Clearly stated as an additional procedure if required</strong><br><span style="font-size:12px;color:#6b7280;">Adds a clear note: bone grafting is an additional procedure if needed, at approximately the price range per area.</span></div>
                     </label>
+                </div>
+            </div>
+
+            <!-- ── Extraction Fees ── -->
+            <div class="cfg-card-section">
+                <h4>Extractions — Separate Fee Note</h4>
+                <p class="cfg-desc" style="margin:0 0 14px;">Turn on if extractions are <strong>not</strong> included in your implant fees. A note with the typical extraction cost is shown on the result screen only when the patient says a tooth still needs to be removed (single / multiple), or has failing teeth / teeth beyond repair (full arch). The range is shown as a separate cost — it is not added to the implant estimate.</p>
+                <label style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin-bottom:12px;cursor:pointer;">
+                    <input type="checkbox" name="<?= CFG_OPTION ?>[imp_extract_enabled]" value="1" <?= checked( $s['imp_extract_enabled'] ?? '0', '1', false ) ?> style="accent-color:#3b82f6;"/>
+                    Show extraction fee note (extractions not included)
+                </label>
+                <div class="cfg-grid">
+                    <div class="cfg-field"><label>Single / multiple — per tooth, min</label><input type="text" name="<?= CFG_OPTION ?>[imp_extract_single_min]" value="<?= esc_attr( $s['imp_extract_single_min'] ?? '100' ) ?>"/></div>
+                    <div class="cfg-field"><label>Single / multiple — per tooth, max</label><input type="text" name="<?= CFG_OPTION ?>[imp_extract_single_max]" value="<?= esc_attr( $s['imp_extract_single_max'] ?? '300' ) ?>"/></div>
+                    <div class="cfg-field"><label>Full arch — per tooth, min</label><input type="text" name="<?= CFG_OPTION ?>[imp_extract_arch_min]" value="<?= esc_attr( $s['imp_extract_arch_min'] ?? '100' ) ?>"/></div>
+                    <div class="cfg-field"><label>Full arch — per tooth, max</label><input type="text" name="<?= CFG_OPTION ?>[imp_extract_arch_max]" value="<?= esc_attr( $s['imp_extract_arch_max'] ?? '300' ) ?>"/></div>
                 </div>
             </div>
 
@@ -9277,6 +9299,18 @@ if ( $graft_display === 'included' ) {
     $graft_note_inner = '<strong>Bone grafting, if required, is a separate additional procedure.</strong> Estimated cost: <strong>' . $g_min . ' &ndash; ' . $g_max . ' per area</strong>. Whether it is needed is confirmed after your clinical exam.';
 }
 
+// ── Extraction fee note (only when enabled; shown by JS when the answers indicate a removal) ──
+$extract_enabled = ( $s['imp_extract_enabled'] ?? '0' ) === '1';
+$_ext_fmt = function( $k, $d ) use ( $s, $currency ) {
+    return esc_html( $currency ) . esc_html( number_format( (int) preg_replace( '/[^0-9]/', '', (string) ( $s[ $k ] ?? $d ) ) ) );
+};
+$extract_note_single = $extract_enabled
+    ? '<strong>Extractions are not included in the implant fee.</strong> If a tooth needs to be removed, extraction is typically <strong>' . $_ext_fmt( 'imp_extract_single_min', '100' ) . ' &ndash; ' . $_ext_fmt( 'imp_extract_single_max', '300' ) . ' per tooth</strong>, confirmed after your clinical exam.'
+    : '';
+$extract_note_arch = $extract_enabled
+    ? '<strong>Extractions are not included in the full-arch fee.</strong> If teeth need to be removed, extraction is typically <strong>' . $_ext_fmt( 'imp_extract_arch_min', '100' ) . ' &ndash; ' . $_ext_fmt( 'imp_extract_arch_max', '300' ) . ' per tooth</strong>, confirmed after your clinical exam.'
+    : '';
+
 // ── Result info sections (3 info boxes below price card) ──
 $result_sections      = json_decode( $s['imp_result_sections'] ?? '[]', true ) ?: [];
 $result_sections_html = '';
@@ -9336,7 +9370,9 @@ $_badge = function($txt) use ($uid) {
 
 <?php
 // Shared left-column price card builder
-$_price_col = function( $range_id, $label_id, $subtitle, $includes_html, $graft_id, $extra_inner = '', $includes_label = 'Included in your estimate' ) use ( $uid, $s, $graft_note_inner, $fin_block, $disc_block, $cta_buttons ) {
+$_price_col = function( $range_id, $label_id, $subtitle, $includes_html, $graft_id, $extra_inner = '', $includes_label = 'Included in your estimate' ) use ( $uid, $s, $graft_note_inner, $fin_block, $disc_block, $cta_buttons, $extract_note_single, $extract_note_arch ) {
+    $extract_note = strpos( $graft_id, 'fullarch' ) !== false ? $extract_note_arch : $extract_note_single;
+    $extract_id   = str_replace( 'graft-note', 'extract-note', $graft_id );
     ob_start(); ?>
     <div style="flex:1;min-width:0;">
       <div style="background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:var(--cr);padding:2rem 2rem 2rem;box-shadow:0 1px 3px rgba(0,0,0,.06);text-align:center;margin-bottom:1rem;">
@@ -9350,6 +9386,11 @@ $_price_col = function( $range_id, $label_id, $subtitle, $includes_html, $graft_
         </div>
         <?php endif; ?>
         <?= $extra_inner ?>
+        <?php if ( $extract_note ): ?>
+        <div id="<?= $extract_id ?>" style="display:none;background:hsl(var(--accent)/.5);padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-top:1.25rem;">
+          <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;line-height:1.6;"><?= $extract_note ?></p>
+        </div>
+        <?php endif; ?>
         <?php if ( $graft_note_inner ): ?>
         <div id="<?= $graft_id ?>" style="display:none;background:hsl(var(--accent)/.5);padding:.875rem 1rem;border:1px solid hsl(var(--border));border-radius:.75rem;text-align:left;margin-top:1.25rem;">
           <p style="font-family:Inter,sans-serif;color:hsl(var(--foreground)/.8);font-size:.875rem;line-height:1.6;"><?= $graft_note_inner ?></p>
@@ -9819,6 +9860,17 @@ $_sections_col = $result_sections_html
     if (rw) { rw.style.filter = ''; rw.style.userSelect = ''; }
     var r = getRange();
     var showGraft = config.graftDisplay !== 'included';
+    // Extraction note: shown when any answer on this path signals a tooth still to be removed
+    var _extVals = { single: ['not-removed','needs-removal'], multiple: ['not-removed','needs-removal'], fullarch: ['failing-teeth','beyond-repair'] };
+    var _flowKey = panelId.replace('result-','');
+    var _extEl = document.getElementById(uid + '-extract-note-' + _flowKey);
+    if (_extEl) {
+      var _need = false, _pq = getPathQs(_flowKey) || [];
+      for (var _i = 0; _i < _pq.length; _i++) {
+        if ((_extVals[_flowKey] || []).indexOf(s.answers[_pq[_i].field]) !== -1) { _need = true; break; }
+      }
+      _extEl.style.display = _need ? 'block' : 'none';
+    }
     if (panelId === 'result-single') {
       animateRange(uid + '-result-single-range', r.label);
       var lbl = document.getElementById(uid + '-result-single-label');
