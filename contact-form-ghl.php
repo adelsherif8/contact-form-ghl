@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.42
+ * Version:     2.6.43
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 define( 'CFG_SLUG',   'contact-form-ghl' );
 define( 'CFG_OPTION', 'cfg_settings' );
 define( 'CFG_ENTRIES_DB_VER', '1.0' );
-define( 'CFG_EVENTS_DB_VER',  '1.0' );
+define( 'CFG_EVENTS_DB_VER',  '1.1' );
 
 // ═══════════════════════════════════════════════════════════════
 //  DATABASE — ENTRIES TABLE
@@ -110,16 +110,20 @@ function cfg_create_events_table() {
     global $wpdb;
     $table           = $wpdb->prefix . 'cfg_events';
     $charset_collate = $wpdb->get_charset_collate();
-    $sql = "CREATE TABLE IF NOT EXISTS {$table} (
+    // Plain CREATE TABLE (not IF NOT EXISTS) so dbDelta can diff it and ALTER existing installs.
+    $sql = "CREATE TABLE {$table} (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         form_type  VARCHAR(20)  NOT NULL DEFAULT '',
         event_type VARCHAR(20)  NOT NULL DEFAULT '',
         step_key   VARCHAR(100) NOT NULL DEFAULT '',
         session_id VARCHAR(64)  NOT NULL DEFAULT '',
+        page_id    BIGINT UNSIGNED NOT NULL DEFAULT 0,
+        page_url   VARCHAR(500) NOT NULL DEFAULT '',
         created_at DATETIME     NOT NULL,
-        PRIMARY KEY (id),
-        KEY idx_form_event (form_type, event_type, created_at),
-        KEY idx_session (session_id, form_type)
+        PRIMARY KEY  (id),
+        KEY idx_form_event (form_type,event_type,created_at),
+        KEY idx_session (session_id,form_type),
+        KEY idx_page (page_id,event_type,created_at)
     ) {$charset_collate};";
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
     dbDelta( $sql );
@@ -1052,6 +1056,18 @@ function cfg_render_analytics_inner( $range ) {
     $cr_today['_all']['complete'] = $actual_today_all;
     $cr_30d['_all']['complete']   = $actual_range_all;
 
+    // ── Call clicks (tel: links) — counted per click, attributed to the landing page's form or 'site' ──
+    $calls_today = []; $calls_range = [];
+    if ( $ev_table_exists ) {
+        foreach ( ['today' => "DATE(created_at) = CURDATE()", 'range' => $an_ev_where] as $period => $where ) {
+            $rows = $wpdb->get_results( "SELECT form_type, COUNT(*) AS cnt FROM {$ev_table} WHERE event_type='call' AND {$where} GROUP BY form_type", ARRAY_A );
+            $map  = [];
+            foreach ( (array) $rows as $r ) $map[ $r['form_type'] ] = (int) $r['cnt'];
+            $map['_all'] = array_sum( $map );
+            if ( $period === 'today' ) $calls_today = $map; else $calls_range = $map;
+        }
+    }
+
     // ── Sort steps into natural form order (not by count) ──
     // Note: 'intro' is intentionally excluded — it's the page's initial state, captured by the 'view' event.
     $imp_natural_order = ['router','a1','a2','a3','a4','m1','m2','m3','m4','m5','b1','b2','b3','ins','offer','lead','result-single','result-multiple','result-fullarch','summary'];
@@ -1375,8 +1391,19 @@ function cfg_render_analytics_inner( $range ) {
         return '<div style="text-align:right;"><strong style="font-size:14px;color:'.$col.';">'.$pct.'%</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.$comp.' / '.$started.' entered</div></div>';
     }
     endif;
+    if (!function_exists('cfg_call_cell')):
+    function cfg_call_cell($range_cnt, $today_cnt) {
+        if (!$range_cnt && !$today_cnt) return '<div style="text-align:right;"><span style="color:#9ca3af;font-size:12px;">—</span></div>';
+        return '<div style="text-align:right;"><strong style="font-size:14px;color:#1d2327;">'.(int)$range_cnt.'</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.(int)$today_cnt.' today</div></div>';
+    }
+    endif;
     $cr_form_labels = ['_all'=>'All Forms','contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator'];
     $cr_form_colors = ['_all'=>'#374151','contact'=>'#2271b1','aligner'=>'#7c3aed','implant'=>'#0891b2'];
+    // Calls on pages that aren't an implant/aligner landing page get their own row so the "All" total adds up.
+    if ( ! empty( $calls_range['site'] ) || ! empty( $calls_today['site'] ) ) {
+        $cr_form_labels['site'] = 'Other Pages (calls only)';
+        $cr_form_colors['site'] = '#6b7280';
+    }
     ?>
 
     <!-- Conversion Rate Table -->
@@ -1387,7 +1414,8 @@ function cfg_render_analytics_inner( $range ) {
                 <tr>
                     <th style="text-align:left;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;width:40%;border-bottom:1px solid #f3f4f6;">Form</th>
                     <th style="text-align:right;padding:0 16px 10px 0;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;">Today</th>
-                    <th style="text-align:right;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;"><?= esc_html($an_label) ?></th>
+                    <th style="text-align:right;padding:0 16px 10px 0;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;"><?= esc_html($an_label) ?></th>
+                    <th style="text-align:right;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;">Calls</th>
                 </tr>
             </thead>
             <tbody>
@@ -1397,12 +1425,13 @@ function cfg_render_analytics_inner( $range ) {
             <tr style="border-bottom:1px solid #f3f4f6;<?= $is_all?'background:#fafafa;':'' ?>">
                 <td style="padding:11px 0 11px 10px;border-left:3px solid <?= $cr_form_colors[$key] ?>;<?= $is_all?'font-weight:700;':'' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
                 <td style="padding:11px 16px 11px 0;"><?= cfg_ev_cell($cr_today[$key]??[]) ?></td>
-                <td style="padding:11px 0;"><?= cfg_ev_cell($cr_30d[$key]??[]) ?></td>
+                <td style="padding:11px 16px 11px 0;"><?= cfg_ev_cell($cr_30d[$key]??[]) ?></td>
+                <td style="padding:11px 0;"><?= cfg_call_cell($calls_range[$key]??0, $calls_today[$key]??0) ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p style="font-size:10px;color:#d1d5db;margin:12px 0 0;">Entered = sessions that started interacting · Unique visitors shown in Form Leads card</p>
+        <p style="font-size:10px;color:#d1d5db;margin:12px 0 0;">Entered = sessions that started interacting · Unique visitors shown in Form Leads card · Calls = clicks on phone (tel:) links in the selected range, attributed to the landing page they happened on</p>
     </div>
 
     <!-- Conversion Rate Line Chart -->
@@ -7124,7 +7153,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
         /* ── Conversion tracking ── */
         var _cfgSidContact = sessionStorage.getItem('cfg_sid_contact') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_contact',id); return id; })();
-        function cfgTrContact(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','contact'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidContact); fetch(AJAX,{method:'POST',body:fd}).catch(function(){}); }
+        function cfgTrContact(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','contact'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidContact); fd.append('page_id','<?= (int) cfg_current_page_id() ?>'); fd.append('page_url',location.href.split('#')[0]); fetch(AJAX,{method:'POST',body:fd}).catch(function(){}); }
         if (!sessionStorage.getItem('cfg_v_contact')) { sessionStorage.setItem('cfg_v_contact','1'); cfgTrContact('view',''); }
         var _cfgContactStarted=false;
         form.addEventListener('focusin',function(){ if(!_cfgContactStarted){_cfgContactStarted=true;cfgTrContact('start','');} },true);
@@ -8397,7 +8426,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 
     /* ── Conversion tracking ── */
     var _cfgSidAligner = sessionStorage.getItem('cfg_sid_aligner') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_aligner',id); return id; })();
-    function cfgTrAligner(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','aligner'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidAligner); fetch(ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
+    function cfgTrAligner(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','aligner'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidAligner); fd.append('page_id','<?= (int) cfg_current_page_id() ?>'); fd.append('page_url',location.href.split('#')[0]); fetch(ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
     if (!sessionStorage.getItem('cfg_v_aligner')) { sessionStorage.setItem('cfg_v_aligner','1'); cfgTrAligner('view',''); }
     var _cfgAlgStarted=false;
 
@@ -10074,7 +10103,7 @@ $_sections_col = $result_sections_html
 
   /* ── Conversion tracking ── */
   var _cfgSidImp = sessionStorage.getItem('cfg_sid_implant') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_implant',id); return id; })();
-  function cfgTrImp(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','implant'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidImp); fetch(config.ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
+  function cfgTrImp(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','implant'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidImp); fd.append('page_id','<?= (int) cfg_current_page_id() ?>'); fd.append('page_url',location.href.split('#')[0]); fetch(config.ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
   var _cfgImpStarted=false;
 
   /* ── INIT ── */
@@ -10942,21 +10971,39 @@ add_action( 'wp_ajax_nopriv_cfg_review_submit', 'cfg_review_ajax_submit' );
 add_action( 'wp_ajax_cfg_track',        'cfg_ajax_track_event' );
 add_action( 'wp_ajax_nopriv_cfg_track', 'cfg_ajax_track_event' );
 
+/**
+ * Post/page ID of the current front-end request, or 0 when the request isn't a single post/page
+ * (archives return a term/user ID from get_queried_object_id(), which must not be stored as a page_id).
+ */
+function cfg_current_page_id() {
+    if ( is_admin() ) return 0;
+    if ( ! is_singular() && ! is_home() ) return 0;
+    // get_queried_object_id() is more reliable in wp_footer than get_the_ID() (which depends on the loop being active).
+    $page_id = (int) get_queried_object_id();
+    if ( ! $page_id && is_singular() ) $page_id = (int) get_the_ID();
+    return $page_id;
+}
+
+/** 'implant' / 'aligner' when $page_id is a configured landing page, otherwise null. */
+function cfg_landing_form_type( $page_id ) {
+    if ( ! $page_id ) return null;
+    $s         = get_option( CFG_OPTION, [] ) + cfg_defaults();
+    $imp_pages = array_map( 'intval', (array)( $s['imp_landing_pages'] ?? [] ) );
+    $alg_pages = array_map( 'intval', (array)( $s['alg_landing_pages'] ?? [] ) );
+    if ( in_array( $page_id, $imp_pages, true ) ) return 'implant';
+    if ( in_array( $page_id, $alg_pages, true ) ) return 'aligner';
+    return null;
+}
+
 add_action( 'wp_footer', 'cfg_landing_page_tracker' );
 function cfg_landing_page_tracker() {
     if ( is_admin() ) return;
 
-    // get_queried_object_id() is more reliable in wp_footer than get_the_ID() (which depends on the loop being active).
-    $page_id = (int) get_queried_object_id();
-    if ( ! $page_id ) $page_id = (int) get_the_ID();
-
+    $page_id   = cfg_current_page_id();
     $s         = get_option( CFG_OPTION, [] ) + cfg_defaults();
     $imp_pages = array_map( 'intval', (array)( $s['imp_landing_pages'] ?? [] ) );
     $alg_pages = array_map( 'intval', (array)( $s['alg_landing_pages'] ?? [] ) );
-
-    $form_type = null;
-    if ( $page_id && in_array( $page_id, $imp_pages, true ) )      $form_type = 'implant';
-    elseif ( $page_id && in_array( $page_id, $alg_pages, true ) )  $form_type = 'aligner';
+    $form_type = cfg_landing_form_type( $page_id );
 
     // Admin-only debug breadcrumb — view-source on any page to confirm what the tracker sees.
     if ( current_user_can( 'manage_options' ) ) {
@@ -10982,8 +11029,53 @@ function cfg_landing_page_tracker() {
             fd.append('event_type','landing');
             fd.append('step_key', String(<?= (int)$page_id ?>));
             fd.append('session_id', sid);
+            fd.append('page_id', '<?= (int)$page_id ?>');
+            fd.append('page_url', location.href.split('#')[0]);
             fetch('<?= esc_js($ajax_url) ?>', { method:'POST', body: fd, credentials:'same-origin' }).catch(function(){});
         } catch(e) {}
+    })();
+    </script>
+    <?php
+}
+
+// Call-click tracking: one delegated listener for every a[href^="tel:"] on the front end.
+// Fire-and-forget (keepalive) so the dialer opens immediately — never preventDefault().
+add_action( 'wp_footer', 'cfg_call_click_tracker' );
+function cfg_call_click_tracker() {
+    if ( is_admin() ) return;
+    $page_id   = cfg_current_page_id();
+    $form_type = cfg_landing_form_type( $page_id ) ?: 'site';
+    $sid_key   = 'cfg_sid_' . $form_type;
+    ?>
+    <script>
+    (function(){
+        var AJAX = <?= wp_json_encode( admin_url( 'admin-ajax.php' ) ) ?>, last = {};
+        document.addEventListener('click', function(e){
+            try {
+                var a = e.target && e.target.closest ? e.target.closest('a[href^="tel:"]') : null;
+                if (!a) return;
+                var num = (a.getAttribute('href') || '').slice(4);
+                try { num = decodeURIComponent(num); } catch(_) {}
+                num = num.trim().slice(0, 100);
+                var now = Date.now();
+                if (last[num] && now - last[num] < 2000) return;
+                last[num] = now;
+                var sid = '';
+                try {
+                    sid = sessionStorage.getItem(<?= wp_json_encode( $sid_key ) ?>);
+                    if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem(<?= wp_json_encode( $sid_key ) ?>, sid); }
+                } catch(_) {}
+                var fd = new FormData();
+                fd.append('action','cfg_track');
+                fd.append('form_type', <?= wp_json_encode( $form_type ) ?>);
+                fd.append('event_type','call');
+                fd.append('step_key', num);
+                fd.append('session_id', sid || '');
+                fd.append('page_id', '<?= (int) $page_id ?>');
+                fd.append('page_url', location.href.split('#')[0]);
+                fetch(AJAX, { method:'POST', body: fd, credentials:'same-origin', keepalive: true }).catch(function(){});
+            } catch(_) {}
+        }, true);
     })();
     </script>
     <?php
@@ -10995,9 +11087,15 @@ function cfg_ajax_track_event() {
     $event_type = sanitize_key( $_POST['event_type'] ?? '' );
     $step_key   = sanitize_text_field( $_POST['step_key']   ?? '' );
     $session_id = sanitize_text_field( $_POST['session_id'] ?? '' );
-    $allowed_forms  = [ 'contact', 'aligner', 'implant' ];
-    $allowed_events = [ 'view', 'start', 'step', 'complete', 'landing' ];
+    $page_id    = absint( $_POST['page_id'] ?? 0 );
+    $page_url   = substr( esc_url_raw( wp_unslash( $_POST['page_url'] ?? '' ) ), 0, 500 );
+    $allowed_forms  = [ 'contact', 'aligner', 'implant', 'site' ];
+    $allowed_events = [ 'view', 'start', 'step', 'complete', 'landing', 'call' ];
     if ( ! in_array( $form_type, $allowed_forms, true ) || ! in_array( $event_type, $allowed_events, true ) ) {
+        wp_send_json_error(); return;
+    }
+    // 'site' only exists for call clicks on pages that aren't a configured landing page.
+    if ( $form_type === 'site' && $event_type !== 'call' ) {
         wp_send_json_error(); return;
     }
     $wpdb->insert( $wpdb->prefix . 'cfg_events', [
@@ -11005,6 +11103,8 @@ function cfg_ajax_track_event() {
         'event_type' => $event_type,
         'step_key'   => substr( $step_key, 0, 100 ),
         'session_id' => substr( $session_id, 0, 64 ),
+        'page_id'    => $page_id,
+        'page_url'   => $page_url,
         'created_at' => current_time( 'mysql' ),
     ] );
     wp_send_json_success();
