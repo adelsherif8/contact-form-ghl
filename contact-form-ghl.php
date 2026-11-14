@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.43
+ * Version:     2.6.44
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -1057,14 +1057,19 @@ function cfg_render_analytics_inner( $range ) {
     $cr_30d['_all']['complete']   = $actual_range_all;
 
     // ── Call clicks (tel: links) — counted per click, attributed to the landing page's form or 'site' ──
-    $calls_today = []; $calls_range = [];
+    // Taps = every click (raw); sessions = unique session_ids, comparable with the other columns.
+    $calls_today = []; $calls_range = []; $call_sessions_range = [];
     if ( $ev_table_exists ) {
         foreach ( ['today' => "DATE(created_at) = CURDATE()", 'range' => $an_ev_where] as $period => $where ) {
-            $rows = $wpdb->get_results( "SELECT form_type, COUNT(*) AS cnt FROM {$ev_table} WHERE event_type='call' AND {$where} GROUP BY form_type", ARRAY_A );
-            $map  = [];
-            foreach ( (array) $rows as $r ) $map[ $r['form_type'] ] = (int) $r['cnt'];
+            $rows = $wpdb->get_results( "SELECT form_type, COUNT(*) AS cnt, COUNT(DISTINCT session_id) AS sess FROM {$ev_table} WHERE event_type='call' AND {$where} GROUP BY form_type", ARRAY_A );
+            $map  = []; $smap = [];
+            foreach ( (array) $rows as $r ) { $map[ $r['form_type'] ] = (int) $r['cnt']; $smap[ $r['form_type'] ] = (int) $r['sess']; }
             $map['_all'] = array_sum( $map );
-            if ( $period === 'today' ) $calls_today = $map; else $calls_range = $map;
+            if ( $period === 'today' ) { $calls_today = $map; continue; }
+            $calls_range = $map;
+            // Session IDs are per form type, so the overall unique count needs its own query.
+            $smap['_all'] = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT form_type, session_id) FROM {$ev_table} WHERE event_type='call' AND {$where}" );
+            $call_sessions_range = $smap;
         }
     }
 
@@ -1392,9 +1397,9 @@ function cfg_render_analytics_inner( $range ) {
     }
     endif;
     if (!function_exists('cfg_call_cell')):
-    function cfg_call_cell($range_cnt, $today_cnt) {
+    function cfg_call_cell($range_cnt, $today_cnt, $range_sessions = 0) {
         if (!$range_cnt && !$today_cnt) return '<div style="text-align:right;"><span style="color:#9ca3af;font-size:12px;">—</span></div>';
-        return '<div style="text-align:right;"><strong style="font-size:14px;color:#1d2327;">'.(int)$range_cnt.'</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.(int)$today_cnt.' today</div></div>';
+        return '<div style="text-align:right;"><strong style="font-size:14px;color:#1d2327;">'.(int)$range_cnt.'</strong><div style="font-size:11px;color:#9ca3af;margin-top:1px;">'.(int)$range_sessions.' unique · '.(int)$today_cnt.' today</div></div>';
     }
     endif;
     $cr_form_labels = ['_all'=>'All Forms','contact'=>'Contact Form','aligner'=>'Aligner Quiz','implant'=>'Implant Estimator'];
@@ -1415,7 +1420,7 @@ function cfg_render_analytics_inner( $range ) {
                     <th style="text-align:left;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;width:40%;border-bottom:1px solid #f3f4f6;">Form</th>
                     <th style="text-align:right;padding:0 16px 10px 0;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;">Today</th>
                     <th style="text-align:right;padding:0 16px 10px 0;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;"><?= esc_html($an_label) ?></th>
-                    <th style="text-align:right;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;">Calls</th>
+                    <th style="text-align:right;padding:0 0 10px;color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f3f4f6;" title="Every tap on a phone link is counted; unique = distinct sessions">Call taps</th>
                 </tr>
             </thead>
             <tbody>
@@ -1426,12 +1431,12 @@ function cfg_render_analytics_inner( $range ) {
                 <td style="padding:11px 0 11px 10px;border-left:3px solid <?= $cr_form_colors[$key] ?>;<?= $is_all?'font-weight:700;':'' ?>color:<?= $cr_form_colors[$key] ?>;"><?= esc_html($label) ?></td>
                 <td style="padding:11px 16px 11px 0;"><?= cfg_ev_cell($cr_today[$key]??[]) ?></td>
                 <td style="padding:11px 16px 11px 0;"><?= cfg_ev_cell($cr_30d[$key]??[]) ?></td>
-                <td style="padding:11px 0;"><?= cfg_call_cell($calls_range[$key]??0, $calls_today[$key]??0) ?></td>
+                <td style="padding:11px 0;"><?= cfg_call_cell($calls_range[$key]??0, $calls_today[$key]??0, $call_sessions_range[$key]??0) ?></td>
             </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
-        <p style="font-size:10px;color:#d1d5db;margin:12px 0 0;">Entered = sessions that started interacting · Unique visitors shown in Form Leads card · Calls = clicks on phone (tel:) links in the selected range, attributed to the landing page they happened on</p>
+        <p style="font-size:10px;color:#d1d5db;margin:12px 0 0;">Entered = sessions that started interacting · Unique visitors shown in Form Leads card · Call taps = every tap on a phone (tel:) link in the selected range (unique = distinct sessions), attributed to the landing page it happened on</p>
     </div>
 
     <!-- Conversion Rate Line Chart -->
