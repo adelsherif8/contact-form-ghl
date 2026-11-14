@@ -84,7 +84,7 @@ console.log(`✅ Updated package.json → ${newVersion}`);
 // ── git commit, tag, push ──────────────────────────────────────
 
 console.log('\n📦 Committing and tagging...\n');
-run(`git add contact-form-ghl.php package.json`);
+run(`git add contact-form-ghl.php package.json assets/ .github/`);
 run(`git commit -m "Release v${newVersion}"`);
 run(`git tag v${newVersion}`);
 run(`git push origin main`);
