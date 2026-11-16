@@ -3,7 +3,7 @@
  * Plugin Name: Contact Form + GoHighLevel
  * Plugin URI: https://upwork.com/freelancers/adelsherif8
  * Description: Fully customizable contact form with GoHighLevel CRM integration. Use shortcode [contact_form_ghl].
- * Version:     2.6.44
+ * Version:     2.6.45
  * Author:      Adel Emad
  * Author URI:  https://upwork.com/freelancers/adelsherif8
  * License:     GPL-2.0+
@@ -202,6 +202,7 @@ function cfg_defaults() {
         'btn_text'               => 'Text Me to Confirm',
         'terms_text'             => 'By submitting this form you agree to be contacted via text or phone regarding your appointment request. Standard message rates may apply.',
         'success_redirect_url'   => '',
+        'contact_landing_pages'  => [],
         'success_msg'            => "Thank you! We'll be in touch shortly to confirm your appointment.",
         'back_link_text'         => '← Other ways to book',
         'back_link_url'          => '/booking-method',
@@ -2621,7 +2622,7 @@ function cfg_sanitize( $input ) {
     }
     if ( ! empty( $secs_new ) ) $input['imp_result_sections'] = json_encode( $secs_new, JSON_UNESCAPED_UNICODE );
 
-    $array_int_fields = [ 'imp_landing_pages', 'alg_landing_pages' ];
+    $array_int_fields = [ 'imp_landing_pages', 'alg_landing_pages', 'contact_landing_pages' ];
 
     // ── General loop ──
     foreach ( $defaults as $key => $default ) {
@@ -3221,6 +3222,19 @@ function cfg_settings_page() {
                 <label>Success Redirect URL <span class="cfg-badge">after submit</span></label>
                 <input type="text" name="<?= CFG_OPTION ?>[success_redirect_url]" value="<?= esc_attr( $s['success_redirect_url'] ) ?>" placeholder="/thank-you"/>
                 <span class="cfg-desc">User is redirected here after successful submission. Leave blank to show the fallback message below.</span>
+            </div>
+            <div class="cfg-field cfg-full">
+                <label>Landing Pages <span style="font-weight:400;color:#9ca3af;">— marketing pages that lead to this form (Home is allowed)</span></label>
+                <?php
+                $ct_lp = array_map( 'intval', (array)( $s['contact_landing_pages'] ?? [] ) );
+                $ct_all_pages = get_pages( [ 'sort_column' => 'post_title', 'sort_order' => 'ASC' ] );
+                ?>
+                <select name="<?= CFG_OPTION ?>[contact_landing_pages][]" multiple size="6" style="width:100%;max-width:520px;padding:6px;border:1px solid #8c8f94;border-radius:4px;font-size:13px;">
+                    <?php foreach ( $ct_all_pages as $p ): ?>
+                    <option value="<?= (int)$p->ID ?>" <?= in_array( (int)$p->ID, $ct_lp, true ) ? 'selected' : '' ?>><?= esc_html( $p->post_title ) ?> <span style="color:#9ca3af;">(/<?= esc_html( $p->post_name ) ?>)</span></option>
+                    <?php endforeach; ?>
+                </select>
+                <span class="cfg-desc">Hold <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> to select multiple. Visits to these pages are recorded as the session's landing page, so a later contact-form lead is tied to the page the visitor arrived on.</span>
             </div>
             <div class="cfg-field cfg-full">
                 <label>Fallback Success Message <span class="cfg-badge">only if no redirect URL</span></label>
@@ -7060,7 +7074,8 @@ function cfg_shortcode( $atts = [], $embed = false ) {
                 utmcontent_custom:  _getParam('utmcontent_custom'),
                 utmkeyword_custom:  _getParam('utmkeyword_custom'),
                 utmterm_custom:     _getParam('utmterm_custom'),
-                gclid_custom:       _getParam('gclid_custom')
+                gclid_custom:       _getParam('gclid_custom'),
+                cfg_landing:        <?= cfg_landing_url_js( 'contact' ) ?>
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             <?= cfg_fresh_nonce_js() ?>
@@ -7158,7 +7173,7 @@ function cfg_shortcode( $atts = [], $embed = false ) {
 
         /* ── Conversion tracking ── */
         var _cfgSidContact = sessionStorage.getItem('cfg_sid_contact') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_contact',id); return id; })();
-        function cfgTrContact(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','contact'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidContact); fd.append('page_id','<?= (int) cfg_current_page_id() ?>'); fd.append('page_url',location.href.split('#')[0]); fetch(AJAX,{method:'POST',body:fd}).catch(function(){}); }
+        function cfgTrContact(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','contact'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidContact); fd.append('page_id',<?= cfg_page_id_js() ?>); fd.append('page_url',location.href.split('#')[0]); fetch(AJAX,{method:'POST',body:fd}).catch(function(){}); }
         if (!sessionStorage.getItem('cfg_v_contact')) { sessionStorage.setItem('cfg_v_contact','1'); cfgTrContact('view',''); }
         var _cfgContactStarted=false;
         form.addEventListener('focusin',function(){ if(!_cfgContactStarted){_cfgContactStarted=true;cfgTrContact('start','');} },true);
@@ -7318,7 +7333,8 @@ function cfg_embed_shortcode_OLD_UNUSED() {
                 utmcontent_custom:  _getParam('utmcontent_custom'),
                 utmkeyword_custom:  _getParam('utmkeyword_custom'),
                 utmterm_custom:     _getParam('utmterm_custom'),
-                gclid_custom:       _getParam('gclid_custom')
+                gclid_custom:       _getParam('gclid_custom'),
+                cfg_landing:        <?= cfg_landing_url_js( 'contact' ) ?>
             };
             btn.disabled = true; lbl.textContent = 'Sending\u2026';
             <?= cfg_fresh_nonce_js() ?>
@@ -7797,6 +7813,8 @@ function cfg_ajax_submit() {
         'utm_term'     => sanitize_text_field( $_POST['utmterm_custom']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid_custom']       ?? '' ),
     ] );
+    $cfg_landing_url = cfg_lead_landing_url();
+    if ( $cfg_landing_url !== '' ) $entry_meta['landing'] = $cfg_landing_url;
     $entry_meta['_ghl_fields_sent'] = $custom_fields;
     $entry_meta['_ghl_http_code']   = $code;
     $entry_meta['_ghl_response']    = $body;
@@ -8431,7 +8449,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
 
     /* ── Conversion tracking ── */
     var _cfgSidAligner = sessionStorage.getItem('cfg_sid_aligner') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_aligner',id); return id; })();
-    function cfgTrAligner(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','aligner'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidAligner); fd.append('page_id','<?= (int) cfg_current_page_id() ?>'); fd.append('page_url',location.href.split('#')[0]); fetch(ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
+    function cfgTrAligner(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','aligner'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidAligner); fd.append('page_id',<?= cfg_page_id_js() ?>); fd.append('page_url',location.href.split('#')[0]); fetch(ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
     if (!sessionStorage.getItem('cfg_v_aligner')) { sessionStorage.setItem('cfg_v_aligner','1'); cfgTrAligner('view',''); }
     var _cfgAlgStarted=false;
 
@@ -8559,6 +8577,7 @@ html,body{overflow-x:hidden!important;max-width:100%!important;}
             function _gp(k){var v='';_up.forEach(function(val,key){if(key.toLowerCase()===k)v=val;});return v||_ss[k]||'';}
             var _fd=new FormData(form);
             ['utmcampaign_custom','utmmedium_custom','utmcontent_custom','utmkeyword_custom','utmterm_custom','gclid_custom'].forEach(function(k){ _fd.append(k,_gp(k)); });
+            _fd.append('cfg_landing', <?= cfg_landing_url_js( 'aligner' ) ?>);
             <?= cfg_fresh_nonce_js() ?>
             window.cfgFreshNonce(ajaxUrl, 'cfg_aligner_submit', _fd.get('alg_nonce')).then(function(n){ _fd.set('alg_nonce', n); return fetch(ajaxUrl,{method:'POST',body:_fd}); })
             .then(function(r){ return r.json(); })
@@ -8745,6 +8764,8 @@ function cfg_aligner_ajax_submit() {
         'utm_term'     => sanitize_text_field( $_POST['utmterm_custom']     ?? '' ),
         'gclid'        => sanitize_text_field( $_POST['gclid_custom']       ?? '' ),
     ] ) );
+    $cfg_landing_url = cfg_lead_landing_url();
+    if ( $cfg_landing_url !== '' ) $entry_meta['landing'] = $cfg_landing_url;
     $entry_meta['_ghl_fields_sent'] = $custom;
     $entry_meta['_ghl_http_code']   = $code;
     $entry_meta['_ghl_response']    = $body;
@@ -10043,6 +10064,7 @@ $_sections_col = $result_sections_html
     var panel = 'result-' + (s.flow || 'single');
     var fd    = new FormData();
     fd.append('action',    'cfg_implant_submit');
+    fd.append('cfg_landing', <?= cfg_landing_url_js( 'implant' ) ?>);
     fd.append('imp_nonce', config.nonce);
     fd.append('firstName', fn);
     fd.append('lastName',  ln);
@@ -10108,7 +10130,7 @@ $_sections_col = $result_sections_html
 
   /* ── Conversion tracking ── */
   var _cfgSidImp = sessionStorage.getItem('cfg_sid_implant') || (function(){ var id=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('cfg_sid_implant',id); return id; })();
-  function cfgTrImp(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','implant'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidImp); fd.append('page_id','<?= (int) cfg_current_page_id() ?>'); fd.append('page_url',location.href.split('#')[0]); fetch(config.ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
+  function cfgTrImp(ev,sk){ var fd=new FormData(); fd.append('action','cfg_track'); fd.append('form_type','implant'); fd.append('event_type',ev); fd.append('step_key',sk||''); fd.append('session_id',_cfgSidImp); fd.append('page_id',<?= cfg_page_id_js() ?>); fd.append('page_url',location.href.split('#')[0]); fetch(config.ajaxUrl,{method:'POST',body:fd}).catch(function(){}); }
   var _cfgImpStarted=false;
 
   /* ── INIT ── */
@@ -10290,6 +10312,8 @@ function cfg_implant_ajax_submit() {
         $val       = sanitize_text_field( $answers[ $raw_field ] ?? $answers[ $field ] ?? '' );
         if ( $field !== '' && $val !== '' ) $entry_meta[ $field ] = $val;
     }
+    $cfg_landing_url = cfg_lead_landing_url();
+    if ( $cfg_landing_url !== '' ) $entry_meta['landing'] = $cfg_landing_url;
     $entry_meta['_ghl_fields_sent'] = $custom;
     $entry_meta['_ghl_http_code']   = $code;
     $entry_meta['_ghl_response']    = $body;
@@ -11000,6 +11024,44 @@ function cfg_landing_form_type( $page_id ) {
     return null;
 }
 
+/**
+ * Every form $page_id is a landing page for: implant/aligner (same as cfg_landing_form_type) plus 'contact'
+ * when the page is in contact_landing_pages. Call tracking keeps using cfg_landing_form_type() unchanged.
+ */
+function cfg_landing_form_types( $page_id ) {
+    $types = [];
+    $main  = cfg_landing_form_type( $page_id );
+    if ( $main ) $types[] = $main;
+    if ( $page_id ) {
+        $s        = get_option( CFG_OPTION, [] ) + cfg_defaults();
+        $ct_pages = array_map( 'intval', (array)( $s['contact_landing_pages'] ?? [] ) );
+        if ( in_array( $page_id, $ct_pages, true ) ) $types[] = 'contact';
+    }
+    return $types;
+}
+
+/**
+ * JS expression: full URL of this session's landing page for $form_type (stored by the landing tracker),
+ * else the page the form is on. Sent with each submission and saved as entry meta 'landing'.
+ */
+function cfg_landing_url_js( $form_type ) {
+    $key = wp_json_encode( 'cfg_landing_url_' . sanitize_key( $form_type ) );
+    return "(function(){var u='';try{u=sessionStorage.getItem({$key})||'';}catch(e){}return u||location.href.split('#')[0];})()";
+}
+
+/** JS expression: current page/post ID — the server-side value, else WordPress's page-id-N / postid-N body class. */
+function cfg_page_id_js() {
+    $id = (int) cfg_current_page_id();
+    return "(function(){var p='{$id}';if(p==='0'){var m=((document.body&&document.body.className)||'').match(/\\b(?:page-id|postid)-(\\d+)\\b/);if(m)p=m[1];}return p;})()";
+}
+
+/** Landing URL posted with a contact/aligner/implant submission, else the page the form was on (referer). */
+function cfg_lead_landing_url() {
+    $url = esc_url_raw( wp_unslash( $_POST['cfg_landing'] ?? '' ), [ 'http', 'https' ] );
+    if ( $url === '' ) $url = esc_url_raw( (string) wp_get_referer(), [ 'http', 'https' ] );
+    return substr( $url, 0, 500 );
+}
+
 add_action( 'wp_footer', 'cfg_landing_page_tracker' );
 function cfg_landing_page_tracker() {
     if ( is_admin() ) return;
@@ -11008,26 +11070,33 @@ function cfg_landing_page_tracker() {
     $s         = get_option( CFG_OPTION, [] ) + cfg_defaults();
     $imp_pages = array_map( 'intval', (array)( $s['imp_landing_pages'] ?? [] ) );
     $alg_pages = array_map( 'intval', (array)( $s['alg_landing_pages'] ?? [] ) );
-    $form_type = cfg_landing_form_type( $page_id );
+    $ct_pages  = array_map( 'intval', (array)( $s['contact_landing_pages'] ?? [] ) );
+    $types     = cfg_landing_form_types( $page_id );
 
     // Admin-only debug breadcrumb — view-source on any page to confirm what the tracker sees.
     if ( current_user_can( 'manage_options' ) ) {
-        echo "\n<!-- CFG Landing Tracker · page_id={$page_id} · implant_pages=" . wp_json_encode( $imp_pages ) . " · aligner_pages=" . wp_json_encode( $alg_pages ) . " · matched_form_type=" . ( $form_type ?: 'none' ) . " -->\n";
+        echo "\n<!-- CFG Landing Tracker · page_id={$page_id} · implant_pages=" . wp_json_encode( $imp_pages ) . " · aligner_pages=" . wp_json_encode( $alg_pages ) . " · contact_pages=" . wp_json_encode( $ct_pages ) . " · matched_form_type=" . ( $types ? implode( ',', $types ) : 'none' ) . " -->\n";
     }
 
-    if ( ! $form_type ) return;
+    if ( ! $types ) return;
 
-    $sid_key     = 'cfg_sid_' . $form_type;
-    $landing_key = 'cfg_landing_' . $form_type;
-    $ajax_url    = admin_url( 'admin-ajax.php' );
-    ?>
+    $ajax_url = admin_url( 'admin-ajax.php' );
+    foreach ( $types as $form_type ) {
+        // Same session key the form itself uses (cfg_sid_contact / cfg_sid_implant / cfg_sid_aligner),
+        // so the later submission's events share this session_id.
+        $sid_key     = 'cfg_sid_' . $form_type;
+        $landing_key = 'cfg_landing_' . $form_type;
+        $url_key     = 'cfg_landing_url_' . $form_type;
+        ?>
     <script>
     (function(){
         try {
             var sid = sessionStorage.getItem('<?= esc_js($sid_key) ?>');
             if (!sid) { sid = Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('<?= esc_js($sid_key) ?>', sid); }
+            // One landing page per session: the first marketing page wins and is never overwritten.
             if (sessionStorage.getItem('<?= esc_js($landing_key) ?>')) return;
             sessionStorage.setItem('<?= esc_js($landing_key) ?>', '1');
+            if (!sessionStorage.getItem('<?= esc_js($url_key) ?>')) sessionStorage.setItem('<?= esc_js($url_key) ?>', location.href.split('#')[0]);
             var fd = new FormData();
             fd.append('action','cfg_track');
             fd.append('form_type','<?= esc_js($form_type) ?>');
@@ -11040,7 +11109,8 @@ function cfg_landing_page_tracker() {
         } catch(e) {}
     })();
     </script>
-    <?php
+        <?php
+    }
 }
 
 // Call-click tracking: one delegated listener for every a[href^="tel:"] on the front end.
